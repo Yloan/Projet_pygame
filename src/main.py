@@ -9,7 +9,6 @@ from ui.server import Serveur
 
 class Game:
     def __init__(self, width=1280, height=720, fullscreen=False):
-        # Démarrage du serveur local par défaut
 
         self.width = width
         self.height = height
