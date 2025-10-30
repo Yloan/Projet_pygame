@@ -4,8 +4,9 @@ import threading
 class Serveur:
     def __init__(self):
         self.Port = 12345
-        self.Host = '0.0.0.0'
+        self.Host = '192.168.1.244'
 
+        B
         self.clients = []
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.Host, self.Port))
