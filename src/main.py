@@ -22,7 +22,7 @@ class Game:
         self.running = False
 
         # Configuration réseau
-        self.host = '192.168.1.244'
+        self.host = '192.168.1.130'
         self.port = 12345
         self._client_socket = None
         self._client_lock = threading.Lock()
