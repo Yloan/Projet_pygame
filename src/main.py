@@ -8,12 +8,8 @@ from ui.server import Serveur
 
 
 class Game:
-    def __init__(self, width=1280, height=720, fullscreen=False, start_local_server=True):
+    def __init__(self, width=1280, height=720, fullscreen=False):
         # Démarrage du serveur local par défaut
-        if start_local_server:
-            self.server = Serveur()
-            self.server.start_server()
-            print("Serveur local démarr�sur le port :12345")
 
         self.width = width
         self.height = height
@@ -119,7 +115,7 @@ class Game:
 
 if __name__ == '__main__':
     # Démarrage du serveur local et du jeu
-    game = Game(width=1280, height=720, fullscreen=False, start_local_server=True)
+    game = Game(width=1280, height=720, fullscreen=False)
     game.run()
 
 

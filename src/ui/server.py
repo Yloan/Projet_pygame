@@ -6,7 +6,6 @@ class Serveur:
         self.Port = 12345
         self.Host = '192.168.1.244'
 
-        B
         self.clients = []
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.Host, self.Port))
@@ -56,4 +55,6 @@ class Serveur:
 
 
 
-    
+server = Serveur()
+server.start_server()
+print("Serveur local démarr�sur le port :12345")
