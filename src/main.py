@@ -13,7 +13,7 @@ class Game:
         if start_local_server:
             self.server = Serveur()
             self.server.start_server()
-            print("Serveur local démarré sur 127.0.0.1:12345")
+            print("Serveur local démarr�sur le port :12345")
 
         self.width = width
         self.height = height
@@ -27,7 +27,7 @@ class Game:
         self.running = False
 
         # Configuration réseau
-        self.host = '127.0.0.1'
+        self.host = '192.168.1.244'
         self.port = 12345
         self._client_socket = None
         self._client_lock = threading.Lock()
