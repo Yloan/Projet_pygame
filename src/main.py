@@ -106,7 +106,7 @@ class Game:
 
             font = pyg.font.SysFont(None, 24)
             txt = font.render('E pour envoyer un message au serveur. Esc pour quitter.', True, (255, 255, 255))
-            self.screen.blit(txt, (20, 20))
+            self.screen.blit(txt, (20, 20))         
 
             pyg.display.flip()
             self.clock.tick(60)
