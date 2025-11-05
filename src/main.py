@@ -10,10 +10,18 @@ from ui.server import Serveur
 class Game:
     def __init__(self, width=1280, height=720, fullscreen=False):
 
+        # Configuration de la fenêtre
         self.width = width
         self.height = height
         self.fullscreen = fullscreen
 
+        # Maps & ressources
+        self.map_back = pyg.image.load("../assets/maps/FOREST-BACKGROUND.png")
+        self.map_front = pyg.image.load("../assets/maps/FOREST-FRONTGROUND.png")
+
+        self.player_spritesheet = pyg.image.load("../assets/sprites/FIRE-WALK-Sheet.png")
+
+        # Initialisation Pygame
         pyg.init()
         flags = pyg.FULLSCREEN if self.fullscreen else 0
         self.screen = pyg.display.set_mode((self.width, self.height), flags)
@@ -96,17 +104,23 @@ class Game:
                 elif event.type == pyg.KEYDOWN:
                     if event.key == pyg.K_ESCAPE:
                         self.running = False
-                    elif event.key == pyg.K_e:
-                        self.send_to_server(message='E appuyé')
+                    """elif event.key == pyg.K_e:
+                        self.send_to_server(message='E appuyé')"""
 
-            # Update game logic ici
+            #chargement des assets dans le jeu
+            self.screen.blit(self.map_back, (0, 0))
+
+           
+            
+
 
             # Draw (nettoyage)
             self.screen.fill((0, 0, 0))
 
+            """
             font = pyg.font.SysFont(None, 24)
             txt = font.render('E pour envoyer un message au serveur. Esc pour quitter.', True, (255, 255, 255))
-            self.screen.blit(txt, (20, 20))         
+            self.screen.blit(txt, (20, 20)) """        
 
             pyg.display.flip()
             self.clock.tick(60)
@@ -116,5 +130,3 @@ if __name__ == '__main__':
     # Démarrage du serveur local et du jeu
     game = Game(width=1280, height=720, fullscreen=False)
     game.run()
-
-
