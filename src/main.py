@@ -5,6 +5,7 @@ import threading
 import queue
 import pygame as pyg
 from ui.server import Serveur
+import os
 
 
 class Game:
@@ -16,10 +17,19 @@ class Game:
         self.fullscreen = fullscreen
 
         # Maps & ressources
-        self.map_back = pyg.image.load("../assets/maps/FOREST-BACKGROUND.png")
-        self.map_front = pyg.image.load("../assets/maps/FOREST-FRONTGROUND.png")
+        base_path = os.path.dirname(os.path.abspath('FOREST-BACKGROUND.png'))
+        print(f"Base path: {base_path}")
 
-        self.player_spritesheet = pyg.image.load("../assets/sprites/FIRE-WALK-Sheet.png")
+        map_path_back = os.path.join(base_path, 'assets', 'maps', 'FOREST-BACKGROUND.png')
+        map_path_fore = os.path.join(base_path, 'assets', 'maps', 'FOREST-FOREGROUND.png')
+
+        sprite_path = os.path.join(base_path, 'assets', 'sprites' , 'FIRE-WALK-Sheet.png')
+
+
+        self.map_back = pyg.image.load(map_path_back)
+        self.map_front = pyg.image.load(map_path_fore)
+
+        self.player_spritesheet = pyg.image.load(sprite_path)
 
         # Initialisation Pygame
         pyg.init()
