@@ -55,6 +55,3 @@ class Serveur:
 
 
 
-server = Serveur()
-server.start_server()
-print("Serveur local démarr�sur le port :12345")

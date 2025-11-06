@@ -3,6 +3,7 @@
 import socket
 import threading
 import queue
+import time
 import pygame as pyg
 from ui.server import Serveur
 import os
@@ -45,7 +46,8 @@ class Game:
         self._client_socket = None
         self._client_lock = threading.Lock()
         self._send_queue = queue.Queue()
-        self._connect_to_server()
+        # Ne pas se connecter automatiquement ici : on démarre la connexion
+        # quand la boucle principale démarre (pour permettre un arrêt propre)
 
     def _connect_to_server(self):
         """Établit une connexion persistante au serveur."""
@@ -61,9 +63,8 @@ class Game:
             self._client_socket.connect((self.host, self.port))
             print(f"Connecté au serveur {self.host}:{self.port}")
             
-            # Démarrer thread de réception
+            # Démarrer thread de réception et d'envoi
             threading.Thread(target=self._receive_loop, daemon=True).start()
-            # Démarrer thread d'envoi
             threading.Thread(target=self._send_loop, daemon=True).start()
             
         except Exception as e:
@@ -72,41 +73,110 @@ class Game:
 
     def _receive_loop(self):
         """Thread de réception des messages du serveur."""
-        while True:
+        while self.running:
             if not self._client_socket:
-                break
+                # Attendre un peu avant d'essayer de se reconnecter si on est encore running
+                time.sleep(0.5)
+                continue
             try:
                 data = self._client_socket.recv(1024)
                 if not data:
+                    print('Connexion fermée par le serveur')
+                    # provoquer une reconnexion
+                    self._client_socket.close()
+                    self._client_socket = None
+                    if self.running:
+                        time.sleep(1.0)
+                        self._connect_to_server()
                     break
                 print('Message reçu:', data.decode('utf-8'))
             except socket.timeout:
                 continue
             except Exception as e:
                 print(f"Erreur réception: {e}")
+                try:
+                    if self._client_socket:
+                        self._client_socket.close()
+                except Exception:
+                    pass
+                self._client_socket = None
+                if self.running:
+                    time.sleep(1.0)
+                    self._connect_to_server()
                 break
-        self._connect_to_server()  # Tente de se reconnecter
 
     def _send_loop(self):
         """Thread d'envoi des messages au serveur."""
-        while True:
+        while self.running:
             try:
-                message = self._send_queue.get()
+                # utiliser un timeout pour pouvoir sortir proprement quand on arrête
+                message = self._send_queue.get(timeout=0.5)
+            except queue.Empty:
+                continue
+            try:
                 if self._client_socket:
                     self._client_socket.send(message.encode('utf-8'))
                 else:
                     print("Non connecté, message non envoyé:", message)
-                    self._connect_to_server()
+                    # remettre le message en file pour tenter plus tard
+                    try:
+                        self._send_queue.put_nowait(message)
+                    except Exception:
+                        pass
+                    # essayer de se reconnecter
+                    if self.running:
+                        time.sleep(1.0)
+                        self._connect_to_server()
             except Exception as e:
                 print(f"Erreur envoi: {e}")
-                self._connect_to_server()
+                if self._client_socket:
+                    try:
+                        self._client_socket.close()
+                    except Exception:
+                        pass
+                self._client_socket = None
+                # remettre le message en file
+                try:
+                    self._send_queue.put_nowait(message)
+                except Exception:
+                    pass
+                if self.running:
+                    time.sleep(1.0)
+                    self._connect_to_server()
 
     def send_to_server(self, message='Bonjour serveur'):
         """Ajoute un message à la file d'envoi."""
         self._send_queue.put(message)
 
+    def shutdown(self):
+        """Arrête proprement la logique réseau et ferme Pygame."""
+        print('Arrêt du jeu : fermeture connexion et threads')
+        self.running = False
+        # fermer la socket client
+        with self._client_lock:
+            try:
+                if self._client_socket:
+                    self._client_socket.shutdown(socket.SHUT_RDWR)
+                    self._client_socket.close()
+            except Exception:
+                pass
+            self._client_socket = None
+        # vider la file d'envoi
+        try:
+            while not self._send_queue.empty():
+                self._send_queue.get_nowait()
+        except Exception:
+            pass
+        # fermer Pygame
+        try:
+            pyg.quit()
+        except Exception:
+            pass
+
     def run(self):
+        # Démarrer le jeu et établir la connexion réseau
         self.running = True
+        self._connect_to_server()
         while self.running:
             for event in pyg.event.get():
                 if event.type == pyg.QUIT:
@@ -114,14 +184,13 @@ class Game:
                 elif event.type == pyg.KEYDOWN:
                     if event.key == pyg.K_ESCAPE:
                         self.running = False
+                        self.send_to_server(message='ESC appuyé')
                     """elif event.key == pyg.K_e:
                         self.send_to_server(message='E appuyé')"""
 
             #chargement des assets dans le jeu
             self.screen.blit(self.map_back, (0, 0))
 
-           
-            
 
 
             # Draw (nettoyage)
@@ -132,8 +201,12 @@ class Game:
             txt = font.render('E pour envoyer un message au serveur. Esc pour quitter.', True, (255, 255, 255))
             self.screen.blit(txt, (20, 20)) """        
 
+            pyg.display.update()
             pyg.display.flip()
             self.clock.tick(60)
+
+        # Quand la boucle se termine, faire un arrêt propre
+        self.shutdown()
 
 
 if __name__ == '__main__':
