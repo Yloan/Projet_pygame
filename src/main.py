@@ -58,6 +58,12 @@ class Game:
             frame = self.player_spritesheet_WALK.subsurface((i * self.frame_width, 0, self.frame_width, self.frame_height))
             frame_flipped = pyg.transform.flip(frame, True, False)
             self.frame_WALK_left.append(frame_flipped)
+        
+        self.frame_IDLE_left = []
+        for i in range(num_frames):
+            frame = self.player_spritesheet_IDLE.subsurface((i * self.frame_width, 0, self.frame_width, self.frame_height))
+            frame_flipped = pyg.transform.flip(frame, True, False)
+            self.frame_IDLE_left.append(frame_flipped)
 
 
 
@@ -225,16 +231,31 @@ class Game:
             if not( event[pyg.K_RIGHT] or event[pyg.K_LEFT] or event[pyg.K_UP] or event[pyg.K_DOWN] ):
                 tem_an_IDLE += t
 
-                if tem_an_IDLE >= 50:
-                    tem_an_IDLE = 0
-                    if frame_IDLE >= len(self.frames_IDLE) - 1:
-                        frame_IDLE = 0
-                    else :
-                        frame_IDLE += 1
+                if frame_walk_dir == 'right':
+                        
+                    if tem_an_IDLE >= 50:
+                        tem_an_IDLE = 0
+                        if frame_IDLE >= len(self.frames_IDLE) - 1:
+                            frame_IDLE = 0
+                        else :
+                            frame_IDLE += 1
+
+                    self.screen.blit(self.frames_IDLE[frame_IDLE], (self.x_temp, self.y_temp))
+                else:
+
+                    if tem_an_IDLE >= 50:
+                        tem_an_IDLE = 0
+                        if frame_IDLE >= len(self.frame_IDLE_left) - 1:
+                            frame_IDLE = 0
+                        else :
+                            frame_IDLE += 1
+                    
+                    self.screen.blit(self.frame_IDLE_left[frame_IDLE], (self.x_temp, self.y_temp))
 
 
-                self.screen.blit(self.frames_IDLE[frame_IDLE], (self.x_temp, self.y_temp))
+                
             else:
+
                 if event[pyg.K_RIGHT]:
                     self.send_to_server(message=f'DROITE appuyé, x actuel : {self.x_temp} , y actuel {self.y_temp}')
                     self.x_temp += self.vit_temp
@@ -263,7 +284,7 @@ class Game:
 
                 if event[pyg.K_LEFT]:
                     frame_walk_dir = 'left'
-                else:
+                elif event[pyg.K_RIGHT]:
                     frame_walk_dir = 'right'
                 if frame_walk_dir == 'left':
                     self.screen.blit(self.frame_WALK_left[frame_WALK], (self.x_temp, self.y_temp))
