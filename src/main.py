@@ -7,6 +7,7 @@ import time
 import pygame as pyg
 from ui.server import Serveur
 import os
+import game.characters as player_module
 
 
 class Game:
@@ -28,45 +29,15 @@ class Game:
         map_path_back = os.path.join(base_path, 'assets', 'maps', 'FOREST-BACKGROUND.png')
         map_path_fore = os.path.join(base_path, 'assets', 'maps', 'FOREST-FOREGROUND.png')
 
-        sprite_path_IDLE = os.path.join(base_path, 'assets', 'sprites' , 'FIRE-IDLE-Sheet.png')
-        sprite_path_WALK = os.path.join(base_path, 'assets', 'sprites' , 'FIRE-WALK-Sheet.png')
+        
 
         #initialisation des assets
         self.map_back = pyg.image.load(map_path_back)
         self.map_back = pyg.transform.scale(self.map_back, (self.width, self.height))
         self.map_front = pyg.image.load(map_path_fore)
-        self.player_spritesheet_IDLE = pyg.image.load(sprite_path_IDLE)
-        self.player_spritesheet_WALK = pyg.image.load(sprite_path_WALK)
 
-        self.frames_IDLE = []
-        self.frame_width = 40
-        self.frame_height = 40
-        num_frames = 12
-
-        for i in range(num_frames):
-            frame = self.player_spritesheet_IDLE.subsurface((i * self.frame_width, 0, self.frame_width, self.frame_height))
-            self.frames_IDLE.append(frame)
-
-        self.fram_WALK = []
-        num_frame = 4
-        for i in range(num_frame):
-            frame = self.player_spritesheet_WALK.subsurface((i * self.frame_width, 0, self.frame_width, self.frame_height))
-            self.fram_WALK.append(frame)
-
-        self.frame_WALK_left = []
-        for i in range(num_frame):
-            frame = self.player_spritesheet_WALK.subsurface((i * self.frame_width, 0, self.frame_width, self.frame_height))
-            frame_flipped = pyg.transform.flip(frame, True, False)
-            self.frame_WALK_left.append(frame_flipped)
-        
-        self.frame_IDLE_left = []
-        for i in range(num_frames):
-            frame = self.player_spritesheet_IDLE.subsurface((i * self.frame_width, 0, self.frame_width, self.frame_height))
-            frame_flipped = pyg.transform.flip(frame, True, False)
-            self.frame_IDLE_left.append(frame_flipped)
-
-
-
+        #chargement des sprites du joueur
+        self.player = player_module.Character1()
         # Initialisation Pygame
         pyg.init()
         flags = pyg.FULLSCREEN if self.fullscreen else 0
@@ -211,6 +182,7 @@ class Game:
         frame_walk_dir = 'right'
         self._connect_to_server()
         while self.running:
+            player_position = self.player.get_status()['position']
             for event in pyg.event.get():
                 if event.type == pyg.QUIT:
                     self.running = False
