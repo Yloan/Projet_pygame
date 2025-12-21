@@ -6,6 +6,8 @@ import queue
 import time
 import pygame as pyg
 from ui.server import Serveur
+from ui.console import print_info, print_error, print_warning, print_network, print_success
+from game.map_laoder import MapLoader
 import os
 import game.characters as player_module
 
@@ -23,23 +25,21 @@ class Game:
         self.fullscreen = fullscreen
 
         # Maps & ressources
-        base_path = os.path.dirname(os.path.abspath('FOREST-BACKGROUND.png'))
-        print(f"Base path: {base_path}")
-
-        map_path_back = os.path.join(base_path, 'assets', 'maps', 'FOREST-BACKGROUND.png')
-        map_path_fore = os.path.join(base_path, 'assets', 'maps', 'FOREST-FOREGROUND.png')
+        
 
         
 
-        #initialisation des assets
-        self.map_back = pyg.image.load(map_path_back)
-        self.map_back = pyg.transform.scale(self.map_back, (self.width, self.height))
-        self.map_front = pyg.image.load(map_path_fore)
-
-        #chargement des sprites du joueur
-        self.player = player_module.Character1()
-        # Initialisation Pygame
+        # Initialisation Pygame avant chargement des assets
         pyg.init()
+
+        # loader de map (résout correctement les chemins)
+        map_loader = MapLoader(None)
+        background, foreground = map_loader.load_map()
+        self.map_back = pyg.transform.scale(background, (self.width, self.height))
+        self.map_front = foreground
+
+        # chargement des sprites du joueur (classe Furnace dans game/characters)
+        self.player = player_module.Furnace()
         flags = pyg.FULLSCREEN if self.fullscreen else 0
         self.screen = pyg.display.set_mode((self.width, self.height), flags)
         pyg.display.set_caption("Jeu Multijoueur")
@@ -47,11 +47,28 @@ class Game:
         self.running = False
 
         # Configuration réseau
-        self.host = '192.168.1.130'
+        self.host = '0.0.0.0'
         self.port = 12345
         self._client_socket = None
         self._client_lock = threading.Lock()
         self._send_queue = queue.Queue()
+
+        # Copier les frames et dimensions du joueur pour accès direct
+        try:
+            self.frames_IDLE = self.player.frames_IDLE
+            self.frame_IDLE_left = self.player.frame_IDLE_left
+            self.fram_WALK = self.player.fram_WALK
+            self.frame_WALK_left = self.player.frame_WALK_left
+            self.frame_width = self.player.frame_width
+            self.frame_height = self.player.frame_height
+        except Exception:
+            # fallback pour éviter crash si attributs manquants
+            self.frames_IDLE = []
+            self.frame_IDLE_left = []
+            self.fram_WALK = []
+            self.frame_WALK_left = []
+            self.frame_width = 32
+            self.frame_height = 32
 
     def _connect_to_server(self):
         """Établit une connexion persistante au serveur."""
@@ -65,14 +82,14 @@ class Game:
             self._client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._client_socket.settimeout(2.0)
             self._client_socket.connect((self.host, self.port))
-            print(f"Connecté au serveur {self.host}:{self.port}")
+            print_success(f"Connecté au serveur {self.host}:{self.port}")
             
             # Démarrer thread de réception et d'envoi
             threading.Thread(target=self._receive_loop, daemon=True).start()
             threading.Thread(target=self._send_loop, daemon=True).start()
             
         except Exception as e:
-            print(f"Erreur de connexion au serveur: {e}")
+            print_error(f"Erreur de connexion au serveur: {e}")
             self._client_socket = None
 
     def _receive_loop(self):
@@ -84,7 +101,7 @@ class Game:
             try:
                 data = self._client_socket.recv(1024)
                 if not data:
-                    print('Connexion fermée par le serveur')
+                    print_warning('Connexion fermée par le serveur')
                     # provoquer une reconnexion
                     self._client_socket.close()
                     self._client_socket = None
@@ -92,11 +109,11 @@ class Game:
                         time.sleep(1.0)
                         self._connect_to_server()
                     break
-                print('Message reçu:', data.decode('utf-8'))
+                print_network(f"Message reçu: {data.decode('utf-8')}")
             except socket.timeout:
                 continue
             except Exception as e:
-                print(f"Erreur réception: {e}")
+                print_error(f"Erreur réception: {e}")
                 try:
                     if self._client_socket:
                         self._client_socket.close()
@@ -119,7 +136,7 @@ class Game:
                 if self._client_socket:
                     self._client_socket.send(message.encode('utf-8'))
                 else:
-                    print("Non connecté, message non envoyé:", message)
+                    print_warning(f"Non connecté, message non envoyé: {message}")
                     try:
                         self._send_queue.put_nowait(message)
                     except Exception:
@@ -128,7 +145,7 @@ class Game:
                         time.sleep(1.0)
                         self._connect_to_server()
             except Exception as e:
-                print(f"Erreur envoi: {e}")
+                print_error(f"Erreur envoi: {e}")
                 if self._client_socket:
                     try:
                         self._client_socket.close()
@@ -149,7 +166,7 @@ class Game:
 
     def shutdown(self):
         """Arrête proprement la logique réseau et ferme Pygame."""
-        print('Arrêt du jeu : fermeture connexion et threads')
+        print_info('Arrêt du jeu : fermeture connexion et threads')
         self.running = False
         # fermer la socket client
         with self._client_lock:

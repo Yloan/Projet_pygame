@@ -1,7 +1,7 @@
 #Caractéristiques des characters
 import os
 import pygame as pyg
-base_path = os.path.dirname(os.path.abspath(__file__))
+from utils.paths import get_asset_path
 
 class Furnace:
     def __init__(self):
@@ -9,9 +9,9 @@ class Furnace:
         self.speed = 5
         self.position = (0, 0)
 
-        #initialisation des assets
-        sprite_path_IDLE = os.path.join(base_path, 'assets', 'sprites' , 'FIRE-IDLE-Sheet.png')
-        sprite_path_WALK = os.path.join(base_path, 'assets', 'sprites' , 'FIRE-WALK-Sheet.png')
+        # initialisation des assets via utils.paths
+        sprite_path_IDLE = get_asset_path('sprites', 'Furnace', 'FIRE-IDLE-Sheet.png')
+        sprite_path_WALK = get_asset_path('sprites', 'Furnace', 'FIRE-WALK-Sheet.png')
 
         self.player_spritesheet_IDLE = pyg.image.load(sprite_path_IDLE)
         self.player_spritesheet_WALK = pyg.image.load(sprite_path_WALK)

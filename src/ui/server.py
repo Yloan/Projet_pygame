@@ -1,5 +1,15 @@
 import socket
 import threading
+from ui.console import (
+    print_info,
+    print_error,
+    print_success,
+    print_warning,
+    print_debug,
+    print_event,
+    print_network,
+)
+
 
 class Serveur:
     def __init__(self):
@@ -12,14 +22,14 @@ class Serveur:
 
     def start_server(self):
         self.server_socket.listen(2)
-        print(f"Serveur démarré sur {self.Host}:{self.Port}")
+        print_success(f"Serveur démarré sur {self.Host}:{self.Port}")
         accept_thread = threading.Thread(target=self.accept_clients)
         accept_thread.start()
         
     def accept_clients(self):
         while True:
             client_socket, addr = self.server_socket.accept()
-            print(f"Client connecté depuis {addr}")
+            print_event(f"Client connecté depuis {addr}")
             self.clients.append(client_socket)
             threading.Thread(target=self.handle_client, args=(client_socket,)).start()
             self.start_game()
@@ -29,7 +39,7 @@ class Serveur:
             try:
                 data = client_socket.recv(1024).decode('utf-8')
                 if data:
-                    print(f"Message reçu: {data}")
+                    print_network(f"Reçu du client: {data}")
                     self.broadcast(data, client_socket)
                 else:
                     break
@@ -37,7 +47,7 @@ class Serveur:
                 break
         client_socket.close()
         self.clients.remove(client_socket)
-        print("Client déconnecté")
+        print_error("Client déconnecté")
     
     def broadcast(self, message, sender_socket):
         for client in self.clients:
@@ -51,7 +61,7 @@ class Serveur:
     def start_game(self):
         start_message = "Le jeu commence maintenant!"
         self.broadcast(start_message, None)
-        print(f"Le jeu a démarré avec {len(self.clients)} joueurs.")
+        print_success(f"Le jeu a démarré avec {len(self.clients)} joueurs.")
 
 
 
