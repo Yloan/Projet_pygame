@@ -35,6 +35,7 @@ class Game:
         self.menu_state = "main"
         self.number_players = 0
         self.number_bot = 0
+        self.character_1 = 0
 
         # Initialisation Pygame avant chargement des assets
         pyg.init()
@@ -71,6 +72,26 @@ class Game:
         three_players_img = pyg.image.load("assets/buttons/button_trhee_players.png").convert_alpha()
         four_players_img = pyg.image.load("assets/buttons/button_four_players.png").convert_alpha()
 
+        #character buttons
+        Character_1_img = pyg.image.load("assets/characters_selection/Character_1.png").convert_alpha()
+        Character_2_img = pyg.image.load("assets/characters_selection/Character_2.png").convert_alpha()
+        Character_3_img = pyg.image.load("assets/characters_selection/Character_3.png").convert_alpha()
+        Character_4_img = pyg.image.load("assets/characters_selection/Character_4.png").convert_alpha()
+        Character_5_img = pyg.image.load("assets/characters_selection/Character_5.png").convert_alpha()
+        Character_6_img = pyg.image.load("assets/characters_selection/Character_6.png").convert_alpha()
+        Character_7_img = pyg.image.load("assets/characters_selection/Character_7.png").convert_alpha()
+        Character_8_img = pyg.image.load("assets/characters_selection/Character_8.png").convert_alpha()
+        Character_9_img = pyg.image.load("assets/characters_selection/Character_9.png").convert_alpha()
+        Character_10_img = pyg.image.load("assets/characters_selection/Character_10.png").convert_alpha()
+        Character_11_img = pyg.image.load("assets/characters_selection/Character_11.png").convert_alpha()
+        Character_12_img = pyg.image.load("assets/characters_selection/Character_12.png").convert_alpha()
+        Character_13_img = pyg.image.load("assets/characters_selection/Character_13.png").convert_alpha()
+        Character_14_img = pyg.image.load("assets/characters_selection/Character_14.png").convert_alpha()
+        Character_15_img = pyg.image.load("assets/characters_selection/Character_15.png").convert_alpha()
+        Character_16_img = pyg.image.load("assets/characters_selection/Character_16.png").convert_alpha()
+        Character_17_img = pyg.image.load("assets/characters_selection/Character_17.png").convert_alpha()
+        Character_18_img = pyg.image.load("assets/characters_selection/Character_18.png").convert_alpha()
+
 
         # create button instances (centrés horizontalement)
         self.play_button = button.Button(self.center_x(play_img, 1), 200, play_img, 1.5)
@@ -85,7 +106,28 @@ class Game:
         self.two_players_button = button.Button(self.center_x(two_players_img, -0.5), 200, two_players_img, 1)
         self.three_players_button = button.Button(self.center_x(three_players_img, 2), 350, three_players_img, 1)
         self.four_players_button = button.Button(self.center_x(four_players_img, -0.5), 350, four_players_img, 1)
+        
+        # character buttons left
+        self.character_1_button = button.Button(self.center_x(Character_1_img, 25), 125, Character_1_img, 4)
+        self.character_2_button = button.Button(self.center_x(Character_2_img, 12), 125, Character_2_img, 4)
+        self.character_3_button = button.Button(self.center_x(Character_3_img, 25), 240, Character_3_img, 4)
+        self.character_4_button = button.Button(self.center_x(Character_4_img, 12.5), 240, Character_4_img, 4)
+        self.character_5_button = button.Button(self.center_x(Character_5_img, 24.4), 355, Character_5_img, 4)
+        self.character_6_button = button.Button(self.center_x(Character_6_img, 12.5), 355, Character_6_img, 4)
+        self.character_7_button = button.Button(self.center_x(Character_7_img, 25), 470, Character_7_img, 4)
+        self.character_8_button = button.Button(self.center_x(Character_8_img, 12.5), 470, Character_8_img, 4)
+        self.character_9_button = button.Button(self.center_x(Character_9_img, 19), 582, Character_9_img, 4)
 
+        # character buttons right
+        self.character_10_button = button.Button(self.center_x(Character_10_img, -17), 125, Character_10_img, 4)
+        self.character_11_button = button.Button(self.center_x(Character_11_img, -4), 125, Character_11_img, 4)
+        self.character_12_button = button.Button(self.center_x(Character_12_img, -16), 240, Character_12_img, 4)
+        self.character_13_button = button.Button(self.center_x(Character_13_img, -4), 240, Character_13_img, 4)
+        self.character_14_button = button.Button(self.center_x(Character_14_img, -16.2), 355, Character_14_img, 4)
+        self.character_15_button = button.Button(self.center_x(Character_15_img, -4.1), 355, Character_15_img, 4)
+        self.character_16_button = button.Button(self.center_x(Character_16_img, -16.2), 470, Character_16_img, 4)
+        self.character_17_button = button.Button(self.center_x(Character_17_img, -4.1), 470, Character_17_img, 4)
+        self.character_18_button = button.Button(self.center_x(Character_18_img, -11), 582, Character_18_img, 4)
 
         # loader de map (résout correctement les chemins)
         map_loader = MapLoader(None)
@@ -360,7 +402,43 @@ class Game:
 
                     elif self.menu_state == "choice_characters":
                         screen.blit(self.choice_chracters, (0, 0))
-                        self.draw_text("Choice characters", self.font, self.TEXT_COL, 100, 0)
+                        self.draw_text("Choose three characters", self.font, self.TEXT_COL, 50, 0)
+                        if self.character_1_button.draw(screen):
+                            self.character_1 = 1
+                        if self.character_2_button.draw(screen):
+                            self.character_1 = 2
+                        if self.character_3_button.draw(screen):
+                            self.character_1 = 3
+                        if self.character_4_button.draw(screen):
+                            self.character_1 = 4
+                        if self.character_5_button.draw(screen):
+                            self.character_1 = 5
+                        if self.character_6_button.draw(screen):
+                            self.character_1 = 6
+                        if self.character_7_button.draw(screen):
+                            self.character_1 = 7
+                        if self.character_8_button.draw(screen):
+                            self.character_1 = 8
+                        if self.character_9_button.draw(screen):
+                            self.character_1 = 9
+                        if self.character_10_button.draw(screen):
+                            self.character_1 = 10
+                        if self.character_11_button.draw(screen):
+                            self.character_1 = 11
+                        if self.character_12_button.draw(screen):
+                            self.character_1 = 12
+                        if self.character_13_button.draw(screen):
+                            self.character_1 = 13
+                        if self.character_14_button.draw(screen):
+                            self.character_1 = 14
+                        if self.character_15_button.draw(screen):
+                            self.character_1 = 15
+                        if self.character_16_button.draw(screen):
+                            self.character_1 = 16
+                        if self.character_17_button.draw(screen):
+                            self.character_1 = 17
+                        if self.character_18_button.draw(screen):
+                            self.character_1 = 18
                         if self.back_button.draw(screen):
                             self.menu_state = "play"
 
