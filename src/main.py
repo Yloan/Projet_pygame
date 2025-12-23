@@ -53,7 +53,9 @@ class Game:
         self.TEXT_COL2 = (255, 0, 0)
 
         self.wallpaper = pyg.image.load("assets/wallpapers/wallpaper.png").convert_alpha()
-        self.choice_chracters = pyg.image.load("assets/wallpapers/choice_chracters.png").convert_alpha()
+        self.choice_chracters = pyg.image.load("assets/wallpapers/SELECT-SCREEN.png").convert_alpha()
+        # Mettre à l'échelle l'image de sélection pour remplir la fenêtre
+        self.choice_chracters = pyg.transform.scale(self.choice_chracters, (self.width, self.height))
 
         # load button images
         play_img = pyg.image.load("assets/buttons/button_play.png").convert_alpha()
@@ -70,19 +72,19 @@ class Game:
         four_players_img = pyg.image.load("assets/buttons/button_four_players.png").convert_alpha()
 
 
-        # create button instances
-        self.play_button = button.Button(300, 100, play_img, 1)
-        self.settings_button = button.Button(300, 225, settings_img, 1)
-        self.exit_button = button.Button(300, 350, exit_img, 1)
-        self.video_button = button.Button(226, 75, video_img, 1)
-        self.audio_button = button.Button(225, 200, audio_img, 1)
-        self.keys_button = button.Button(246, 325, keys_img, 1)
-        self.back_button = button.Button(332, 450, back_img, 1)
-        self.zero_player_button = button.Button(450, 300, zero_player_img, 0.3)
-        self.one_player_button = button.Button(250, 125, one_player_img, 1)
-        self.two_players_button = button.Button(450, 125, two_players_img, 1)
-        self.three_players_button = button.Button(250, 300, three_players_img, 1)
-        self.four_players_button = button.Button(450, 300, four_players_img, 1)
+        # create button instances (centrés horizontalement)
+        self.play_button = button.Button(self.center_x(play_img, 1), 200, play_img, 1.5)
+        self.settings_button = button.Button(self.center_x(settings_img, 1), 350, settings_img, 1.5)
+        self.exit_button = button.Button(self.center_x(exit_img, 1), 500, exit_img, 1.5)
+        self.video_button = button.Button(self.center_x(video_img, 1), 200, video_img, 1)
+        self.audio_button = button.Button(self.center_x(audio_img, 1), 350, audio_img, 1)
+        self.keys_button = button.Button(self.center_x(keys_img, 1), 500, keys_img, 1)
+        self.back_button = button.Button(self.center_x(back_img, 1), 700, back_img, 1)
+        self.zero_player_button = button.Button(self.center_x(zero_player_img, 0.3), 500, zero_player_img, 0.3)
+        self.one_player_button = button.Button(self.center_x(one_player_img, 2), 200, one_player_img, 1)
+        self.two_players_button = button.Button(self.center_x(two_players_img, -0.5), 200, two_players_img, 1)
+        self.three_players_button = button.Button(self.center_x(three_players_img, 2), 350, three_players_img, 1)
+        self.four_players_button = button.Button(self.center_x(four_players_img, -0.5), 350, four_players_img, 1)
 
 
         # loader de map (résout correctement les chemins)
@@ -123,6 +125,20 @@ class Game:
         img = font.render(text, True, text_col)
         self.screen.blit(img, (x, y))
 
+    def draw_text_center(self, text, font, text_col, y):
+        """Render text centered horizontally at vertical position `y`."""
+        img = font.render(text, True, text_col)
+        x = (self.width - img.get_width()) // 2
+        self.screen.blit(img, (x, y))
+
+    def center_x(self, image, scale=1):
+        """Retourne la coordonnée x pour centrer `image` horizontalement dans la fenêtre.
+
+        `scale` correspond au facteur passé au constructeur `Button` (par défaut 1).
+        """
+        w = int(image.get_width() * scale)
+        return (self.width - w) // 2
+
     def _connect_to_server(self):
         """Établit une connexion persistante au serveur."""
         try:
@@ -156,7 +172,10 @@ class Game:
                 if not data:
                     print_warning('Connexion fermée par le serveur')
                     # provoquer une reconnexion
-                    self._client_socket.close()
+                    try:
+                        self._client_socket.close()
+                    except Exception:
+                        pass
                     self._client_socket = None
                     if self.running:
                         time.sleep(1.0)
@@ -257,16 +276,16 @@ class Game:
                 screen.blit(self.wallpaper, (0, 0))
                 if self.game_started:
                     # main menu
-                    if menu_state == "main":
+                    if self.menu_state == "main":
                         if self.play_button.draw(screen):
-                            menu_state = "play"
+                            self.menu_state = "play"
                         if self.settings_button.draw(screen):
-                            menu_state = "settings"
+                            self.menu_state = "settings"
                         if self.exit_button.draw(screen):
-                            run = False
+                            break
 
                     # settings menu
-                    elif menu_state == "settings":
+                    elif self.menu_state == "settings":
                         if self.video_button.draw(screen):
                             print("Video Settings")
                         if self.audio_button.draw(screen):
@@ -274,87 +293,87 @@ class Game:
                         if self.keys_button.draw(screen):
                             print("Keys Settings")
                         if self.back_button.draw(screen):
-                            menu_state = "main"
+                            self.menu_state = "main"
 
                     # play -> choose number of players
-                    elif menu_state == "play":
-                        self.draw_text("Select the number of players", self.font, self.TEXT_COL2, 100, 50)
+                    elif self.menu_state == "play":
+                        self.draw_text_center("Select the number of players", self.font, self.TEXT_COL2, 50)
                         if self.one_player_button.draw(screen):
-                            menu_state = "one_player"
-                            number_players = 1
+                            self.menu_state = "one_player"
+                            self.number_players = 1
                         if self.two_players_button.draw(screen):
-                            menu_state = "two_players"
-                            number_players = 2
+                            self.menu_state = "two_players"
+                            self.number_players = 2
                         if self.three_players_button.draw(screen):
-                            menu_state = "three_players"
-                            number_players = 3
+                            self.menu_state = "three_players"
+                            self.number_players = 3
                         if self.four_players_button.draw(screen):
-                            menu_state = "choice_characters"
-                            number_players = 4
+                            self.menu_state = "choice_characters"
+                            self.number_players = 4
                         if self.back_button.draw(screen):
-                            menu_state = "main"
+                            self.menu_state = "main"
 
                     # one player -> choose number of bots
-                    elif menu_state == "one_player":
-                        self.draw_text("Select the number of bots", self.font, self.TEXT_COL2, 100, 50)
+                    elif self.menu_state == "one_player":
+                        self.draw_text_center("Select the number of bots", self.font, self.TEXT_COL2, 50)
                         if self.zero_player_button.draw(screen):
-                            menu_state = "choice_characters"
-                            number_bot = 0
+                            self.menu_state = "choice_characters"
+                            self.number_bot = 0
                         if self.one_player_button.draw(screen):
-                            menu_state = "choice_characters"
-                            number_bot = 1
+                            self.menu_state = "choice_characters"
+                            self.number_bot = 1
                         if self.two_players_button.draw(screen):
-                            menu_state = "choice_characters"
-                            number_bot = 2
+                            self.menu_state = "choice_characters"
+                            self.number_bot = 2
                         if self.three_players_button.draw(screen):
-                            menu_state = "choice_characters"
-                            number_bot = 3
+                            self.menu_state = "choice_characters"
+                            self.number_bot = 3
                         if self.back_button.draw(screen):
-                            menu_state = "play"
+                            self.menu_state = "play"
 
                     # two players -> choose number of bots (example)
-                    elif menu_state == "two_players":
-                        self.draw_text("Select the number of bots", self.font, self.TEXT_COL2, 100, 50)
+                    elif self.menu_state == "two_players":
+                        self.draw_text_center("Select the number of bots", self.font, self.TEXT_COL2, 50)
                         if self.zero_player_button.draw(screen):
-                            menu_state = "choice_characters"
-                            number_bot = 0
+                            self.menu_state = "choice_characters"
+                            self.number_bot = 0
                         if self.one_player_button.draw(screen):
-                            menu_state = "choice_characters"
-                            number_bot = 1
+                            self.menu_state = "choice_characters"
+                            self.number_bot = 1
                         if self.two_players_button.draw(screen):
-                            menu_state = "choice_characters"
-                            number_bot = 2
+                            self.menu_state = "choice_characters"
+                            self.number_bot = 2
                         if self.back_button.draw(screen):
-                            menu_state = "play"
+                            self.menu_state = "play"
 
                     # three_players / four_players can be handled similarly if needed
-                    elif menu_state == "three_players":
-                        self.draw_text("Select the number of bots", self.font, self.TEXT_COL2, 100, 50)
+                    elif self.menu_state == "three_players":
+                        self.draw_text_center("Select the number of bots", self.font, self.TEXT_COL2, 50)
                         if self.zero_player_button.draw(screen):
-                            menu_state = "choice_characters"
-                            number_bot = 0
+                            self.menu_state = "choice_characters"
+                            self.number_bot = 0
                         if self.one_player_button.draw(screen):
-                            menu_state = "choice_characters"
-                            number_bot = 1
+                            self.menu_state = "choice_characters"
+                            self.number_bot = 1
                         if self.back_button.draw(screen):
-                            menu_state = "play"
+                            self.menu_state = "play"
 
-                    elif menu_state == "choice_characters":
+                    elif self.menu_state == "choice_characters":
                         screen.blit(self.choice_chracters, (0, 0))
-                        self.draw_text("Choice characters", self.font, self.TEXT_COL, 200, 0)
+                        self.draw_text("Choice characters", self.font, self.TEXT_COL, 100, 0)
                         if self.back_button.draw(screen):
-                            menu_state = "play"
+                            self.menu_state = "play"
 
                 else:
-                    self.draw_text("Press Space to start", self.font, self.TEXT_COL, 160, 250)
+                    self.draw_text_center("Press Space to start", self.font, self.TEXT_COL, 250)
 
                 # event handler
                 for event in pyg.event.get():
                     if event.type == pyg.KEYDOWN:
                         if event.key == pyg.K_SPACE:
-                            game_started = True
+                            self.game_started = True
                     if event.type == pyg.QUIT:
-                        run = False
+                        self.running = False
 
                 pyg.display.update()
             if self.etat == "game":
