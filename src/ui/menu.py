@@ -1,13 +1,12 @@
 import pygame
 import button
+from src.main import *
+import src.main as game
 
 pygame.init()
 
-# Taille de la fenêtre
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
 
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+screen = pygame.display.set_mode((game.width, game.height))
 pygame.display.set_caption("Main Menu")
 
 # game variables
