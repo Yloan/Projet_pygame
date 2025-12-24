@@ -16,17 +16,13 @@ import ui.button as button
 class Game:
     def __init__(self, width=1280, height=720, fullscreen=False):
 
-        self.x_temp = 270
-        self.y_temp = 280
-        self.vit_temp = 5
-
         # Configuration de la fenêtre
         self.width = width
         self.height = height
         self.fullscreen = fullscreen
 
-        # Maps & ressources
-        
+        # This are temporary variables for player
+        self.player = player_module.Furnace()
 
         # Variables
         self.etat = "menu"
@@ -140,7 +136,7 @@ class Game:
         self.running = False
 
         # Configuration réseau
-        self.host = '0.0.0.0'
+        self.host = '127.0.0.1'
         self.port = 12345
         self._client_socket = None
         self._client_lock = threading.Lock()
@@ -277,6 +273,7 @@ class Game:
     def send_to_server(self, message='Bonjour serveur'):
         """Ajoute un message à la file d'envoi."""
         self._send_queue.put(message)
+
 
     def shutdown(self):
         """Arrête proprement la logique réseau et ferme Pygame."""
@@ -468,6 +465,10 @@ class Game:
 
                 #chargement des assets dans le jeu
                 self.screen.blit(self.map_back, (0, 0))
+
+
+                #connexion au serveur et envoi des données
+                self.send_to_server(message=f'Position du joueur : x={self.player.get_status()["position"][0]}, y={self.player.get_status()["position"][1]}')
                 
 
                 t = self.clock.tick(60)
