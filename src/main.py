@@ -1,21 +1,28 @@
 # Point d'entrée du jeu : boucle principale et envoi d'informations au serveur
 
+import os
+import queue
 import socket
 import threading
-import queue
 import time
+
 import pygame as pyg
-from ui.server import Serveur
-from ui.console import print_info, print_error, print_warning, print_network, print_success
-from game.map_laoder import MapLoader
-import os
+
 import game.characters as player_module
 import ui.button as button
+from game.map_laoder import MapLoader
+from ui.console import (
+    print_error,
+    print_info,
+    print_network,
+    print_success,
+    print_warning,
+)
+from ui.server import Serveur
 
 
 class Game:
     def __init__(self, width=1280, height=720, fullscreen=False):
-
         # Configuration de la fenêtre
         self.width = width
         self.height = height
@@ -46,36 +53,57 @@ class Game:
 
         # define font
         self.font = pyg.font.SysFont("arialblack", 40)
-        
 
         # define colors
         self.TEXT_COL = (255, 255, 255)
         self.TEXT_COL2 = (255, 0, 0)
 
-        self.wallpaper = pyg.image.load("assets/wallpapers/wallpaper.png").convert_alpha()
-        self.choice_chracters = pyg.image.load("assets/wallpapers/SELECT-SCREEN.png").convert_alpha()
+        self.wallpaper = pyg.image.load(
+            "assets/wallpapers/wallpaper.png"
+        ).convert_alpha()
+        self.choice_chracters = pyg.image.load(
+            "assets/wallpapers/SELECT-SCREEN.png"
+        ).convert_alpha()
         # Mettre à l'échelle l'image de sélection pour remplir la fenêtre
-        self.choice_chracters = pyg.transform.scale(self.choice_chracters, (self.width, self.height))
+        self.choice_chracters = pyg.transform.scale(
+            self.choice_chracters, (self.width, self.height)
+        )
 
         # load button images
         play_img = pyg.image.load("assets/buttons/button_play.png").convert_alpha()
-        settings_img = pyg.image.load("assets/buttons/button_settings.png").convert_alpha()
+        settings_img = pyg.image.load(
+            "assets/buttons/button_settings.png"
+        ).convert_alpha()
         exit_img = pyg.image.load("assets/buttons/button_exit.png").convert_alpha()
         video_img = pyg.image.load("assets/buttons/button_video.png").convert_alpha()
         audio_img = pyg.image.load("assets/buttons/button_audio.png").convert_alpha()
         keys_img = pyg.image.load("assets/buttons/button_keys.png").convert_alpha()
         back_img = pyg.image.load("assets/buttons/button_back.png").convert_alpha()
-        zero_player_img = pyg.image.load("assets/buttons/button_zero_player.png").convert_alpha()
-        one_player_img = pyg.image.load("assets/buttons/button_one_player.png").convert_alpha()
-        two_players_img = pyg.image.load("assets/buttons/button_two_players.png").convert_alpha()
-        three_players_img = pyg.image.load("assets/buttons/button_trhee_players.png").convert_alpha()
-        four_players_img = pyg.image.load("assets/buttons/button_four_players.png").convert_alpha()
-        Back_selection_character_img = pyg.image.load("assets/buttons/Back_selection_character.png").convert_alpha()
+        zero_player_img = pyg.image.load(
+            "assets/buttons/button_zero_player.png"
+        ).convert_alpha()
+        one_player_img = pyg.image.load(
+            "assets/buttons/button_one_player.png"
+        ).convert_alpha()
+        two_players_img = pyg.image.load(
+            "assets/buttons/button_two_players.png"
+        ).convert_alpha()
+        three_players_img = pyg.image.load(
+            "assets/buttons/button_trhee_players.png"
+        ).convert_alpha()
+        four_players_img = pyg.image.load(
+            "assets/buttons/button_four_players.png"
+        ).convert_alpha()
+        Back_selection_character_img = pyg.image.load(
+            "assets/buttons/Back_selection_character.png"
+        ).convert_alpha()
 
-        #character buttons
+        # character buttons
         image_ch = []
-        for i in range(1,19):
-            Img= pyg.image.load(f"assets/characters_selection/Character_{i}.png").convert_alpha()
+        for i in range(1, 19):
+            Img = pyg.image.load(
+                f"assets/characters_selection/Character_{i}.png"
+            ).convert_alpha()
             image_ch.append(Img)
 
         # garder la liste d'images pour l'affichage du personnage sélectionné
@@ -84,49 +112,107 @@ class Game:
         # échelle par défaut pour l'aperçu du personnage sélectionné (modifiable)
         self.char_preview_scale = 9.5
 
-
         # create button instances (centrés horizontalement)
         self.play_button = button.Button(self.center_x(play_img, 1), 200, play_img, 1.5)
-        self.settings_button = button.Button(self.center_x(settings_img, 1), 350, settings_img, 1.5)
+        self.settings_button = button.Button(
+            self.center_x(settings_img, 1), 350, settings_img, 1.5
+        )
         self.exit_button = button.Button(self.center_x(exit_img, 1), 500, exit_img, 1.5)
-        self.video_button = button.Button(self.center_x(video_img, 1), 200, video_img, 1)
-        self.audio_button = button.Button(self.center_x(audio_img, 1), 350, audio_img, 1)
+        self.video_button = button.Button(
+            self.center_x(video_img, 1), 200, video_img, 1
+        )
+        self.audio_button = button.Button(
+            self.center_x(audio_img, 1), 350, audio_img, 1
+        )
         self.keys_button = button.Button(self.center_x(keys_img, 1), 500, keys_img, 1)
         self.back_button = button.Button(self.center_x(back_img, 1), 700, back_img, 1)
-        self.zero_player_button = button.Button(self.center_x(zero_player_img, 0.3), 500, zero_player_img, 0.3)
-        self.one_player_button = button.Button(self.center_x(one_player_img, 2), 200, one_player_img, 1)
-        self.two_players_button = button.Button(self.center_x(two_players_img, -0.5), 200, two_players_img, 1)
-        self.three_players_button = button.Button(self.center_x(three_players_img, 2), 350, three_players_img, 1)
-        self.four_players_button = button.Button(self.center_x(four_players_img, -0.5), 350, four_players_img, 1)
-        self.Back_selection_character = button.Button(self.center_x(Back_selection_character_img, 77), 10, Back_selection_character_img, 2.7)
-        
+        self.zero_player_button = button.Button(
+            self.center_x(zero_player_img, 0.3), 500, zero_player_img, 0.3
+        )
+        self.one_player_button = button.Button(
+            self.center_x(one_player_img, 2), 200, one_player_img, 1
+        )
+        self.two_players_button = button.Button(
+            self.center_x(two_players_img, -0.5), 200, two_players_img, 1
+        )
+        self.three_players_button = button.Button(
+            self.center_x(three_players_img, 2), 350, three_players_img, 1
+        )
+        self.four_players_button = button.Button(
+            self.center_x(four_players_img, -0.5), 350, four_players_img, 1
+        )
+        self.Back_selection_character = button.Button(
+            self.center_x(Back_selection_character_img, 77),
+            10,
+            Back_selection_character_img,
+            2.7,
+        )
+
         # character buttons left
-        self.character_1_button = button.Button(self.center_x(image_ch[0], 25), 125, image_ch[0], 4)
-        self.character_2_button = button.Button(self.center_x(image_ch[1], 12), 125, image_ch[1], 4)
-        self.character_3_button = button.Button(self.center_x(image_ch[2], 25), 240, image_ch[2], 4)
-        self.character_4_button = button.Button(self.center_x(image_ch[3], 12.5), 240, image_ch[3], 4)
-        self.character_5_button = button.Button(self.center_x(image_ch[4], 24.4), 355, image_ch[4], 4)
-        self.character_6_button = button.Button(self.center_x(image_ch[5], 12.5), 355, image_ch[5], 4)
-        self.character_7_button = button.Button(self.center_x(image_ch[6], 25), 470, image_ch[6], 4)
-        self.character_8_button = button.Button(self.center_x(image_ch[7], 12.5), 470, image_ch[7], 4)
-        self.character_9_button = button.Button(self.center_x(image_ch[8], 19), 582, image_ch[8], 4)
+        self.character_1_button = button.Button(
+            self.center_x(image_ch[0], 25), 125, image_ch[0], 4
+        )
+        self.character_2_button = button.Button(
+            self.center_x(image_ch[1], 12), 125, image_ch[1], 4
+        )
+        self.character_3_button = button.Button(
+            self.center_x(image_ch[2], 25), 240, image_ch[2], 4
+        )
+        self.character_4_button = button.Button(
+            self.center_x(image_ch[3], 12.5), 240, image_ch[3], 4
+        )
+        self.character_5_button = button.Button(
+            self.center_x(image_ch[4], 24.4), 355, image_ch[4], 4
+        )
+        self.character_6_button = button.Button(
+            self.center_x(image_ch[5], 12.5), 355, image_ch[5], 4
+        )
+        self.character_7_button = button.Button(
+            self.center_x(image_ch[6], 25), 470, image_ch[6], 4
+        )
+        self.character_8_button = button.Button(
+            self.center_x(image_ch[7], 12.5), 470, image_ch[7], 4
+        )
+        self.character_9_button = button.Button(
+            self.center_x(image_ch[8], 19), 582, image_ch[8], 4
+        )
 
         # character buttons right
-        self.character_10_button = button.Button(self.center_x(image_ch[9], -17), 125, image_ch[9], 4)
-        self.character_11_button = button.Button(self.center_x(image_ch[10], -4), 125, image_ch[10], 4)
-        self.character_12_button = button.Button(self.center_x(image_ch[11], -16), 240, image_ch[11], 4)
-        self.character_13_button = button.Button(self.center_x(image_ch[12], -4), 240, image_ch[12], 4)
-        self.character_14_button = button.Button(self.center_x(image_ch[13], -16.2), 355, image_ch[13], 4)
-        self.character_15_button = button.Button(self.center_x(image_ch[14], -4.1), 355, image_ch[14], 4)
-        self.character_16_button = button.Button(self.center_x(image_ch[15], -16.2), 470, image_ch[15], 4)
-        self.character_17_button = button.Button(self.center_x(image_ch[16], -4.1), 470, image_ch[16], 4)
-        self.character_18_button = button.Button(self.center_x(image_ch[17], -11), 582, image_ch[17], 4)
+        self.character_10_button = button.Button(
+            self.center_x(image_ch[9], -17), 125, image_ch[9], 4
+        )
+        self.character_11_button = button.Button(
+            self.center_x(image_ch[10], -4), 125, image_ch[10], 4
+        )
+        self.character_12_button = button.Button(
+            self.center_x(image_ch[11], -16), 240, image_ch[11], 4
+        )
+        self.character_13_button = button.Button(
+            self.center_x(image_ch[12], -4), 240, image_ch[12], 4
+        )
+        self.character_14_button = button.Button(
+            self.center_x(image_ch[13], -16.2), 355, image_ch[13], 4
+        )
+        self.character_15_button = button.Button(
+            self.center_x(image_ch[14], -4.1), 355, image_ch[14], 4
+        )
+        self.character_16_button = button.Button(
+            self.center_x(image_ch[15], -16.2), 470, image_ch[15], 4
+        )
+        self.character_17_button = button.Button(
+            self.center_x(image_ch[16], -4.1), 470, image_ch[16], 4
+        )
+        self.character_18_button = button.Button(
+            self.center_x(image_ch[17], -11), 582, image_ch[17], 4
+        )
 
         # character choosen
-        character_choosen_img = pyg.image.load("assets/buttons/character_choosen.png").convert_alpha()
-        self.character_choosen_button = button.Button(self.center_x(character_choosen_img, -11), 100, character_choosen_img, 10)
-        
-
+        character_choosen_img = pyg.image.load(
+            "assets/buttons/character_choosen.png"
+        ).convert_alpha()
+        self.character_choosen_button = button.Button(
+            self.center_x(character_choosen_img, -11), 100, character_choosen_img, 10
+        )
 
         # loader de map (résout correctement les chemins)
         map_loader = MapLoader(None)
@@ -139,7 +225,7 @@ class Game:
         self.running = False
 
         # Configuration réseau
-        self.host = '127.0.0.1'
+        self.host = "127.0.0.1"
         self.port = 12345
         self._client_socket = None
         self._client_lock = threading.Lock()
@@ -188,16 +274,16 @@ class Game:
                     self._client_socket.close()
                 except:
                     pass
-            
+
             self._client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._client_socket.settimeout(2.0)
             self._client_socket.connect((self.host, self.port))
             print_success(f"Connecté au serveur {self.host}:{self.port}")
-            
+
             # Démarrer thread de réception et d'envoi
             threading.Thread(target=self._receive_loop, daemon=True).start()
             threading.Thread(target=self._send_loop, daemon=True).start()
-            
+
         except Exception as e:
             print_error(f"Erreur de connexion au serveur: {e}")
             self._client_socket = None
@@ -211,7 +297,7 @@ class Game:
             try:
                 data = self._client_socket.recv(1024)
                 if not data:
-                    print_warning('Connexion fermée par le serveur')
+                    print_warning("Connexion fermée par le serveur")
                     # provoquer une reconnexion
                     try:
                         self._client_socket.close()
@@ -247,7 +333,7 @@ class Game:
                 continue
             try:
                 if self._client_socket:
-                    self._client_socket.send(message.encode('utf-8'))
+                    self._client_socket.send(message.encode("utf-8"))
                 else:
                     print_warning(f"Non connecté, message non envoyé: {message}")
                     try:
@@ -273,14 +359,13 @@ class Game:
                     time.sleep(1.0)
                     self._connect_to_server()
 
-    def send_to_server(self, message='Bonjour serveur'):
+    def send_to_server(self, message="Bonjour serveur"):
         """Ajoute un message à la file d'envoi."""
         self._send_queue.put(message)
 
-
     def shutdown(self):
         """Arrête proprement la logique réseau et ferme Pygame."""
-        print_info('Arrêt du jeu : fermeture connexion et threads')
+        print_info("Arrêt du jeu : fermeture connexion et threads")
         self.running = False
         # fermer la socket client
         with self._client_lock:
@@ -310,10 +395,9 @@ class Game:
         frame_WALK = 0
         tem_an_IDLE = 0
         tem_an_WALK = 0
-        frame_walk_dir = 'right'
+        frame_walk_dir = "right"
         self._connect_to_server()
         screen = self.screen
-        print_character = (0, 0)
         while self.running:
             if self.etat == "menu":
                 screen.blit(self.wallpaper, (0, 0))
@@ -340,7 +424,12 @@ class Game:
 
                     # play -> choose number of players
                     elif self.menu_state == "play":
-                        self.draw_text_center("Select the number of players", self.font, self.TEXT_COL2, 50)
+                        self.draw_text_center(
+                            "Select the number of players",
+                            self.font,
+                            self.TEXT_COL2,
+                            50,
+                        )
                         if self.one_player_button.draw(screen):
                             self.menu_state = "one_player"
                             self.number_players = 1
@@ -358,7 +447,9 @@ class Game:
 
                     # one player -> choose number of bots
                     elif self.menu_state == "one_player":
-                        self.draw_text_center("Select the number of bots", self.font, self.TEXT_COL2, 50)
+                        self.draw_text_center(
+                            "Select the number of bots", self.font, self.TEXT_COL2, 50
+                        )
                         if self.one_player_button.draw(screen):
                             self.menu_state = "choice_characters_1"
                             self.number_bot = 1
@@ -373,7 +464,9 @@ class Game:
 
                     # two players -> choose number of bots (example)
                     elif self.menu_state == "two_players":
-                        self.draw_text_center("Select the number of bots", self.font, self.TEXT_COL2, 50)
+                        self.draw_text_center(
+                            "Select the number of bots", self.font, self.TEXT_COL2, 50
+                        )
                         if self.zero_player_button.draw(screen):
                             self.menu_state = "choice_characters_1"
                             self.number_bot = 0
@@ -388,7 +481,9 @@ class Game:
 
                     # three_players / four_players can be handled similarly if needed
                     elif self.menu_state == "three_players":
-                        self.draw_text_center("Select the number of bots", self.font, self.TEXT_COL2, 50)
+                        self.draw_text_center(
+                            "Select the number of bots", self.font, self.TEXT_COL2, 50
+                        )
                         if self.zero_player_button.draw(screen):
                             self.menu_state = "choice_characters_1"
                             self.number_bot = 0
@@ -400,7 +495,9 @@ class Game:
 
                     elif self.menu_state == "choice_characters_1":
                         screen.blit(self.choice_chracters, (0, 0))
-                        self.draw_text("Choose three characters", self.font, self.TEXT_COL, 70, 0)
+                        self.draw_text(
+                            "Choose three characters", self.font, self.TEXT_COL, 70, 0
+                        )
                         if self.Back_selection_character.draw(screen):
                             self.menu_state = "play"
                         # chaque bouton définit l'indice (1..18) du personnage sélectionné
@@ -466,12 +563,20 @@ class Game:
                         if idx and 1 <= idx <= len(self.image_ch):
                             sel_img = self.image_ch[idx - 1]
                             s = max(1.0, float(self.char_preview_scale))
-                            scaled = pyg.transform.scale(sel_img, (int(sel_img.get_width() * s), int(sel_img.get_height() * s)))
+                            scaled = pyg.transform.scale(
+                                sel_img,
+                                (
+                                    int(sel_img.get_width() * s),
+                                    int(sel_img.get_height() * s),
+                                ),
+                            )
                             self.screen.blit(scaled, (self.center_x(sel_img, 50), 127))
 
                     elif self.menu_state == "choice_characters_2":
                         screen.blit(self.choice_chracters, (0, 0))
-                        self.draw_text("Choose two characters", self.font, self.TEXT_COL, 70, 0)
+                        self.draw_text(
+                            "Choose two characters", self.font, self.TEXT_COL, 70, 0
+                        )
 
                         if self.Back_selection_character.draw(screen):
                             self.menu_state = "choice_characters_1"
@@ -540,23 +645,45 @@ class Game:
                             # grand aperçu pour le 2e personnage choisi
                             sel_img = self.image_ch[idx2 - 1]
                             s = max(1.0, float(self.char_preview_scale))
-                            scaled = pyg.transform.scale(sel_img, (int(sel_img.get_width() * s), int(sel_img.get_height() * s)))
+                            scaled = pyg.transform.scale(
+                                sel_img,
+                                (
+                                    int(sel_img.get_width() * s),
+                                    int(sel_img.get_height() * s),
+                                ),
+                            )
                             self.screen.blit(scaled, (self.center_x(sel_img, 50), 127))
                             # afficher le premier en petit en bas
-                            if isinstance(self.character_1, int) and 1 <= self.character_1 <= len(self.image_ch):
+                            if isinstance(
+                                self.character_1, int
+                            ) and 1 <= self.character_1 <= len(self.image_ch):
                                 prev_img = self.image_ch[self.character_1 - 1]
-                                self.screen.blit(prev_img, (self.center_x(prev_img, 50), 345))
+                                self.screen.blit(
+                                    prev_img, (self.center_x(prev_img, 50), 345)
+                                )
                         else:
                             # pas encore de 2e choisi : afficher le 1er en grand
-                            if isinstance(self.character_1, int) and 1 <= self.character_1 <= len(self.image_ch):
+                            if isinstance(
+                                self.character_1, int
+                            ) and 1 <= self.character_1 <= len(self.image_ch):
                                 sel_img = self.image_ch[self.character_1 - 1]
                                 s = max(1.0, float(self.char_preview_scale))
-                                scaled = pyg.transform.scale(sel_img, (int(sel_img.get_width() * s), int(sel_img.get_height() * s)))
-                                self.screen.blit(scaled, (self.center_x(sel_img, 50), 127))
-                    
+                                scaled = pyg.transform.scale(
+                                    sel_img,
+                                    (
+                                        int(sel_img.get_width() * s),
+                                        int(sel_img.get_height() * s),
+                                    ),
+                                )
+                                self.screen.blit(
+                                    scaled, (self.center_x(sel_img, 50), 127)
+                                )
+
                     elif self.menu_state == "choice_characters_3":
                         screen.blit(self.choice_chracters, (0, 0))
-                        self.draw_text("Choose one character", self.font, self.TEXT_COL, 70, 0)
+                        self.draw_text(
+                            "Choose one character", self.font, self.TEXT_COL, 70, 0
+                        )
 
                         if self.Back_selection_character.draw(screen):
                             self.menu_state = "choice_characters_2"
@@ -623,31 +750,57 @@ class Game:
                         if idx3 and 1 <= idx3 <= len(self.image_ch):
                             sel_img = self.image_ch[idx3 - 1]
                             s = max(1.0, float(self.char_preview_scale))
-                            scaled = pyg.transform.scale(sel_img, (int(sel_img.get_width() * s), int(sel_img.get_height() * s)))
+                            scaled = pyg.transform.scale(
+                                sel_img,
+                                (
+                                    int(sel_img.get_width() * s),
+                                    int(sel_img.get_height() * s),
+                                ),
+                            )
                             self.screen.blit(scaled, (self.center_x(sel_img, 50), 127))
                             # afficher premiers en petit
-                            if isinstance(self.character_1, int) and 1 <= self.character_1 <= len(self.image_ch):
+                            if isinstance(
+                                self.character_1, int
+                            ) and 1 <= self.character_1 <= len(self.image_ch):
                                 prev1 = self.image_ch[self.character_1 - 1]
                                 self.screen.blit(prev1, (self.center_x(prev1, 50), 345))
-                            if isinstance(self.character_2, int) and 1 <= self.character_2 <= len(self.image_ch):
+                            if isinstance(
+                                self.character_2, int
+                            ) and 1 <= self.character_2 <= len(self.image_ch):
                                 prev2 = self.image_ch[self.character_2 - 1]
                                 self.screen.blit(prev2, (self.center_x(prev2, 40), 345))
                         else:
                             # si pas encore de 3e choisi, afficher le 2e en grand (si présent)
-                            if isinstance(self.character_2, int) and 1 <= self.character_2 <= len(self.image_ch):
+                            if isinstance(
+                                self.character_2, int
+                            ) and 1 <= self.character_2 <= len(self.image_ch):
                                 sel_img = self.image_ch[self.character_2 - 1]
                                 s = max(1.0, float(self.char_preview_scale))
-                                scaled = pyg.transform.scale(sel_img, (int(sel_img.get_width() * s), int(sel_img.get_height() * s)))
-                                self.screen.blit(scaled, (self.center_x(sel_img, 50), 127))
+                                scaled = pyg.transform.scale(
+                                    sel_img,
+                                    (
+                                        int(sel_img.get_width() * s),
+                                        int(sel_img.get_height() * s),
+                                    ),
+                                )
+                                self.screen.blit(
+                                    scaled, (self.center_x(sel_img, 50), 127)
+                                )
                                 # afficher le 1er en petit
-                                if isinstance(self.character_1, int) and 1 <= self.character_1 <= len(self.image_ch):
+                                if isinstance(
+                                    self.character_1, int
+                                ) and 1 <= self.character_1 <= len(self.image_ch):
                                     prev1 = self.image_ch[self.character_1 - 1]
-                                    self.screen.blit(prev1, (self.center_x(prev1, 50), 345))
+                                    self.screen.blit(
+                                        prev1, (self.center_x(prev1, 50), 345)
+                                    )
 
                         ## elif self.menu_state == "start game":
-                            
+
                 else:
-                    self.draw_text_center("Press Space to start", self.font, self.TEXT_COL, 250)
+                    self.draw_text_center(
+                        "Press Space to start", self.font, self.TEXT_COL, 250
+                    )
 
                 # event handler
                 for event in pyg.event.get():
@@ -659,72 +812,87 @@ class Game:
 
                 pyg.display.update()
             if self.etat == "game":
-                player_position = self.player.get_status()['position']
                 for event in pyg.event.get():
                     if event.type == pyg.QUIT:
                         self.running = False
                     elif event.type == pyg.KEYDOWN:
                         if event.key == pyg.K_ESCAPE:
                             self.running = False
-                            self.send_to_server(message='ESC appuyé')
+                            self.send_to_server(message="ESC appuyé")
                         """elif event.key == pyg.K_e:
                             self.send_to_server(message='E appuyé')"""
 
-                #chargement des assets dans le jeu
+                # chargement des assets dans le jeu
                 self.screen.blit(self.map_back, (0, 0))
 
-
-                #connexion au serveur et envoi des données
-                self.send_to_server(message=f'Position du joueur : x={self.player.get_status()["position"][0]}, y={self.player.get_status()["position"][1]}')
-                
+                # connexion au serveur et envoi des données
+                self.send_to_server(
+                    message=f"Position du joueur : x={self.player.get_status()['position'][0]}, y={self.player.get_status()['position'][1]}"
+                )
 
                 t = self.clock.tick(60)
                 event = pyg.key.get_pressed()
 
-                if not( event[pyg.K_RIGHT] or event[pyg.K_LEFT] or event[pyg.K_UP] or event[pyg.K_DOWN] ):
+                if not (
+                    event[pyg.K_RIGHT]
+                    or event[pyg.K_LEFT]
+                    or event[pyg.K_UP]
+                    or event[pyg.K_DOWN]
+                ):
                     tem_an_IDLE += t
 
-                    if frame_walk_dir == 'right':
-                            
+                    if frame_walk_dir == "right":
                         if tem_an_IDLE >= 50:
                             tem_an_IDLE = 0
                             if frame_IDLE >= len(self.frames_IDLE) - 1:
                                 frame_IDLE = 0
-                            else :
+                            else:
                                 frame_IDLE += 1
 
-                        self.screen.blit(self.frames_IDLE[frame_IDLE], (self.x_temp, self.y_temp))
+                        self.screen.blit(
+                            self.frames_IDLE[frame_IDLE], (self.x_temp, self.y_temp)
+                        )
                     else:
-
                         if tem_an_IDLE >= 50:
                             tem_an_IDLE = 0
                             if frame_IDLE >= len(self.frame_IDLE_left) - 1:
                                 frame_IDLE = 0
-                            else :
+                            else:
                                 frame_IDLE += 1
-                        
-                        self.screen.blit(self.frame_IDLE_left[frame_IDLE], (self.x_temp, self.y_temp))
 
+                        self.screen.blit(
+                            self.frame_IDLE_left[frame_IDLE], (self.x_temp, self.y_temp)
+                        )
 
-                    
                 else:
-
                     if event[pyg.K_RIGHT]:
-                        self.send_to_server(message=f'DROITE appuyé, x actuel : {self.x_temp} , y actuel {self.y_temp}')
+                        self.send_to_server(
+                            message=f"DROITE appuyé, x actuel : {self.x_temp} , y actuel {self.y_temp}"
+                        )
                         self.x_temp += self.vit_temp
                     if event[pyg.K_LEFT]:
-                        self.send_to_server(message=f'GAUCHE appuyé, x actuel : {self.x_temp} , y actuel {self.y_temp}')
+                        self.send_to_server(
+                            message=f"GAUCHE appuyé, x actuel : {self.x_temp} , y actuel {self.y_temp}"
+                        )
                         self.x_temp -= self.vit_temp
                     if event[pyg.K_UP]:
-                        self.send_to_server(message=f'HAUT appuyé, x actuel : {self.x_temp} , y actuel {self.y_temp}')
+                        self.send_to_server(
+                            message=f"HAUT appuyé, x actuel : {self.x_temp} , y actuel {self.y_temp}"
+                        )
                         self.y_temp -= self.vit_temp
                     if event[pyg.K_DOWN]:
-                        self.send_to_server(message=f'BAS appuyé, x actuel : {self.x_temp} , y actuel {self.y_temp}')
+                        self.send_to_server(
+                            message=f"BAS appuyé, x actuel : {self.x_temp} , y actuel {self.y_temp}"
+                        )
                         self.y_temp += self.vit_temp
 
                     # Limiter la position après déplacement
-                    self.x_temp = max(0, min(self.x_temp, self.width - self.frame_width))
-                    self.y_temp = max(0, min(self.y_temp, self.height - self.frame_height))
+                    self.x_temp = max(
+                        0, min(self.x_temp, self.width - self.frame_width)
+                    )
+                    self.y_temp = max(
+                        0, min(self.y_temp, self.height - self.frame_height)
+                    )
 
                     tem_an_WALK += t
 
@@ -732,26 +900,26 @@ class Game:
                         tem_an_WALK = 0
                         if frame_WALK >= len(self.fram_WALK) - 1:
                             frame_WALK = 0
-                        else :
+                        else:
                             frame_WALK += 1
 
                     if event[pyg.K_LEFT]:
-                        frame_walk_dir = 'left'
+                        frame_walk_dir = "left"
                     elif event[pyg.K_RIGHT]:
-                        frame_walk_dir = 'right'
-                    if frame_walk_dir == 'left':
-                        self.screen.blit(self.frame_WALK_left[frame_WALK], (self.x_temp, self.y_temp))
+                        frame_walk_dir = "right"
+                    if frame_walk_dir == "left":
+                        self.screen.blit(
+                            self.frame_WALK_left[frame_WALK], (self.x_temp, self.y_temp)
+                        )
                     else:
-                        self.screen.blit(self.fram_WALK[frame_WALK], (self.x_temp, self.y_temp))
-
-
-
-                
+                        self.screen.blit(
+                            self.fram_WALK[frame_WALK], (self.x_temp, self.y_temp)
+                        )
 
                 """
                 font = pyg.font.SysFont(None, 24)
                 txt = font.render('E pour envoyer un message au serveur. Esc pour quitter.', True, (255, 255, 255))
-                self.screen.blit(txt, (20, 20)) """        
+                self.screen.blit(txt, (20, 20)) """
 
                 pyg.display.update()
                 pyg.display.flip()
@@ -760,7 +928,7 @@ class Game:
         self.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Démarrage du serveur local et du jeu
     game = Game(width=1280, height=720, fullscreen=True)
     game.run()

@@ -1,17 +1,19 @@
-#Caractéristiques des characters
-import os
+# Caractéristiques des characters
+
 import pygame as pyg
+
 from utils.paths import get_asset_path
+
 
 class Furnace:
     def __init__(self):
         self.health = 100
         self.speed = 5
-        self.position = (0, 0)
+        self.position = [0, 0]
 
         # initialisation des assets via utils.paths
-        sprite_path_IDLE = get_asset_path('sprites', 'Furnace', 'FIRE-IDLE-Sheet.png')
-        sprite_path_WALK = get_asset_path('sprites', 'Furnace', 'FIRE-WALK-Sheet.png')
+        sprite_path_IDLE = get_asset_path("sprites", "Furnace", "FIRE-IDLE-Sheet.png")
+        sprite_path_WALK = get_asset_path("sprites", "Furnace", "FIRE-WALK-Sheet.png")
 
         self.player_spritesheet_IDLE = pyg.image.load(sprite_path_IDLE)
         self.player_spritesheet_WALK = pyg.image.load(sprite_path_WALK)
@@ -23,25 +25,33 @@ class Furnace:
         num_frames = 12
 
         for i in range(num_frames):
-            frame = self.player_spritesheet_IDLE.subsurface((i * self.frame_width, 0, self.frame_width, self.frame_height))
+            frame = self.player_spritesheet_IDLE.subsurface(
+                (i * self.frame_width, 0, self.frame_width, self.frame_height)
+            )
             self.frames_IDLE.append(frame)
 
         self.fram_WALK = []
         num_frame = 4
 
         for i in range(num_frame):
-            frame = self.player_spritesheet_WALK.subsurface((i * self.frame_width, 0, self.frame_width, self.frame_height))
+            frame = self.player_spritesheet_WALK.subsurface(
+                (i * self.frame_width, 0, self.frame_width, self.frame_height)
+            )
             self.fram_WALK.append(frame)
 
         self.frame_WALK_left = []
         for i in range(num_frame):
-            frame = self.player_spritesheet_WALK.subsurface((i * self.frame_width, 0, self.frame_width, self.frame_height))
+            frame = self.player_spritesheet_WALK.subsurface(
+                (i * self.frame_width, 0, self.frame_width, self.frame_height)
+            )
             frame_flipped = pyg.transform.flip(frame, True, False)
             self.frame_WALK_left.append(frame_flipped)
-        
+
         self.frame_IDLE_left = []
         for i in range(num_frames):
-            frame = self.player_spritesheet_IDLE.subsurface((i * self.frame_width, 0, self.frame_width, self.frame_height))
+            frame = self.player_spritesheet_IDLE.subsurface(
+                (i * self.frame_width, 0, self.frame_width, self.frame_height)
+            )
             frame_flipped = pyg.transform.flip(frame, True, False)
             self.frame_IDLE_left.append(frame_flipped)
 
@@ -66,14 +76,11 @@ class Furnace:
             self.health = 100
 
     def get_status(self):
-        return {
-            "health": self.health,
-            "position": self.position
-        }
+        return {"health": self.health, "position": self.position}
 
     def skill1(self):
         pass
-    
+
     def skill2(self):
         pass
 
