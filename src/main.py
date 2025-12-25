@@ -32,6 +32,8 @@ class Game:
         self.number_players = 0
         self.number_bot = 0
         self.character_1 = 0
+        self.character_2 = 0
+        self.character_3 = 0
 
         # Initialisation Pygame avant chargement des assets
         pyg.init()
@@ -44,6 +46,7 @@ class Game:
 
         # define font
         self.font = pyg.font.SysFont("arialblack", 40)
+        
 
         # define colors
         self.TEXT_COL = (255, 255, 255)
@@ -67,12 +70,19 @@ class Game:
         two_players_img = pyg.image.load("assets/buttons/button_two_players.png").convert_alpha()
         three_players_img = pyg.image.load("assets/buttons/button_trhee_players.png").convert_alpha()
         four_players_img = pyg.image.load("assets/buttons/button_four_players.png").convert_alpha()
+        Back_selection_character_img = pyg.image.load("assets/buttons/Back_selection_character.png").convert_alpha()
 
         #character buttons
         image_ch = []
         for i in range(1,19):
             Img= pyg.image.load(f"assets/characters_selection/Character_{i}.png").convert_alpha()
             image_ch.append(Img)
+
+        # garder la liste d'images pour l'affichage du personnage sélectionné
+        self.image_ch = image_ch
+
+        # échelle par défaut pour l'aperçu du personnage sélectionné (modifiable)
+        self.char_preview_scale = 9.5
 
 
         # create button instances (centrés horizontalement)
@@ -88,6 +98,7 @@ class Game:
         self.two_players_button = button.Button(self.center_x(two_players_img, -0.5), 200, two_players_img, 1)
         self.three_players_button = button.Button(self.center_x(three_players_img, 2), 350, three_players_img, 1)
         self.four_players_button = button.Button(self.center_x(four_players_img, -0.5), 350, four_players_img, 1)
+        self.Back_selection_character = button.Button(self.center_x(Back_selection_character_img, 77), 10, Back_selection_character_img, 2.7)
         
         # character buttons left
         self.character_1_button = button.Button(self.center_x(image_ch[0], 25), 125, image_ch[0], 4)
@@ -110,6 +121,12 @@ class Game:
         self.character_16_button = button.Button(self.center_x(image_ch[15], -16.2), 470, image_ch[15], 4)
         self.character_17_button = button.Button(self.center_x(image_ch[16], -4.1), 470, image_ch[16], 4)
         self.character_18_button = button.Button(self.center_x(image_ch[17], -11), 582, image_ch[17], 4)
+
+        # character choosen
+        character_choosen_img = pyg.image.load("assets/buttons/character_choosen.png").convert_alpha()
+        self.character_choosen_button = button.Button(self.center_x(character_choosen_img, -11), 100, character_choosen_img, 10)
+        
+
 
         # loader de map (résout correctement les chemins)
         map_loader = MapLoader(None)
@@ -296,6 +313,7 @@ class Game:
         frame_walk_dir = 'right'
         self._connect_to_server()
         screen = self.screen
+        print_character = (0, 0)
         while self.running:
             if self.etat == "menu":
                 screen.blit(self.wallpaper, (0, 0))
@@ -333,7 +351,7 @@ class Game:
                             self.menu_state = "three_players"
                             self.number_players = 3
                         if self.four_players_button.draw(screen):
-                            self.menu_state = "choice_characters"
+                            self.menu_state = "choice_characters_1"
                             self.number_players = 4
                         if self.back_button.draw(screen):
                             self.menu_state = "main"
@@ -341,17 +359,14 @@ class Game:
                     # one player -> choose number of bots
                     elif self.menu_state == "one_player":
                         self.draw_text_center("Select the number of bots", self.font, self.TEXT_COL2, 50)
-                        if self.zero_player_button.draw(screen):
-                            self.menu_state = "choice_characters"
-                            self.number_bot = 0
                         if self.one_player_button.draw(screen):
-                            self.menu_state = "choice_characters"
+                            self.menu_state = "choice_characters_1"
                             self.number_bot = 1
                         if self.two_players_button.draw(screen):
-                            self.menu_state = "choice_characters"
+                            self.menu_state = "choice_characters_1"
                             self.number_bot = 2
                         if self.three_players_button.draw(screen):
-                            self.menu_state = "choice_characters"
+                            self.menu_state = "choice_characters_1"
                             self.number_bot = 3
                         if self.back_button.draw(screen):
                             self.menu_state = "play"
@@ -360,13 +375,13 @@ class Game:
                     elif self.menu_state == "two_players":
                         self.draw_text_center("Select the number of bots", self.font, self.TEXT_COL2, 50)
                         if self.zero_player_button.draw(screen):
-                            self.menu_state = "choice_characters"
+                            self.menu_state = "choice_characters_1"
                             self.number_bot = 0
                         if self.one_player_button.draw(screen):
-                            self.menu_state = "choice_characters"
+                            self.menu_state = "choice_characters_1"
                             self.number_bot = 1
                         if self.two_players_button.draw(screen):
-                            self.menu_state = "choice_characters"
+                            self.menu_state = "choice_characters_1"
                             self.number_bot = 2
                         if self.back_button.draw(screen):
                             self.menu_state = "play"
@@ -375,7 +390,7 @@ class Game:
                     elif self.menu_state == "three_players":
                         self.draw_text_center("Select the number of bots", self.font, self.TEXT_COL2, 50)
                         if self.zero_player_button.draw(screen):
-                            self.menu_state = "choice_characters"
+                            self.menu_state = "choice_characters_1"
                             self.number_bot = 0
                         if self.one_player_button.draw(screen):
                             self.menu_state = "choice_characters"
@@ -383,48 +398,254 @@ class Game:
                         if self.back_button.draw(screen):
                             self.menu_state = "play"
 
-                    elif self.menu_state == "choice_characters":
+                    elif self.menu_state == "choice_characters_1":
                         screen.blit(self.choice_chracters, (0, 0))
-                        self.draw_text("Choose three characters", self.font, self.TEXT_COL, 50, 0)
+                        self.draw_text("Choose three characters", self.font, self.TEXT_COL, 70, 0)
+                        if self.Back_selection_character.draw(screen):
+                            self.menu_state = "play"
+                        # chaque bouton définit l'indice (1..18) du personnage sélectionné
                         if self.character_1_button.draw(screen):
                             self.character_1 = 1
+                            self.menu_state = "choice_characters_2"
                         if self.character_2_button.draw(screen):
                             self.character_1 = 2
+                            self.menu_state = "choice_characters_2"
                         if self.character_3_button.draw(screen):
                             self.character_1 = 3
+                            self.menu_state = "choice_characters_2"
                         if self.character_4_button.draw(screen):
                             self.character_1 = 4
+                            self.menu_state = "choice_characters_2"
                         if self.character_5_button.draw(screen):
                             self.character_1 = 5
+                            self.menu_state = "choice_characters_2"
                         if self.character_6_button.draw(screen):
                             self.character_1 = 6
+                            self.menu_state = "choice_characters_2"
                         if self.character_7_button.draw(screen):
                             self.character_1 = 7
+                            self.menu_state = "choice_characters_2"
                         if self.character_8_button.draw(screen):
                             self.character_1 = 8
+                            self.menu_state = "choice_characters_2"
                         if self.character_9_button.draw(screen):
                             self.character_1 = 9
+                            self.menu_state = "choice_characters_2"
                         if self.character_10_button.draw(screen):
                             self.character_1 = 10
+                            self.menu_state = "choice_characters_2"
                         if self.character_11_button.draw(screen):
                             self.character_1 = 11
+                            self.menu_state = "choice_characters_2"
                         if self.character_12_button.draw(screen):
                             self.character_1 = 12
+                            self.menu_state = "choice_characters_2"
                         if self.character_13_button.draw(screen):
                             self.character_1 = 13
+                            self.menu_state = "choice_characters_2"
                         if self.character_14_button.draw(screen):
                             self.character_1 = 14
+                            self.menu_state = "choice_characters_2"
                         if self.character_15_button.draw(screen):
                             self.character_1 = 15
+                            self.menu_state = "choice_characters_2"
                         if self.character_16_button.draw(screen):
                             self.character_1 = 16
+                            self.menu_state = "choice_characters_2"
                         if self.character_17_button.draw(screen):
                             self.character_1 = 17
+                            self.menu_state = "choice_characters_2"
                         if self.character_18_button.draw(screen):
                             self.character_1 = 18
-                        if self.back_button.draw(screen):
-                            self.menu_state = "play"
+                            self.menu_state = "choice_characters_2"
+                        # Afficher l'aperçu du personnage sélectionné (si un indice est présent)
+                        try:
+                            idx = int(self.character_1)
+                        except Exception:
+                            idx = 0
+                        if idx and 1 <= idx <= len(self.image_ch):
+                            sel_img = self.image_ch[idx - 1]
+                            s = max(1.0, float(self.char_preview_scale))
+                            scaled = pyg.transform.scale(sel_img, (int(sel_img.get_width() * s), int(sel_img.get_height() * s)))
+                            self.screen.blit(scaled, (self.center_x(sel_img, 50), 127))
 
+                    elif self.menu_state == "choice_characters_2":
+                        screen.blit(self.choice_chracters, (0, 0))
+                        self.draw_text("Choose two characters", self.font, self.TEXT_COL, 70, 0)
+
+                        if self.Back_selection_character.draw(screen):
+                            self.menu_state = "choice_characters_1"
+                        if self.character_1_button.draw(screen):
+                            self.character_2 = 1
+                            self.menu_state = "choice_characters_3"
+                        if self.character_2_button.draw(screen):
+                            self.character_2 = 2
+                            self.menu_state = "choice_characters_3"
+                        if self.character_3_button.draw(screen):
+                            self.character_2 = 3
+                            self.menu_state = "choice_characters_3"
+                        if self.character_4_button.draw(screen):
+                            self.character_2 = 4
+                            self.menu_state = "choice_characters_3"
+                        if self.character_5_button.draw(screen):
+                            self.character_2 = 5
+                            self.menu_state = "choice_characters_3"
+                        if self.character_6_button.draw(screen):
+                            self.character_2 = 6
+                            self.menu_state = "choice_characters_3"
+                        if self.character_7_button.draw(screen):
+                            self.character_2 = 7
+                            self.menu_state = "choice_characters_3"
+                        if self.character_8_button.draw(screen):
+                            self.character_2 = 8
+                            self.menu_state = "choice_characters_3"
+                        if self.character_9_button.draw(screen):
+                            self.character_2 = 9
+                            self.menu_state = "choice_characters_3"
+                        if self.character_10_button.draw(screen):
+                            self.character_2 = 10
+                            self.menu_state = "choice_characters_3"
+                        if self.character_11_button.draw(screen):
+                            self.character_2 = 11
+                            self.menu_state = "choice_characters_3"
+                        if self.character_12_button.draw(screen):
+                            self.character_2 = 12
+                            self.menu_state = "choice_characters_3"
+                        if self.character_13_button.draw(screen):
+                            self.character_2 = 13
+                            self.menu_state = "choice_characters_3"
+                        if self.character_14_button.draw(screen):
+                            self.character_2 = 14
+                            self.menu_state = "choice_characters_3"
+                        if self.character_15_button.draw(screen):
+                            self.character_2 = 15
+                            self.menu_state = "choice_characters_3"
+                        if self.character_16_button.draw(screen):
+                            self.character_2 = 16
+                            self.menu_state = "choice_characters_3"
+                        if self.character_17_button.draw(screen):
+                            self.character_2 = 17
+                            self.menu_state = "choice_characters_3"
+                        if self.character_18_button.draw(screen):
+                            self.character_2 = 18
+                            self.menu_state = "choice_characters_3"
+
+                        # Afficher le grand aperçu : si `character_2` est choisi, l'afficher grand,
+                        # sinon afficher en grand `character_1` (sélection précédente).
+                        try:
+                            idx2 = int(self.character_2)
+                        except Exception:
+                            idx2 = 0
+                        if idx2 and 1 <= idx2 <= len(self.image_ch):
+                            # grand aperçu pour le 2e personnage choisi
+                            sel_img = self.image_ch[idx2 - 1]
+                            s = max(1.0, float(self.char_preview_scale))
+                            scaled = pyg.transform.scale(sel_img, (int(sel_img.get_width() * s), int(sel_img.get_height() * s)))
+                            self.screen.blit(scaled, (self.center_x(sel_img, 50), 127))
+                            # afficher le premier en petit en bas
+                            if isinstance(self.character_1, int) and 1 <= self.character_1 <= len(self.image_ch):
+                                prev_img = self.image_ch[self.character_1 - 1]
+                                self.screen.blit(prev_img, (self.center_x(prev_img, 50), 345))
+                        else:
+                            # pas encore de 2e choisi : afficher le 1er en grand
+                            if isinstance(self.character_1, int) and 1 <= self.character_1 <= len(self.image_ch):
+                                sel_img = self.image_ch[self.character_1 - 1]
+                                s = max(1.0, float(self.char_preview_scale))
+                                scaled = pyg.transform.scale(sel_img, (int(sel_img.get_width() * s), int(sel_img.get_height() * s)))
+                                self.screen.blit(scaled, (self.center_x(sel_img, 50), 127))
+                    
+                    elif self.menu_state == "choice_characters_3":
+                        screen.blit(self.choice_chracters, (0, 0))
+                        self.draw_text("Choose two characters", self.font, self.TEXT_COL, 70, 0)
+
+                        if self.Back_selection_character.draw(screen):
+                            self.menu_state = "choice_characters_2"
+                        if self.character_1_button.draw(screen):
+                            self.character_3 = 1
+                            self.menu_state = "choice_characters_3"
+                        if self.character_2_button.draw(screen):
+                            self.character_3 = 2
+                            self.menu_state = "choice_characters_3"
+                        if self.character_3_button.draw(screen):
+                            self.character_3 = 3
+                            self.menu_state = "choice_characters_3"
+                        if self.character_4_button.draw(screen):
+                            self.character_3 = 4
+                            self.menu_state = "choice_characters_3"
+                        if self.character_5_button.draw(screen):
+                            self.character_3 = 5
+                            self.menu_state = "choice_characters_3"
+                        if self.character_6_button.draw(screen):
+                            self.character_3 = 6
+                            self.menu_state = "choice_characters_3"
+                        if self.character_7_button.draw(screen):
+                            self.character_3 = 7
+                            self.menu_state = "choice_characters_3"
+                        if self.character_8_button.draw(screen):
+                            self.character_3 = 8
+                            self.menu_state = "choice_characters_3"
+                        if self.character_9_button.draw(screen):
+                            self.character_3 = 9
+                            self.menu_state = "choice_characters_3"
+                        if self.character_10_button.draw(screen):
+                            self.character_3 = 10
+                            self.menu_state = "choice_characters_3"
+                        if self.character_11_button.draw(screen):
+                            self.character_3 = 11
+                            self.menu_state = "choice_characters_3"
+                        if self.character_12_button.draw(screen):
+                            self.character_3 = 12
+                            self.menu_state = "choice_characters_3"
+                        if self.character_13_button.draw(screen):
+                            self.character_3 = 13
+                            self.menu_state = "choice_characters_3"
+                        if self.character_14_button.draw(screen):
+                            self.character_3 = 14
+                            self.menu_state = "choice_characters_3"
+                        if self.character_15_button.draw(screen):
+                            self.character_3 = 15
+                            self.menu_state = "choice_characters_3"
+                        if self.character_16_button.draw(screen):
+                            self.character_3 = 16
+                            self.menu_state = "choice_characters_3"
+                        if self.character_17_button.draw(screen):
+                            self.character_3 = 17
+                            self.menu_state = "choice_characters_3"
+                        if self.character_18_button.draw(screen):
+                            self.character_3 = 18
+                            self.menu_state = "choice_characters_3"
+                        # Afficher l'aperçu du personnage sélectionné (si un indice est présent)
+                        try:
+                            idx3 = int(self.character_3)
+                        except Exception:
+                            idx3 = 0
+                        # Si le 3e est choisi -> grand aperçu du 3e
+                        if idx3 and 1 <= idx3 <= len(self.image_ch):
+                            sel_img = self.image_ch[idx3 - 1]
+                            s = max(1.0, float(self.char_preview_scale))
+                            scaled = pyg.transform.scale(sel_img, (int(sel_img.get_width() * s), int(sel_img.get_height() * s)))
+                            self.screen.blit(scaled, (self.center_x(sel_img, 50), 127))
+                            # afficher premiers en petit
+                            if isinstance(self.character_1, int) and 1 <= self.character_1 <= len(self.image_ch):
+                                prev1 = self.image_ch[self.character_1 - 1]
+                                self.screen.blit(prev1, (self.center_x(prev1, 50), 345))
+                            if isinstance(self.character_2, int) and 1 <= self.character_2 <= len(self.image_ch):
+                                prev2 = self.image_ch[self.character_2 - 1]
+                                self.screen.blit(prev2, (self.center_x(prev2, 40), 345))
+                        else:
+                            # si pas encore de 3e choisi, afficher le 2e en grand (si présent)
+                            if isinstance(self.character_2, int) and 1 <= self.character_2 <= len(self.image_ch):
+                                sel_img = self.image_ch[self.character_2 - 1]
+                                s = max(1.0, float(self.char_preview_scale))
+                                scaled = pyg.transform.scale(sel_img, (int(sel_img.get_width() * s), int(sel_img.get_height() * s)))
+                                self.screen.blit(scaled, (self.center_x(sel_img, 50), 127))
+                                # afficher le 1er en petit
+                                if isinstance(self.character_1, int) and 1 <= self.character_1 <= len(self.image_ch):
+                                    prev1 = self.image_ch[self.character_1 - 1]
+                                    self.screen.blit(prev1, (self.center_x(prev1, 50), 345))
+
+                        ## elif self.menu_state == "start game":
+                            
                 else:
                     self.draw_text_center("Press Space to start", self.font, self.TEXT_COL, 250)
 

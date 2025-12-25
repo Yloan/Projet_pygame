@@ -1,4 +1,6 @@
-#!/Users/quentin/Desktop/Etude/Epita/Projet/Projet_pygame/.venv/bin/python3.14
+#!/bin/sh
+'''exec' "/Users/quentin/Desktop/Etude/Epita/Projet bis/.venv/bin/python3.14" "$0" "$@"
+' '''
 import sys
 from pip._internal.cli.main import main
 if __name__ == '__main__':
