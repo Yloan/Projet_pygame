@@ -556,7 +556,7 @@ class Game:
                     
                     elif self.menu_state == "choice_characters_3":
                         screen.blit(self.choice_chracters, (0, 0))
-                        self.draw_text("Choose two characters", self.font, self.TEXT_COL, 70, 0)
+                        self.draw_text("Choose one character", self.font, self.TEXT_COL, 70, 0)
 
                         if self.Back_selection_character.draw(screen):
                             self.menu_state = "choice_characters_2"
