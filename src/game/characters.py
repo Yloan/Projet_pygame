@@ -9,7 +9,7 @@ class Furnace:
     def __init__(self):
         self.health = 100
         self.speed = 5
-        self.position = [0, 0]
+        self.position = (0, 0)
 
         # initialisation des assets via utils.paths
         sprite_path_IDLE = get_asset_path("sprites", "Furnace", "FIRE-IDLE-Sheet.png")

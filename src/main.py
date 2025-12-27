@@ -388,15 +388,36 @@ class Game:
         except Exception:
             pass
 
+    # methode pour l'update du player
+    def update(self):
+        event = pyg.key.get_pressed()
+
+        if event[pyg.K_RIGHT]:
+            self.player.move("right")
+        if event[pyg.K_LEFT]:
+            self.player.move("left")
+        if event[pyg.K_UP]:
+            self.player.move("up")
+        if event[pyg.K_DOWN]:
+            self.player.move("down")
+
     def run(self):
         # Démarrer le jeu et établir la connexion réseau
         self.running = True
+
+        # variables for the animations and the direction
         frame_IDLE = 0
         frame_WALK = 0
         tem_an_IDLE = 0
         tem_an_WALK = 0
         frame_walk_dir = "right"
+
+        # environnement variables
+        player_pos = self.player.get_status()["position"]
+
+        # connexion server
         self._connect_to_server()
+
         screen = self.screen
         while self.running:
             if self.etat == "menu":
@@ -795,7 +816,9 @@ class Game:
                                         prev1, (self.center_x(prev1, 50), 345)
                                     )
 
-                        ## elif self.menu_state == "start game":
+                    elif self.menu_state == "start game":
+                        self.etat = "game"
+                        # self.player = player_module.Le character choisis
 
                 else:
                     self.draw_text_center(
@@ -819,15 +842,13 @@ class Game:
                         if event.key == pyg.K_ESCAPE:
                             self.running = False
                             self.send_to_server(message="ESC appuyé")
-                        """elif event.key == pyg.K_e:
-                            self.send_to_server(message='E appuyé')"""
 
                 # chargement des assets dans le jeu
                 self.screen.blit(self.map_back, (0, 0))
 
                 # connexion au serveur et envoi des données
                 self.send_to_server(
-                    message=f"Position du joueur : x={self.player.get_status()['position'][0]}, y={self.player.get_status()['position'][1]}"
+                    message=f"Position du joueur : x={player_pos[0]}, y={player_pos[1]}"
                 )
 
                 t = self.clock.tick(60)
@@ -850,7 +871,11 @@ class Game:
                                 frame_IDLE += 1
 
                         self.screen.blit(
-                            self.frames_IDLE[frame_IDLE], (self.x_temp, self.y_temp)
+                            self.frames_IDLE[frame_IDLE],
+                            (
+                                player_pos[0],
+                                player_pos[1],
+                            ),
                         )
                     else:
                         if tem_an_IDLE >= 50:
@@ -861,38 +886,15 @@ class Game:
                                 frame_IDLE += 1
 
                         self.screen.blit(
-                            self.frame_IDLE_left[frame_IDLE], (self.x_temp, self.y_temp)
+                            self.frame_IDLE_left[frame_IDLE],
+                            (
+                                player_pos[0],
+                                player_pos[1],
+                            ),
                         )
 
                 else:
-                    if event[pyg.K_RIGHT]:
-                        self.send_to_server(
-                            message=f"DROITE appuyé, x actuel : {self.x_temp} , y actuel {self.y_temp}"
-                        )
-                        self.x_temp += self.vit_temp
-                    if event[pyg.K_LEFT]:
-                        self.send_to_server(
-                            message=f"GAUCHE appuyé, x actuel : {self.x_temp} , y actuel {self.y_temp}"
-                        )
-                        self.x_temp -= self.vit_temp
-                    if event[pyg.K_UP]:
-                        self.send_to_server(
-                            message=f"HAUT appuyé, x actuel : {self.x_temp} , y actuel {self.y_temp}"
-                        )
-                        self.y_temp -= self.vit_temp
-                    if event[pyg.K_DOWN]:
-                        self.send_to_server(
-                            message=f"BAS appuyé, x actuel : {self.x_temp} , y actuel {self.y_temp}"
-                        )
-                        self.y_temp += self.vit_temp
-
-                    # Limiter la position après déplacement
-                    self.x_temp = max(
-                        0, min(self.x_temp, self.width - self.frame_width)
-                    )
-                    self.y_temp = max(
-                        0, min(self.y_temp, self.height - self.frame_height)
-                    )
+                    self.update()
 
                     tem_an_WALK += t
 
@@ -909,17 +911,20 @@ class Game:
                         frame_walk_dir = "right"
                     if frame_walk_dir == "left":
                         self.screen.blit(
-                            self.frame_WALK_left[frame_WALK], (self.x_temp, self.y_temp)
+                            self.frame_WALK_left[frame_WALK],
+                            (
+                                player_pos[0],
+                                player_pos[1],
+                            ),
                         )
                     else:
                         self.screen.blit(
-                            self.fram_WALK[frame_WALK], (self.x_temp, self.y_temp)
+                            self.fram_WALK[frame_WALK],
+                            (
+                                player_pos[0],
+                                player_pos[1],
+                            ),
                         )
-
-                """
-                font = pyg.font.SysFont(None, 24)
-                txt = font.render('E pour envoyer un message au serveur. Esc pour quitter.', True, (255, 255, 255))
-                self.screen.blit(txt, (20, 20)) """
 
                 pyg.display.update()
                 pyg.display.flip()
