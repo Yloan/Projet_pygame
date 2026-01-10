@@ -1,6 +1,4 @@
-#!/bin/sh
-'''exec' "/Users/quentin/Desktop/Etude/Epita/Projet bis/.venv/bin/python" "$0" "$@"
-' '''
+#!/Users/quentin/Desktop/Etude/Projet_pygame/.venv/bin/python
 import sys
 from wheel.cli import main
 if __name__ == '__main__':
