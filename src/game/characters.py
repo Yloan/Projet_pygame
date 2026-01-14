@@ -1,88 +1,464 @@
-# Caractéristiques des characters
+"""
+CHARACTER MODULE - Defines all playable characters and their behavior
+
+This module contains character classes for the game, each with:
+- Stats management (health, speed, position)
+- Animation system (idle, walk, hurt, death states)
+- Movement and combat mechanics
+- Skill system for special abilities
+
+Recommendations:
+1. Consider creating a base Character class to reduce code duplication
+2. Add constants for animation frames and speeds at module level
+3. Implement a state machine for better animation transitions
+"""
 
 import pygame as pyg
 
 from utils.paths import get_asset_path
 
 
+# ============================================================================
+# CONSTANTS - Animation and sprite configuration
+# ============================================================================
+FURNACE_FRAME_WIDTH = 40
+FURNACE_FRAME_HEIGHT = 40
+FURNACE_IDLE_FRAMES = 12
+FURNACE_WALK_FRAMES = 4
+FURNACE_ANIMATION_IDLE_SPEED = 50  # milliseconds between frames
+FURNACE_ANIMATION_WALK_SPEED = 100  # milliseconds between frames
+
+WATER_FRAME_SIZE = 40
+WATER_IDLE_FRAMES = 12
+WATER_MOVE_FRAMES = 5
+WATER_HURT_FRAMES = 5
+
+
 class Furnace:
+    """
+    Furnace character class - A fire-type character with high speed.
+    
+    Attributes:
+        health (int): Current health points (0-100)
+        speed (int): Movement speed in pixels per frame
+        position (tuple): Current (x, y) position on screen
+        direction (str): Current facing direction ('left' or 'right')
+        is_moving (bool): Whether the character is currently moving
+        
+    Animation States:
+        - IDLE: Standing still animation (12 frames)
+        - WALK: Moving animation (4 frames per direction)
+    """
+    
     def __init__(self):
+        """Initialize Furnace character with default stats and load sprite assets."""
+        
+        # ====================================================================
+        # CHARACTER STATS
+        # ====================================================================
         self.health = 100
         self.speed = 5
         self.position = (0, 0)
-
-        # initialisation des assets via utils.paths
+        
+        # ====================================================================
+        # LOAD SPRITE ASSETS
+        # ====================================================================
         sprite_path_IDLE = get_asset_path("sprites", "Furnace", "FIRE-IDLE-Sheet.png")
         sprite_path_WALK = get_asset_path("sprites", "Furnace", "FIRE-WALK-Sheet.png")
 
         self.player_spritesheet_IDLE = pyg.image.load(sprite_path_IDLE)
         self.player_spritesheet_WALK = pyg.image.load(sprite_path_WALK)
 
-        self.frame_width = 40
-        self.frame_height = 40
-
+        # ====================================================================
+        # EXTRACT IDLE ANIMATION FRAMES
+        # ====================================================================
         self.frames_IDLE = []
-        num_frames = 12
-
-        for i in range(num_frames):
+        for i in range(FURNACE_IDLE_FRAMES):
             frame = self.player_spritesheet_IDLE.subsurface(
-                (i * self.frame_width, 0, self.frame_width, self.frame_height)
+                (i * FURNACE_FRAME_WIDTH, 0, FURNACE_FRAME_WIDTH, FURNACE_FRAME_HEIGHT)
             )
             self.frames_IDLE.append(frame)
 
+        # ====================================================================
+        # EXTRACT WALK ANIMATION FRAMES (RIGHT DIRECTION)
+        # ====================================================================
         self.fram_WALK = []
-        num_frame = 4
-
-        for i in range(num_frame):
+        for i in range(FURNACE_WALK_FRAMES):
             frame = self.player_spritesheet_WALK.subsurface(
-                (i * self.frame_width, 0, self.frame_width, self.frame_height)
+                (i * FURNACE_FRAME_WIDTH, 0, FURNACE_FRAME_WIDTH, FURNACE_FRAME_HEIGHT)
             )
             self.fram_WALK.append(frame)
 
+        # ====================================================================
+        # EXTRACT WALK ANIMATION FRAMES (LEFT DIRECTION - FLIPPED)
+        # ====================================================================
         self.frame_WALK_left = []
-        for i in range(num_frame):
+        for i in range(FURNACE_WALK_FRAMES):
             frame = self.player_spritesheet_WALK.subsurface(
-                (i * self.frame_width, 0, self.frame_width, self.frame_height)
+                (i * FURNACE_FRAME_WIDTH, 0, FURNACE_FRAME_WIDTH, FURNACE_FRAME_HEIGHT)
             )
             frame_flipped = pyg.transform.flip(frame, True, False)
             self.frame_WALK_left.append(frame_flipped)
 
+        # ====================================================================
+        # EXTRACT IDLE ANIMATION FRAMES (LEFT DIRECTION - FLIPPED)
+        # ====================================================================
         self.frame_IDLE_left = []
-        for i in range(num_frames):
+        for i in range(FURNACE_IDLE_FRAMES):
             frame = self.player_spritesheet_IDLE.subsurface(
-                (i * self.frame_width, 0, self.frame_width, self.frame_height)
+                (i * FURNACE_FRAME_WIDTH, 0, FURNACE_FRAME_WIDTH, FURNACE_FRAME_HEIGHT)
             )
             frame_flipped = pyg.transform.flip(frame, True, False)
             self.frame_IDLE_left.append(frame_flipped)
 
+        # ====================================================================
+        # ANIMATION STATE VARIABLES
+        # ====================================================================
+        self.frame_IDLE = 0  # Current idle animation frame index
+        self.frame_WALK = 0  # Current walk animation frame index
+        self.tem_an_IDLE = 0  # Elapsed time for idle animation
+        self.tem_an_WALK = 0  # Elapsed time for walk animation
+        self.direction = "right"  # Current direction (left or right)
+        self.is_moving = False  # Movement state flag
+
+
+    # ========================================================================
+    # MOVEMENT METHODS
+    # ========================================================================
+    
     def move(self, direction):
+        """
+        Move the character in the specified direction.
+        
+        Args:
+            direction (str): Movement direction ('up', 'down', 'left', 'right')
+        """
         if direction == "up":
             self.position = (self.position[0], self.position[1] - self.speed)
         elif direction == "down":
             self.position = (self.position[0], self.position[1] + self.speed)
         elif direction == "left":
             self.position = (self.position[0] - self.speed, self.position[1])
+            self.direction = "left"
         elif direction == "right":
             self.position = (self.position[0] + self.speed, self.position[1])
+            self.direction = "right"
+
+    # ========================================================================
+    # HEALTH MANAGEMENT METHODS
+    # ========================================================================
 
     def take_damage(self, amount):
+        """
+        Reduce character health by the specified amount.
+        Health cannot go below 0.
+        
+        Args:
+            amount (int): Damage amount to inflict
+        """
         self.health -= amount
         if self.health < 0:
             self.health = 0
 
     def heal(self, amount):
+        """
+        Increase character health by the specified amount.
+        Health cannot exceed 100.
+        
+        Args:
+            amount (int): Healing amount
+        """
         self.health += amount
         if self.health > 100:
             self.health = 100
 
+    # ========================================================================
+    # STATUS AND INFORMATION METHODS
+    # ========================================================================
+
     def get_status(self):
+        """
+        Get current character status.
+        
+        Returns:
+            dict: Dictionary containing health and position
+        """
         return {"health": self.health, "position": self.position}
 
+    # ========================================================================
+    # ANIMATION METHODS
+    # ========================================================================
+
+    def update_animation(self, delta_time, is_moving):
+        """
+        Update animation state based on movement and elapsed time.
+        Handles transitions between idle and walk animations.
+        
+        Args:
+            delta_time (int): Time elapsed since last frame in milliseconds
+            is_moving (bool): Whether the character is currently moving
+        """
+        self.is_moving = is_moving
+
+        if is_moving:
+            # Update walking animation
+            self.tem_an_WALK += delta_time
+            if self.tem_an_WALK >= FURNACE_ANIMATION_WALK_SPEED:
+                self.tem_an_WALK = 0
+                if self.frame_WALK >= len(self.fram_WALK) - 1:
+                    self.frame_WALK = 0
+                else:
+                    self.frame_WALK += 1
+        else:
+            # Update idle animation
+            self.tem_an_IDLE += delta_time
+            if self.tem_an_IDLE >= FURNACE_ANIMATION_IDLE_SPEED:
+                self.tem_an_IDLE = 0
+                if self.frame_IDLE >= len(self.frames_IDLE) - 1:
+                    self.frame_IDLE = 0
+                else:
+                    self.frame_IDLE += 1
+
+    def get_current_sprite(self):
+        """
+        Get the current sprite to be drawn based on animation state and direction.
+        
+        Returns:
+            pygame.Surface: Current animation frame
+        """
+        if self.is_moving:
+            if self.direction == "left":
+                return self.frame_WALK_left[self.frame_WALK]
+            else:
+                return self.fram_WALK[self.frame_WALK]
+        else:
+            if self.direction == "left":
+                return self.frame_IDLE_left[self.frame_IDLE]
+            else:
+                return self.frames_IDLE[self.frame_IDLE]
+
+    # ========================================================================
+    # SKILL SYSTEM
+    # ========================================================================
+
     def skill1(self):
+        """First special skill - To be implemented."""
         pass
 
     def skill2(self):
+        """Second special skill - To be implemented."""
         pass
 
     def skill3(self):
+        """Third special skill - To be implemented."""
+        pass
+
+    # ========================================================================
+    # GAME LOOP UPDATE
+    # ========================================================================
+
+    def update(self):
+        """
+        Update method called during game loop.
+        Used for continuous movement handling and state updates.
+        """
+        # This method can be extended for continuous movement handling
+        pass
+
+
+class Water:
+    """
+    Water character class - A water-type character with defensive abilities.
+    
+    Attributes:
+        health (int): Current health points (0-100)
+        speed (int): Movement speed in pixels per frame
+        position (tuple): Current (x, y) position on screen
+        direction (str): Current facing direction ('left' or 'right')
+        
+    Animation States:
+        - IDLE: Standing still animation (12 frames)
+        - MOVE: Moving animation (5 frames per direction)
+        - HURT: Taking damage animation (5 frames)
+        - DEATH: Character death animation (1 frame)
+    """
+    
+    def __init__(self):
+        """Initialize Water character with default stats and load sprite assets."""
+        
+        # ====================================================================
+        # CHARACTER STATS
+        # ====================================================================
+        self.health = 100
+        self.speed = 5
+        self.position = (0, 0)
+        self.direction = "right"
+        
+        # ====================================================================
+        # LOAD SPRITE ASSET PATHS
+        # ====================================================================
+        self.sprite_IDLE = get_asset_path("sprites", "Water", "2-IDLE-Sheet.png")
+        self.sprite_MOVE = get_asset_path("sprites", "Water", "2-MOVE-Sheet.png")
+        self.sprite_HURT = get_asset_path("sprites", "Water", "2-HURT-Sheet.png")
+        self.sprite_DEATH = get_asset_path("sprites", "Water", "2-DEAD-Sheet.png")
+
+        # ====================================================================
+        # INITIALIZE ANIMATION FRAME LISTS
+        # ====================================================================
+        self.frames_IDLE = []
+        self.frames_MOVE_right = []
+        self.frames_MOVE_left = []
+        self.frames_HURT = []
+        self.frames_DEATH = [pyg.image.load(self.sprite_DEATH)]
+
+        # ====================================================================
+        # EXTRACT IDLE ANIMATION FRAMES
+        # ====================================================================
+        for i in range(WATER_IDLE_FRAMES):
+            frame = pyg.image.load(self.sprite_IDLE).subsurface(
+                (i * WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
+            )
+            self.frames_IDLE.append(frame)
+
+        # ====================================================================
+        # EXTRACT MOVE ANIMATION FRAMES (BOTH DIRECTIONS)
+        # ====================================================================
+        for i in range(WATER_MOVE_FRAMES):
+            frame = pyg.image.load(self.sprite_MOVE).subsurface(
+                (i * WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
+            )
+            self.frames_MOVE_right.append(frame)
+            # Create flipped version for left direction
+            frame_flipped = pyg.transform.flip(frame, True, False)
+            self.frames_MOVE_left.append(frame_flipped)
+        
+        # ====================================================================
+        # EXTRACT HURT ANIMATION FRAMES
+        # ====================================================================
+        for i in range(WATER_HURT_FRAMES):
+            frame = pyg.image.load(self.sprite_HURT).subsurface(
+                (i * WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
+            )
+            self.frames_HURT.append(frame)
+        
+        # ====================================================================
+        # ANIMATION STATE VARIABLES
+        # ====================================================================
+        self.frame_MOVE = 0  # Current move animation frame index
+        self.frame_IDLE = 0  # Current idle animation frame index
+
+    # ========================================================================
+    # MOVEMENT METHODS
+    # ========================================================================
+
+    def move(self, direction):
+        """
+        Move the character in the specified direction.
+        
+        Args:
+            direction (str): Movement direction ('up', 'down', 'left', 'right')
+        """
+        if direction == "up":
+            self.position = (self.position[0], self.position[1] - self.speed)
+        elif direction == "down":
+            self.position = (self.position[0], self.position[1] + self.speed)
+        elif direction == "left":
+            self.position = (self.position[0] - self.speed, self.position[1])
+            self.direction = "left"
+        elif direction == "right":
+            self.position = (self.position[0] + self.speed, self.position[1])
+            self.direction = "right"
+
+    # ========================================================================
+    # STATUS AND INFORMATION METHODS
+    # ========================================================================
+
+    def get_status(self):
+        """
+        Get current character status.
+        
+        Returns:
+            dict: Dictionary containing health and position
+        """
+        return {"health": self.health, "position": self.position}
+    
+    # ========================================================================
+    # HEALTH AND COMBAT METHODS
+    # ========================================================================
+
+    def take_damage(self, amount):
+        """
+        Reduce character health by the specified amount.
+        Triggers death sequence if health reaches 0.
+        
+        Args:
+            amount (int): Damage amount to inflict
+        """
+        self.health -= amount
+        if self.health < 0:
+            self.health = 0
+            self.death()
+
+    def death(self):
+        """
+        Handle character death sequence.
+        
+        Returns:
+            pygame.Surface: Death sprite frame
+        """
+        return pyg.image.load(self.sprite_DEATH)
+    
+    def heal(self, amount):
+        """
+        Increase character health by the specified amount.
+        Health cannot exceed 100.
+        
+        Args:
+            amount (int): Healing amount
+        """
+        self.health += amount
+        if self.health > 100:
+            self.health = 100
+
+    # ========================================================================
+    # ANIMATION METHODS
+    # ========================================================================
+
+    def get_current_sprite(self):
+        """
+        Get the current sprite to be drawn based on animation state and direction.
+        
+        Returns:
+            pygame.Surface: Current animation frame
+        """
+        if self.direction == "left":
+            return self.frames_MOVE_left[self.frame_MOVE]
+        else:
+            return self.frames_MOVE_right[self.frame_MOVE]
+    
+    # ========================================================================
+    # SKILL SYSTEM
+    # ========================================================================
+
+    def skill1(self):
+        """First special skill - To be implemented."""
+        pass
+
+    def skill2(self):
+        """Second special skill - To be implemented."""
+        pass
+
+    def skill3(self):
+        """Third special skill - To be implemented."""
+        pass
+    
+    # ========================================================================
+    # GAME LOOP UPDATE
+    # ========================================================================
+
+    def update(self):
+        """
+        Update method called during game loop.
+        Used for continuous state updates and animations.
+        """
         pass

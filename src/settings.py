@@ -1,1 +1,0 @@
-# Constantes globales (taille fenêtre, FPS, couleurs...)

@@ -1,56 +1,56 @@
-<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.2.5 Chrome/138.0.7204.251 Electron/37.6.1 Safari/537.36" version="28.2.5">
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.2.9 Chrome/140.0.7339.249 Electron/38.7.2 Safari/537.36" version="29.2.9">
   <diagram name="Page-1" id="VZ321Vapsk0rJGcPApup">
-    <mxGraphModel dx="1338" dy="768" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="815" dy="508" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="PlEhTqexls-xtfnu9Ddh-1" value="SERVER" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
-          <mxGeometry x="440" y="330" width="160" height="170" as="geometry" />
+        <mxCell id="PlEhTqexls-xtfnu9Ddh-1" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#d5e8d4;strokeColor=#82b366;" value="SERVER" vertex="1">
+          <mxGeometry height="170" width="160" x="440" y="330" as="geometry" />
         </mxCell>
-        <mxCell id="PlEhTqexls-xtfnu9Ddh-2" value="PLAYER 1" style="image;points=[];aspect=fixed;html=1;align=center;shadow=0;dashed=0;image=img/lib/allied_telesis/computer_and_terminals/Personal_Computer_with_Server.svg;" vertex="1" parent="1">
-          <mxGeometry x="840" y="360" width="170" height="170" as="geometry" />
+        <mxCell id="PlEhTqexls-xtfnu9Ddh-2" parent="1" style="image;points=[];aspect=fixed;html=1;align=center;shadow=0;dashed=0;image=img/lib/allied_telesis/computer_and_terminals/Personal_Computer_with_Server.svg;" value="PLAYER 1" vertex="1">
+          <mxGeometry height="170" width="170" x="840" y="360" as="geometry" />
         </mxCell>
-        <mxCell id="PlEhTqexls-xtfnu9Ddh-3" value="PLAYER 2" style="image;points=[];aspect=fixed;html=1;align=center;shadow=0;dashed=0;image=img/lib/allied_telesis/computer_and_terminals/Personal_Computer_with_Server.svg;" vertex="1" parent="1">
-          <mxGeometry x="840" y="630" width="170" height="170" as="geometry" />
+        <mxCell id="PlEhTqexls-xtfnu9Ddh-3" parent="1" style="image;points=[];aspect=fixed;html=1;align=center;shadow=0;dashed=0;image=img/lib/allied_telesis/computer_and_terminals/Personal_Computer_with_Server.svg;" value="PLAYER 2" vertex="1">
+          <mxGeometry height="170" width="170" x="840" y="630" as="geometry" />
         </mxCell>
-        <mxCell id="PlEhTqexls-xtfnu9Ddh-4" value="PLAYER 3" style="image;points=[];aspect=fixed;html=1;align=center;shadow=0;dashed=0;image=img/lib/allied_telesis/computer_and_terminals/Personal_Computer_with_Server.svg;" vertex="1" parent="1">
-          <mxGeometry x="410" y="640" width="170" height="170" as="geometry" />
+        <mxCell id="PlEhTqexls-xtfnu9Ddh-4" parent="1" style="image;points=[];aspect=fixed;html=1;align=center;shadow=0;dashed=0;image=img/lib/allied_telesis/computer_and_terminals/Personal_Computer_with_Server.svg;" value="PLAYER 3" vertex="1">
+          <mxGeometry height="170" width="170" x="410" y="640" as="geometry" />
         </mxCell>
-        <mxCell id="PlEhTqexls-xtfnu9Ddh-6" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;fillColor=#fff2cc;strokeColor=#d6b656;edgeStyle=orthogonalEdgeStyle;curved=1;entryX=1;entryY=1;entryDx=0;entryDy=-15;entryPerimeter=0;exitX=0.016;exitY=0.202;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="PlEhTqexls-xtfnu9Ddh-3" target="PlEhTqexls-xtfnu9Ddh-1">
-          <mxGeometry width="50" height="50" relative="1" as="geometry">
+        <mxCell id="PlEhTqexls-xtfnu9Ddh-6" edge="1" parent="1" source="PlEhTqexls-xtfnu9Ddh-3" style="endArrow=classic;startArrow=classic;html=1;rounded=0;fillColor=#fff2cc;strokeColor=#d6b656;edgeStyle=orthogonalEdgeStyle;curved=1;entryX=1;entryY=1;entryDx=0;entryDy=-15;entryPerimeter=0;exitX=0.016;exitY=0.202;exitDx=0;exitDy=0;exitPerimeter=0;" target="PlEhTqexls-xtfnu9Ddh-1" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
             <mxPoint x="730" y="630" as="sourcePoint" />
             <mxPoint x="780" y="580" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="PlEhTqexls-xtfnu9Ddh-7" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;fillColor=#fff2cc;strokeColor=#d6b656;edgeStyle=orthogonalEdgeStyle;curved=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.155;exitY=0.004;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="PlEhTqexls-xtfnu9Ddh-4" target="PlEhTqexls-xtfnu9Ddh-1">
-          <mxGeometry width="50" height="50" relative="1" as="geometry">
+        <mxCell id="PlEhTqexls-xtfnu9Ddh-7" edge="1" parent="1" source="PlEhTqexls-xtfnu9Ddh-4" style="endArrow=classic;startArrow=classic;html=1;rounded=0;fillColor=#fff2cc;strokeColor=#d6b656;edgeStyle=orthogonalEdgeStyle;curved=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.155;exitY=0.004;exitDx=0;exitDy=0;exitPerimeter=0;" target="PlEhTqexls-xtfnu9Ddh-1" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
             <mxPoint x="983" y="819" as="sourcePoint" />
             <mxPoint x="740" y="640" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="PlEhTqexls-xtfnu9Ddh-8" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;fillColor=#fff2cc;strokeColor=#d6b656;edgeStyle=orthogonalEdgeStyle;curved=1;entryX=1;entryY=0;entryDx=0;entryDy=50;entryPerimeter=0;exitX=0.012;exitY=0.353;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="PlEhTqexls-xtfnu9Ddh-2" target="PlEhTqexls-xtfnu9Ddh-1">
-          <mxGeometry width="50" height="50" relative="1" as="geometry">
+        <mxCell id="PlEhTqexls-xtfnu9Ddh-8" edge="1" parent="1" source="PlEhTqexls-xtfnu9Ddh-2" style="endArrow=classic;startArrow=classic;html=1;rounded=0;fillColor=#fff2cc;strokeColor=#d6b656;edgeStyle=orthogonalEdgeStyle;curved=1;entryX=1;entryY=0;entryDx=0;entryDy=50;entryPerimeter=0;exitX=0.012;exitY=0.353;exitDx=0;exitDy=0;exitPerimeter=0;" target="PlEhTqexls-xtfnu9Ddh-1" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
             <mxPoint x="1003" y="819" as="sourcePoint" />
             <mxPoint x="760" y="640" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="PlEhTqexls-xtfnu9Ddh-9" value="&lt;font face=&quot;Garamond&quot; style=&quot;font-size: 5px;&quot;&gt;Send the personnal informations player&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="785" y="630" width="100" height="30" as="geometry" />
+        <mxCell id="PlEhTqexls-xtfnu9Ddh-9" parent="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" value="&lt;font face=&quot;Garamond&quot; style=&quot;font-size: 7px;&quot;&gt;Send the personnal informations player&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="130" x="760" y="620" as="geometry" />
         </mxCell>
-        <mxCell id="PlEhTqexls-xtfnu9Ddh-11" value="&lt;font face=&quot;Garamond&quot; style=&quot;font-size: 5px;&quot;&gt;Send the update of all the informations about the others players&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="599" y="460" width="150" height="30" as="geometry" />
+        <mxCell id="PlEhTqexls-xtfnu9Ddh-11" parent="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" value="&lt;font face=&quot;Garamond&quot; style=&quot;font-size: 7px;&quot;&gt;Send the update of all the informations about the others players&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="200" x="600" y="450" as="geometry" />
         </mxCell>
-        <mxCell id="PlEhTqexls-xtfnu9Ddh-12" value="&lt;font face=&quot;Garamond&quot; style=&quot;font-size: 5px;&quot;&gt;Send the update of all the informations about the others players&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="380" y="490" width="150" height="30" as="geometry" />
+        <mxCell id="PlEhTqexls-xtfnu9Ddh-12" parent="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" value="&lt;font face=&quot;Garamond&quot; style=&quot;font-size: 7px;&quot;&gt;Send the update of all the informations about the others players&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="200" x="390" y="510" as="geometry" />
         </mxCell>
-        <mxCell id="PlEhTqexls-xtfnu9Ddh-13" value="&lt;font face=&quot;Garamond&quot; style=&quot;font-size: 5px;&quot;&gt;Send the personnal informations player&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="440" y="610" width="100" height="30" as="geometry" />
+        <mxCell id="PlEhTqexls-xtfnu9Ddh-13" parent="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" value="&lt;font face=&quot;Garamond&quot; style=&quot;font-size: 7px;&quot;&gt;Send the personnal informations player&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="130" x="425" y="610" as="geometry" />
         </mxCell>
-        <mxCell id="PlEhTqexls-xtfnu9Ddh-14" value="&lt;font face=&quot;Garamond&quot; style=&quot;font-size: 5px;&quot;&gt;Send the personnal informations player&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="749" y="390" width="100" height="30" as="geometry" />
+        <mxCell id="PlEhTqexls-xtfnu9Ddh-14" parent="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" value="&lt;font face=&quot;Garamond&quot; style=&quot;font-size: 7px;&quot;&gt;Send the personnal informations player&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="130" x="710" y="420" as="geometry" />
         </mxCell>
-        <mxCell id="PlEhTqexls-xtfnu9Ddh-15" value="&lt;font face=&quot;Garamond&quot; style=&quot;font-size: 5px;&quot;&gt;Send the update of all the informations about the others players&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="590" y="350" width="150" height="30" as="geometry" />
+        <mxCell id="PlEhTqexls-xtfnu9Ddh-15" parent="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" value="&lt;font face=&quot;Garamond&quot; style=&quot;font-size: 7px;&quot;&gt;Send the update of all the informations about the others players&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="200" x="600" y="350" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
