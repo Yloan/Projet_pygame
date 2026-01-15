@@ -119,12 +119,12 @@ class Game:
         map_loader = MapLoader(None)
         background, foreground = map_loader.load_map()
         self.map_back = pyg.transform.scale(background, (self.width, self.height))
-        self.map_front = foreground
+        self.map_front = pyg.transform.scale(foreground, (self.width, self.height))
 
         # ====================================================================
         # LOAD PLAYER CHARACTER
         # ====================================================================
-        self.player = player_module.Furnace()
+        self.player = player_module.Water()
         self.running = False
 
         # ====================================================================
@@ -368,6 +368,12 @@ class Game:
         self._connect_to_server()
 
         screen = self.screen
+
+        # ====================================================================
+        # Temporary variables (for tests)
+        # ====================================================================
+        #self.etat = "game"  # Start directly in game for testing
+
         while self.running:
             # ================================================================
             # MENU STATE
@@ -382,14 +388,10 @@ class Game:
                     if self.Menu.etat == "game":
                         self.etat = "game"
                 else:
-                    # Display startup prompt
-                    self.draw_text_center("Press Space to start", self.font, self.TEXT_COL, 250)
+                    self.game_started = True
 
                 # Handle menu events
                 for event in pyg.event.get():
-                    if event.type == pyg.KEYDOWN:
-                        if event.key == pyg.K_SPACE:
-                            self.game_started = True
                     if event.type == pyg.QUIT:
                         self.running = False
 
@@ -442,6 +444,9 @@ class Game:
                 current_sprite = self.player.get_current_sprite()
                 player_pos = self.player.position
                 self.screen.blit(current_sprite, player_pos)
+
+                # Draw foreground on top of player
+                self.screen.blit(self.map_front, (0, 0))
 
                 # Send player position to server
                 self.send_to_server(

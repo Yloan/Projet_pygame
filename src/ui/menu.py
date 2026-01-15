@@ -20,7 +20,11 @@ Recommendations:
 import pygame as pyg
 import sys
 from . import button
+from . import animated_button
 import game.characters as player_module
+
+from utils.paths import get_asset_path
+from ui import Buttons as ObjButton
 
 
 # ============================================================================
@@ -100,8 +104,12 @@ class Menu:
         # LOAD MENU BACKGROUNDS
         # ====================================================================
         self.wallpaper = pyg.image.load(
-            "assets/wallpapers/wallpaper.png"
+            "assets/buttons/21-MENUS/MAIN MENU-Sheet.png"
         ).convert_alpha()
+        # Scale wallpaper to fill window
+        self.wallpaper = pyg.transform.scale(
+            self.wallpaper, (self.width, self.height)
+        )
         self.choice_chracters = pyg.image.load(
             "assets/wallpapers/SELECT-SCREEN.png"
         ).convert_alpha()
@@ -114,7 +122,30 @@ class Menu:
         # LOAD BUTTON IMAGES
         # ====================================================================
         # Main menu buttons
-        play_img = pyg.image.load("assets/buttons/button_play.png").convert_alpha()
+        
+
+        # ====================================================================
+        # play button frames
+        # ====================================================================
+
+        play_button = ObjButton.PlayButton()
+        self.play_button_frames = play_button.play_button_frames
+
+        # ====================================================================
+        # Settings button frames
+        # ====================================================================
+
+        settings_button = ObjButton.OptionsButton()
+        self.settings_button_frames = settings_button.settings_button_frames
+
+        # ====================================================================
+        # Exit button frames
+        # ====================================================================
+
+        exit_button = ObjButton.ExitButton()
+        self.exit_button_frames = exit_button.exit_button_frames
+
+        # Static button images for non-animated buttons
         settings_img = pyg.image.load(
             "assets/buttons/button_settings.png"
         ).convert_alpha()
@@ -163,28 +194,45 @@ class Menu:
         # ====================================================================
         # CREATE BUTTON INSTANCES
         # ====================================================================
-        # Main menu buttons (horizontally centered)
-        self.play_button = button.Button(self.center_x(play_img, 1), 200, play_img, BUTTON_SCALE)
-        self.settings_button = button.Button(
-            self.center_x(settings_img, 1), 350, settings_img, 1.5
+        # Main menu buttons with animations (horizontally centered)
+        self.play_button = animated_button.AnimatedButton(
+            self.center_x(self.play_button_frames[0], BUTTON_SCALE), 
+            380, 
+            self.play_button_frames, 
+            BUTTON_SCALE,
+            animation_speed=1
         )
-        self.exit_button = button.Button(self.center_x(exit_img, 1), 500, exit_img, 1.5)
+        self.settings_button = animated_button.AnimatedButton(
+            self.center_x(self.settings_button_frames[0], 1.5), 
+            440, 
+            self.settings_button_frames, 
+            1.5,
+            animation_speed=1
+        )
+        self.exit_button = animated_button.AnimatedButton(
+            self.center_x(self.exit_button_frames[0], 1.5), 
+            510, 
+            self.exit_button_frames, 
+            1.5,
+            animation_speed=1
+        )
         self.video_button = button.Button(
-            self.center_x(video_img, 1), 200, video_img, 1
+            self.center_x(video_img, 1) - 350, 350, video_img, 1
         )
         self.audio_button = button.Button(
             self.center_x(audio_img, 1), 350, audio_img, 1
         )
-        self.keys_button = button.Button(self.center_x(keys_img, 1), 500, keys_img, 1)
+        self.keys_button = button.Button(self.center_x(keys_img, 1) + 350, 350, keys_img, 1)
         self.back_button = button.Button(self.center_x(back_img, 1), 700, back_img, 1)
         self.zero_player_button = button.Button(
             self.center_x(zero_player_img, 0.3), 500, zero_player_img, 0.3
         )
+
         self.one_player_button = button.Button(
-            self.center_x(one_player_img, 2), 200, one_player_img, 1
+            self.center_x(one_player_img, 2) - 150, 350, one_player_img, 1
         )
         self.two_players_button = button.Button(
-            self.center_x(two_players_img, -0.5), 200, two_players_img, 1
+            self.center_x(two_players_img, -0.5) + 150, 350, two_players_img, 1
         )
         self.three_players_button = button.Button(
             self.center_x(three_players_img, 2), 350, three_players_img, 1
@@ -290,6 +338,9 @@ class Menu:
 
     def handle_main_menu(self):
         """Gère l'état du menu principal"""
+        # Draw background first to clear previous frame
+        self.screen.blit(self.wallpaper, (0, 0))
+        # Then draw animated buttons
         if self.play_button.draw(self.screen):
             self.menu_state = "play"
         if self.settings_button.draw(self.screen):
@@ -306,7 +357,7 @@ class Menu:
             print("Audio Settings")
         if self.keys_button.draw(self.screen):
             print("Keys Settings")
-        if self.back_button.draw(self.screen):
+        if self.exit_button.draw(self.screen):
             self.menu_state = "main"
 
     def handle_play_menu(self):
@@ -329,7 +380,7 @@ class Menu:
         if self.four_players_button.draw(self.screen):
             self.menu_state = "choice_characters_1"
             self.number_players = 4
-        if self.back_button.draw(self.screen):
+        if self.exit_button.draw(self.screen):
             self.menu_state = "main"
 
     def handle_one_player_menu(self):
@@ -346,7 +397,7 @@ class Menu:
         if self.three_players_button.draw(self.screen):
             self.menu_state = "choice_characters_1"
             self.number_bot = 3
-        if self.back_button.draw(self.screen):
+        if self.exit_button.draw(self.screen):
             self.menu_state = "play"
 
     def handle_two_players_menu(self):
@@ -363,7 +414,7 @@ class Menu:
         if self.two_players_button.draw(self.screen):
             self.menu_state = "choice_characters_1"
             self.number_bot = 2
-        if self.back_button.draw(self.screen):
+        if self.exit_button.draw(self.screen):
             self.menu_state = "play"
 
     def handle_three_players_menu(self):
@@ -377,7 +428,7 @@ class Menu:
         if self.one_player_button.draw(self.screen):
             self.menu_state = "choice_characters_1"
             self.number_bot = 1
-        if self.back_button.draw(self.screen):
+        if self.exit_button.draw(self.screen):
             self.menu_state = "play"
 
     def draw_character_preview(self, char_index):

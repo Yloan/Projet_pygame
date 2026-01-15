@@ -25,13 +25,15 @@ FURNACE_FRAME_WIDTH = 40
 FURNACE_FRAME_HEIGHT = 40
 FURNACE_IDLE_FRAMES = 12
 FURNACE_WALK_FRAMES = 4
-FURNACE_ANIMATION_IDLE_SPEED = 50  # milliseconds between frames
-FURNACE_ANIMATION_WALK_SPEED = 100  # milliseconds between frames
+FURNACE_ANIMATION_IDLE_SPEED = 100  # milliseconds between frames
+FURNACE_ANIMATION_WALK_SPEED = 200  # milliseconds between frames
 
 WATER_FRAME_SIZE = 40
 WATER_IDLE_FRAMES = 12
 WATER_MOVE_FRAMES = 5
 WATER_HURT_FRAMES = 5
+WATER_ANIMATION_IDLE_SPEED = 100  # milliseconds between frames
+WATER_ANIMATION_MOVE_SPEED = 200  # milliseconds between frames
 
 
 class Furnace:
@@ -57,8 +59,8 @@ class Furnace:
         # CHARACTER STATS
         # ====================================================================
         self.health = 100
-        self.speed = 5
-        self.position = (0, 0)
+        self.speed = 2
+        self.position = (400, 400)
         
         # ====================================================================
         # LOAD SPRITE ASSETS
@@ -290,8 +292,8 @@ class Water:
         # CHARACTER STATS
         # ====================================================================
         self.health = 100
-        self.speed = 5
-        self.position = (0, 0)
+        self.speed = 2
+        self.position = (400, 400)
         self.direction = "right"
         
         # ====================================================================
@@ -306,6 +308,7 @@ class Water:
         # INITIALIZE ANIMATION FRAME LISTS
         # ====================================================================
         self.frames_IDLE = []
+        self.frames_IDLE_left = []
         self.frames_MOVE_right = []
         self.frames_MOVE_left = []
         self.frames_HURT = []
@@ -319,6 +322,9 @@ class Water:
                 (i * WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
             )
             self.frames_IDLE.append(frame)
+            frame_flipped = pyg.transform.flip(frame, True, False)
+            self.frames_IDLE_left.append(frame_flipped)
+        
 
         # ====================================================================
         # EXTRACT MOVE ANIMATION FRAMES (BOTH DIRECTIONS)
@@ -346,6 +352,10 @@ class Water:
         # ====================================================================
         self.frame_MOVE = 0  # Current move animation frame index
         self.frame_IDLE = 0  # Current idle animation frame index
+        self.tem_an_IDLE = 0  # Elapsed time for idle animation
+        self.tem_an_MOVE = 0  # Elapsed time for move animation
+        self.is_moving = False  # Movement state flag
+        self.direction = "right"  # Current direction (left or right)
 
     # ========================================================================
     # MOVEMENT METHODS
@@ -424,6 +434,36 @@ class Water:
     # ANIMATION METHODS
     # ========================================================================
 
+    def update_animation(self, delta_time, is_moving):
+        """
+        Update animation state based on elapsed time.
+        Handles idle and move animations.
+        
+        Args:
+            delta_time (int): Time elapsed since last frame in milliseconds
+            is_moving (bool): Whether the character is currently moving
+        """
+        self.is_moving = is_moving
+        
+        if is_moving:
+            # Update move animation
+            self.tem_an_MOVE += delta_time
+            if self.tem_an_MOVE >= WATER_ANIMATION_MOVE_SPEED:
+                self.tem_an_MOVE = 0
+                if self.frame_MOVE >= len(self.frames_MOVE_right) - 1:
+                    self.frame_MOVE = 0
+                else:
+                    self.frame_MOVE += 1
+        else:
+            # Update idle animation
+            self.tem_an_IDLE += delta_time
+            if self.tem_an_IDLE >= WATER_ANIMATION_IDLE_SPEED:
+                self.tem_an_IDLE = 0
+                if self.frame_IDLE >= len(self.frames_IDLE) - 1:
+                    self.frame_IDLE = 0
+                else:
+                    self.frame_IDLE += 1
+
     def get_current_sprite(self):
         """
         Get the current sprite to be drawn based on animation state and direction.
@@ -431,10 +471,16 @@ class Water:
         Returns:
             pygame.Surface: Current animation frame
         """
-        if self.direction == "left":
-            return self.frames_MOVE_left[self.frame_MOVE]
+        if self.is_moving:
+            if self.direction == "left":
+                return self.frames_MOVE_left[self.frame_MOVE]
+            else:
+                return self.frames_MOVE_right[self.frame_MOVE]
         else:
-            return self.frames_MOVE_right[self.frame_MOVE]
+            if self.direction == "left":
+                return self.frames_IDLE_left[self.frame_IDLE]
+            else:
+                return self.frames_IDLE[self.frame_IDLE]
     
     # ========================================================================
     # SKILL SYSTEM
