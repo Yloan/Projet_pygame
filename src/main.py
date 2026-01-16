@@ -32,6 +32,7 @@ import pygame as pyg
 
 import game.characters as player_module
 import ui.menu as menu
+import ui.menu_in_game as menu_in_game
 from game.map_laoder import MapLoader
 from ui.console import (
     print_error,

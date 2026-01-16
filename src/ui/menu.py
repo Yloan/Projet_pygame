@@ -32,7 +32,7 @@ from ui import Buttons as ObjButton
 # ============================================================================
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
-BUTTON_SCALE = 1.5
+BUTTON_SCALE = 2
 
 
 class Menu:
@@ -196,24 +196,24 @@ class Menu:
         # ====================================================================
         # Main menu buttons with animations (horizontally centered)
         self.play_button = animated_button.AnimatedButton(
-            self.center_x(self.play_button_frames[0], BUTTON_SCALE), 
-            380, 
+            self.center_x(self.play_button_frames[0], 1.5), 
+            370, 
             self.play_button_frames, 
             BUTTON_SCALE,
             animation_speed=1
         )
         self.settings_button = animated_button.AnimatedButton(
             self.center_x(self.settings_button_frames[0], 1.5), 
-            440, 
+            455, 
             self.settings_button_frames, 
-            1.5,
+            2,
             animation_speed=1
         )
         self.exit_button = animated_button.AnimatedButton(
             self.center_x(self.exit_button_frames[0], 1.5), 
-            510, 
+            540, 
             self.exit_button_frames, 
-            1.5,
+            2,
             animation_speed=1
         )
         self.video_button = button.Button(
@@ -222,23 +222,23 @@ class Menu:
         self.audio_button = button.Button(
             self.center_x(audio_img, 1), 350, audio_img, 1
         )
-        self.keys_button = button.Button(self.center_x(keys_img, 1) + 350, 350, keys_img, 1)
+        self.keys_button = button.Button(self.center_x(keys_img, 1) + 330, 350, keys_img, 1)
         self.back_button = button.Button(self.center_x(back_img, 1), 700, back_img, 1)
         self.zero_player_button = button.Button(
-            self.center_x(zero_player_img, 0.3), 500, zero_player_img, 0.3
+            self.center_x(zero_player_img, -0.5) + 150, 350, zero_player_img, 0.3
         )
 
         self.one_player_button = button.Button(
             self.center_x(one_player_img, 2) - 150, 350, one_player_img, 1
         )
         self.two_players_button = button.Button(
-            self.center_x(two_players_img, -0.5) + 150, 350, two_players_img, 1
+            self.center_x(two_players_img, 2), 350, two_players_img, 1
         )
         self.three_players_button = button.Button(
-            self.center_x(three_players_img, 2), 350, three_players_img, 1
+            self.center_x(three_players_img, -0.5), 350, three_players_img, 1
         )
         self.four_players_button = button.Button(
-            self.center_x(four_players_img, -0.5), 350, four_players_img, 1
+            self.center_x(four_players_img, -0.5) + 150, 350, four_players_img, 1
         )
         self.Back_selection_character = button.Button(
             self.center_x(Back_selection_character_img, 77),
@@ -363,10 +363,16 @@ class Menu:
     def handle_play_menu(self):
         """Gère la sélection du nombre de joueurs"""
         self.draw_text_center(
-            "Select the number of players",
+            "Select the number",
             self.font,
             self.TEXT_COL2,
-            50,
+            20,
+        )
+        self.draw_text_center(
+            "of players",
+            self.font,
+            self.TEXT_COL2,
+            65,
         )
         if self.one_player_button.draw(self.screen):
             self.menu_state = "one_player"

@@ -1,4 +1,4 @@
-#!/Users/quentin/Desktop/Etude/Projet_pygame/.venv/bin/python3.14
+#!/Users/quentin/Desktop/Etude/Epita/Projet/Projet_pygame/.venv/bin/python3.14
 import sys
 from pip._internal.cli.main import main
 if __name__ == '__main__':
