@@ -82,6 +82,7 @@ class Game:
         # GAME STATE VARIABLES
         # ====================================================================
         self.etat = "menu"  # Current state: "menu" or "game"
+        self.etat = "game" # temporary variable for avoid to go trough the menu each time I test the code 
         self.game_started = False  # Flag for menu launch
         
         # ====================================================================
@@ -416,6 +417,7 @@ class Game:
 
                 # Get frame time
                 delta_time = self.clock.tick(60)
+                
 
                 # Get current key presses
                 keys_pressed = pyg.key.get_pressed()
@@ -428,6 +430,11 @@ class Game:
                     or keys_pressed[pyg.K_DOWN]
                 )
 
+                if keys_pressed[pyg.K_a] and not self.player.is_attacking_skill1:
+                    self.player.is_attacking_skill1 = True
+                    self.player.frame_character_skill1 = 0
+
+
                 # Handle player movement
                 if keys_pressed[pyg.K_UP]:
                     self.player.move("up")
@@ -439,7 +446,20 @@ class Game:
                     self.player.move("right")
 
                 # Update player animation
-                self.player.update_animation(delta_time, is_moving)
+                # if is_attacking_skill1:
+                #     while self.player.loop_animation_skill1 < player_module.WATER_SKILL1_FRAMES + 1:
+                #         self.player.update_animation(delta_time, is_moving, is_attacking_skill1)
+                #         time.sleep(0.1)
+                #         current_sprite = self.player.get_current_sprite()
+
+                #         self.screen.blit(current_sprite, self.player.position)
+                #         pyg.display.update()
+                #         pyg.display.flip()
+
+                #         self.player.loop_animation_skill1 += 1
+                #     self.player.loop_animation_skill1 = 0
+                
+                self.player.update_animation(delta_time, is_moving, self.player.is_attacking_skill1)
 
                 # Get and draw current player sprite
                 current_sprite = self.player.get_current_sprite()

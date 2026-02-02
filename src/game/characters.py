@@ -32,8 +32,15 @@ WATER_FRAME_SIZE = 40
 WATER_IDLE_FRAMES = 12
 WATER_MOVE_FRAMES = 5
 WATER_HURT_FRAMES = 5
+WATER_SKILL1_FRAMES = 10
+WATER_SKILL2_FRAMES = 11
+WATER_SKILL3_FRAMES = 19
 WATER_ANIMATION_IDLE_SPEED = 100  # milliseconds between frames
 WATER_ANIMATION_MOVE_SPEED = 200  # milliseconds between frames
+WATER_ANIMATION_SKILL1_SPEED = 100  # milliseconds between frames
+WATER_ANIMATION_SKILL2_SPEED = 100  # milliseconds between frames
+WATER_ANIMATION_SKILL3_SPEED = 100  # milliseconds between frames
+
 
 
 class Furnace:
@@ -304,6 +311,18 @@ class Water:
         self.sprite_HURT = get_asset_path("sprites", "Water", "2-HURT-Sheet.png")
         self.sprite_DEATH = get_asset_path("sprites", "Water", "2-DEAD-Sheet.png")
 
+        
+        self.sprite_character_skill1 = get_asset_path("sprites", "Water", "2-S1-Sheet.png")
+        self.sprite_skill1 = get_asset_path("sprites", "Water", "effect-2-Bash-Sheet.png")
+
+        self.sprite_character_skill2 = get_asset_path("sprites", "Water", "2-S2-Sheet.png")
+        self.sprite_skill2 = get_asset_path("sprites", "Water", "effect-2-Bash-Sheet.png")
+
+        self.sprite_character_skill3 = get_asset_path("sprites", "Water", "2-S3-1-Sheet.png")
+        self.sprite_skill3 = get_asset_path("sprites", "Water", "effect-2-Bash-Sheet.png")
+        
+
+
         # ====================================================================
         # INITIALIZE ANIMATION FRAME LISTS
         # ====================================================================
@@ -313,6 +332,11 @@ class Water:
         self.frames_MOVE_left = []
         self.frames_HURT = []
         self.frames_DEATH = [pyg.image.load(self.sprite_DEATH)]
+
+        self.frames_character_skill1 = []
+        self.frames_character_skill2 = []
+        self.frames_character_skill3 = []
+
 
         # ====================================================================
         # EXTRACT IDLE ANIMATION FRAMES
@@ -346,6 +370,23 @@ class Water:
                 (i * WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
             )
             self.frames_HURT.append(frame)
+
+        # ====================================================================
+        # EXTRACT ATTACK ANIMATION FRAMES
+        # ====================================================================
+
+        for i in range(WATER_SKILL1_FRAMES):
+            frame = pyg.image.load(self.sprite_character_skill1).subsurface(i*WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
+            self.frames_character_skill1.append(frame)
+
+        for i in range(WATER_SKILL2_FRAMES):
+            frame = pyg.image.load(self.sprite_character_skill2).subsurface(i*WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
+            self.frames_character_skill2.append(frame)
+
+        for i in range(WATER_SKILL3_FRAMES):
+            frame = pyg.image.load(self.sprite_character_skill3).subsurface(i*WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
+            self.frames_character_skill3.append(frame)
+
         
         # ====================================================================
         # ANIMATION STATE VARIABLES
@@ -356,6 +397,23 @@ class Water:
         self.tem_an_MOVE = 0  # Elapsed time for move animation
         self.is_moving = False  # Movement state flag
         self.direction = "right"  # Current direction (left or right)
+
+        # This is the time for the animations of the three skills
+        self.frame_character_skill1 = 0
+        self.frame_character_skill2 = 0
+        self.frame_character_skill3 = 0
+        self.tem_an_skill1 = 0
+        self.tem_an_skill2 = 0
+        self.tem_an_skill3 = 0
+        self.is_attacking_skill1 = False
+        self.is_attacking_skill2 = False
+        self.is_attacking_skill3 = False
+
+        self.loop_animation_skill1 = 0
+        self.loop_animation_skill2 = 0
+        self.loop_animation_skill3 = 0
+
+
 
     # ========================================================================
     # MOVEMENT METHODS
@@ -434,7 +492,7 @@ class Water:
     # ANIMATION METHODS
     # ========================================================================
 
-    def update_animation(self, delta_time, is_moving):
+    def update_animation(self, delta_time, is_moving, is_attacking_skill1):
         """
         Update animation state based on elapsed time.
         Handles idle and move animations.
@@ -443,6 +501,20 @@ class Water:
             delta_time (int): Time elapsed since last frame in milliseconds
             is_moving (bool): Whether the character is currently moving
         """
+
+        self.is_attacking_skill1 = is_attacking_skill1
+
+        if self.is_attacking_skill1:
+            self.tem_an_skill1 += delta_time
+            if self.tem_an_skill1 >= WATER_ANIMATION_SKILL1_SPEED:
+                self.tem_an_skill1 = 0
+                self.frame_character_skill1 += 1
+
+                if self.frame_character_skill1 >= len(self.frames_character_skill1):
+                    self.frame_character_skill1 = 0
+                    self.is_attacking_skill1 = False
+
+
         self.is_moving = is_moving
         
         if is_moving:
@@ -471,6 +543,11 @@ class Water:
         Returns:
             pygame.Surface: Current animation frame
         """
+
+        if self.is_attacking_skill1:
+            return self.frames_character_skill1[self.frame_character_skill1]
+
+
         if self.is_moving:
             if self.direction == "left":
                 return self.frames_MOVE_left[self.frame_MOVE]
@@ -481,14 +558,19 @@ class Water:
                 return self.frames_IDLE_left[self.frame_IDLE]
             else:
                 return self.frames_IDLE[self.frame_IDLE]
+            
+
     
     # ========================================================================
     # SKILL SYSTEM
     # ========================================================================
 
-    def skill1(self):
+    def skill1(self, delta_time, is_attacking_skill1):
         """First special skill - To be implemented."""
+
         pass
+
+
 
     def skill2(self):
         """Second special skill - To be implemented."""
