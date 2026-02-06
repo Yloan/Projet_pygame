@@ -430,9 +430,17 @@ class Game:
                     or keys_pressed[pyg.K_DOWN]
                 )
 
-                if keys_pressed[pyg.K_a] and not self.player.is_attacking_skill1:
+                if keys_pressed[pyg.K_q] and not self.player.is_attacking_skill1:
                     self.player.is_attacking_skill1 = True
                     self.player.frame_character_skill1 = 0
+
+                if keys_pressed[pyg.K_s] and not self.player.is_attacking_skill2:
+                    self.player.is_attacking_skill2 = True
+                    self.player.frame_character_skill2 = 0
+
+                if keys_pressed[pyg.K_d] and not self.player.is_attacking_skill3:
+                    self.player.is_attacking_skill3 = True
+                    self.player.frame_character_skill3 = 0
 
 
                 # Handle player movement
@@ -459,7 +467,7 @@ class Game:
                 #         self.player.loop_animation_skill1 += 1
                 #     self.player.loop_animation_skill1 = 0
                 
-                self.player.update_animation(delta_time, is_moving, self.player.is_attacking_skill1)
+                self.player.update_animation(delta_time, is_moving, self.player.is_attacking_skill1, self.player.is_attacking_skill2, self.player.is_attacking_skill3)
 
                 # Get and draw current player sprite
                 current_sprite = self.player.get_current_sprite()

@@ -337,6 +337,20 @@ class Water:
         self.frames_character_skill2 = []
         self.frames_character_skill3 = []
 
+        self.frames_character_skill1_left = []
+        self.frames_character_skill2_left = []
+        self.frames_character_skill3_left = []
+
+        self.frames_effect_character_skill1 = []
+        self.frames_effect_character_skill2 = []
+        self.frames_effect_character_skill3_1 = []
+        self.frames_effect_character_skill3_2 = []
+
+        self.frames_effect_character_skill1_left = []
+        self.frames_effect_character_skill2_left = []
+        self.frames_effect_character_skill3_1_left = []
+        self.frames_effect_character_skill3_2_left = []
+
 
         # ====================================================================
         # EXTRACT IDLE ANIMATION FRAMES
@@ -379,13 +393,53 @@ class Water:
             frame = pyg.image.load(self.sprite_character_skill1).subsurface(i*WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
             self.frames_character_skill1.append(frame)
 
+            frame_flipped = pyg.transform.flip(frame, True, False)
+            self.frames_character_skill1_left.append(frame_flipped)
+
         for i in range(WATER_SKILL2_FRAMES):
             frame = pyg.image.load(self.sprite_character_skill2).subsurface(i*WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
             self.frames_character_skill2.append(frame)
 
+            frame_flipped = pyg.transform.flip(frame, True, False)
+            self.frames_character_skill2_left.append(frame_flipped)
+
+
         for i in range(WATER_SKILL3_FRAMES):
             frame = pyg.image.load(self.sprite_character_skill3).subsurface(i*WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
             self.frames_character_skill3.append(frame)
+
+            frame_flipped = pyg.transform.flip(frame, True, False)
+            self.frames_character_skill3_left.append(frame_flipped)
+
+
+        # ====================================================================
+        # EXTRACT ATTACK ANIMATIONS OF THE PROJECTILE
+        # ====================================================================
+
+
+        for i in range(WATER_SKILL1_FRAMES):
+            frame = pyg.image.load(self.sprite_skill1).subsurface(i*WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
+            self.effect_character_skill1.append(frame)
+
+            frame_flipped = pyg.transofrm.flip(frame, True, False)
+            self.effect_character_skill1_left.append(frame_flipped)
+
+        for i in range(WATER_SKILL2_FRAMES):
+            frame = pyg.image.load(self.effect_character_skill2).subsurface(i*WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
+            self.effect_character_skill2.append(frame)
+
+            frame_flipped = pyg.transform.flip(frame, True, False)
+            self.effect_character_skill2_left.append(frame_flipped)
+
+        for i in range(WATER_SKILL3_FRAMES):
+            frame = pyg.image.load(self.effect_character_skill3_1).subsurface(i*WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
+            self.effect_character_skill3_1.append(frame)
+
+            frame_flipped = pyg.transform.flip(frame, True, False)
+            self.effect_character_skill3_1_left.append(frame_flipped)
+
+
+        
 
         
         # ====================================================================
@@ -408,6 +462,11 @@ class Water:
         self.is_attacking_skill1 = False
         self.is_attacking_skill2 = False
         self.is_attacking_skill3 = False
+
+        self.frame_effect_skill1 = 0
+        self.frame_effect_skill2 = 0
+        self.frame_effect_skill3 = 0
+
 
         self.loop_animation_skill1 = 0
         self.loop_animation_skill2 = 0
@@ -492,7 +551,7 @@ class Water:
     # ANIMATION METHODS
     # ========================================================================
 
-    def update_animation(self, delta_time, is_moving, is_attacking_skill1):
+    def update_animation(self, delta_time, is_moving, is_attacking_skill1, is_attacking_skill2, is_attacking_skill3):
         """
         Update animation state based on elapsed time.
         Handles idle and move animations.
@@ -503,19 +562,55 @@ class Water:
         """
 
         self.is_attacking_skill1 = is_attacking_skill1
+        self.is_attacking_skill2 = is_attacking_skill2
+        self.is_attacking_skill3 = is_attacking_skill3
+        self.is_moving = is_moving
 
+        #SKILL 1
         if self.is_attacking_skill1:
             self.tem_an_skill1 += delta_time
             if self.tem_an_skill1 >= WATER_ANIMATION_SKILL1_SPEED:
                 self.tem_an_skill1 = 0
                 self.frame_character_skill1 += 1
 
+
                 if self.frame_character_skill1 >= len(self.frames_character_skill1):
                     self.frame_character_skill1 = 0
+                    self.frame_effect_character_skill1 = 0
                     self.is_attacking_skill1 = False
 
 
-        self.is_moving = is_moving
+        # SKILL 2
+        if self.is_attacking_skill2:
+            self.tem_an_skill2 += delta_time
+            if self.tem_an_skill2 >= WATER_ANIMATION_SKILL2_SPEED:
+                self.tem_an_skill2 = 0
+                self.frame_character_skill2 += 1
+
+                if self.frame_character_skill2 >= len(self.frames_character_skill2):
+                    self.frame_character_skill2 = 0
+                    self.is_attacking_skill2 = False
+
+
+
+            
+
+        # SKILL 3
+        if self.is_attacking_skill3:
+            self.tem_an_skill3 += delta_time
+            if self.tem_an_skill3 >= WATER_ANIMATION_SKILL3_SPEED:
+                self.tem_an_skill3 = 0
+                # On incrémente l'INDEX
+                self.frame_character_skill3 += 1
+
+                # On compare l'index avec la longueur de la LISTE d'images
+                if self.frame_character_skill3 >= len(self.frames_character_skill3):
+                    self.frame_character_skill3 = 0
+                    self.is_attacking_skill3 = False
+
+                    
+
+
         
         if is_moving:
             # Update move animation
@@ -545,7 +640,22 @@ class Water:
         """
 
         if self.is_attacking_skill1:
-            return self.frames_character_skill1[self.frame_character_skill1]
+            if self.direction == 'left':
+                return self.frames_character_skill1_left[self.frame_character_skill1]
+            else:
+                return self.frames_character_skill1[self.frame_character_skill1]
+        
+        if self.is_attacking_skill2:
+            if self.direction == 'left':
+                return self.frames_character_skill2_left[self.frame_character_skill2]
+            else:
+                return self.frames_character_skill2[self.frame_character_skill2]
+        
+        if self.is_attacking_skill3:
+            if self.direction == 'left':
+                return self.frames_character_skill3_left[self.frame_character_skill3]
+            else:
+                return self.frames_character_skill3[self.frame_character_skill3]
 
 
         if self.is_moving:
