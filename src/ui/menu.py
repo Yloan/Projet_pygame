@@ -97,6 +97,8 @@ class Menu:
         # FONT AND COLOR SETUP
         # ====================================================================
         self.font = pyg.font.SysFont("arialblack", 40)
+        self.middle_font = pyg.font.SysFont("arialblack", 20)
+        self.little_font = pyg.font.SysFont("arialblack", 10)
         self.TEXT_COL = (255, 255, 255)  # White
         self.TEXT_COL2 = (255, 0, 0)  # Red
 
@@ -117,12 +119,6 @@ class Menu:
         self.choice_chracters = pyg.transform.scale(
             self.choice_chracters, (self.width, self.height)
         )
-
-        # ====================================================================
-        # LOAD BUTTON IMAGES
-        # ====================================================================
-        # Main menu buttons
-        
 
         # ====================================================================
         # play button frames
@@ -177,6 +173,19 @@ class Menu:
             "assets/buttons/Back_selection_character.png"
         ).convert_alpha()
 
+        # # ====================================================================
+        # # Images for session's interface
+        # # ====================================================================
+
+        self.bg_session = pyg.image.load("assets/Menus_assets/sessions_section/Browse_Sessions.png").convert_alpha()
+        # self.bar_session = pyg.image.load("assets/Menus_assets/sessions_section/BAR.png").convert_alpha()
+        # self.bot_session = pyg.image.load("assets/Menus_assets/sessions_section/BOT.png").convert_alpha()
+        self.button_session = pyg.image.load("assets/Menus_assets/sessions_section/Button.png").convert_alpha()
+        # self.player_session = pyg.image.load("assets/Menus_assets/sessions_section/player.png").convert_alpha()
+        # self.splash_session = pyg.image.load("assets/Menus_assets/sessions_section/splash.png").convert_alpha()
+        # self.star_bar_session = pyg.image.load("assets/Menus_assets/sessions_section/Star_Bar.png").convert_alpha()
+
+
         # ====================================================================
         # LOAD CHARACTER SELECTION IMAGES
         # ====================================================================
@@ -204,14 +213,14 @@ class Menu:
         )
         self.settings_button = animated_button.AnimatedButton(
             self.center_x(self.settings_button_frames[0], 1.5), 
-            455, 
+            475, 
             self.settings_button_frames, 
             2,
             animation_speed=1
         )
         self.exit_button = animated_button.AnimatedButton(
             self.center_x(self.exit_button_frames[0], 1.5), 
-            540, 
+            580, 
             self.exit_button_frames, 
             2,
             animation_speed=1
@@ -245,6 +254,15 @@ class Menu:
             10,
             Back_selection_character_img,
             2.7,
+        )
+
+        # # Sessions buttons
+        # self.join_button = button.Button(
+        #     x=691, y=231, image= self.button_session, scale=0.25
+        # )
+
+        self.create_session_button = button.Button(
+            x=655, y=400, image= self.button_session, scale=0.5
         )
 
         # character buttons left
@@ -318,6 +336,57 @@ class Menu:
         self.start_button = button.Button(
             self.center_x(start_img, 1), 600, start_img, 1
         )
+
+
+        # ====================================================================
+        # dev settings
+        # ====================================================================
+        # self.images_session = [self.bg_session, self.bar_session, self.bot_session, self.button_session, self.player_session, self.splash_session, self.star_bar_session]
+
+        # ====================================================================
+        # Variables sessions
+        # ====================================================================
+        self.sessions = []
+        self.scroll_y = 0
+
+        self.input_box = InputBox(100, 100, 140, 32, button_session=self.button_session, menu=self)
+
+
+    def handle_session_menu(self):
+        """Gère l'état du menu des sessions"""
+        self.bg_session = pyg.transform.scale(
+            self.bg_session, (self.width, self.height)
+        )
+        self.screen.blit(self.bg_session, (0, 0))
+
+        
+        zone_visible = pyg.Rect(300, 200, 750, 320)
+        self.screen.set_clip(zone_visible)
+
+        for i,session in enumerate(self.sessions):
+            print(f"Session nb {i}: {session}. Y-->{session.y}")
+            session.draw_session(session.y - self.scroll_y)
+
+        
+        self.screen.set_clip(None)
+            
+
+        if self.create_session_button.draw(self.screen):
+            print("Session created")
+            new_session = Session(self)
+
+            self.menu_state = "creation_parameters_session_menu"
+            
+            calculated_y = 79 + (len(self.sessions) * new_session.gap)
+            new_session.y = calculated_y
+            
+            self.sessions.append(new_session)
+
+        self.draw_text(text="Create session", font=self.middle_font, text_col="Black", x=735, y=480)
+        if self.exit_button.draw(self.screen):
+            self.menu_state = "main"
+
+
     
     def center_x(self, image, scale=1):
         """Retourne la coordonnée x pour centrer `image` horizontalement.
@@ -612,8 +681,37 @@ class Menu:
             self.handle_main_menu()
         elif self.menu_state == "settings":
             self.handle_settings_menu()
+        elif self.menu_state == "creation_parameters_session_menu":
+            self.handle_session_menu() # Dessine l'arrière-plan
+            
+            # Fond du modal
+            pyg.draw.rect(self.screen, (30, 30, 30), (350, 150, 600, 450))
+            
+            
+            self.draw_text_center("Configuration", self.font, self.TEXT_COL, 170)
+        
+            # Utilisation correcte de l'objet input_box
+            self.input_box.rect.x = 500 # Position fixe
+            self.input_box.rect.y = 245
+            self.input_box.draw(self.screen)
+
+
+            self.draw_text(f"IA: {self.input_box.temp_nb_ia}", self.middle_font, self.TEXT_COL, 380, 320)
+            if self.input_box.btn_plus_ia.draw(self.screen): self.input_box.temp_nb_ia += 1
+            if self.input_box.btn_moins_ia.draw(self.screen) and self.input_box.temp_nb_ia > 0: self.input_box.temp_nb_ia -= 1
+        
+            if self.input_box.validate_button.draw(self.screen):
+                # Créer la session avec les vraies données de l'input_box
+                new_s = Session(self)
+                new_s.titre = self.input_box.text if self.input_box.text != "" else "Sans titre"
+                new_s.nb_bots = self.input_box.temp_nb_ia
+                self.sessions.append(new_s)
+                self.menu_state = "play"
+
         elif self.menu_state == "play":
-            self.handle_play_menu()
+            self.input_box.clean()
+            self.handle_session_menu()
+            #self.handle_play_menu()
         elif self.menu_state == "one_player":
             self.handle_one_player_menu()
         elif self.menu_state == "two_players":
@@ -632,3 +730,111 @@ class Menu:
             self.draw_text_center(
                 "Press Space to start", self.font, self.TEXT_COL, 250
             )
+
+
+
+class Session:
+    def __init__(self, menu):
+        self.menu = menu
+        self.screen = menu.screen
+        
+        # Chargement et redimensionnement des assets
+        self.bar_session = pyg.image.load("assets/Menus_assets/sessions_section/BAR.png").convert_alpha()
+        self.bot_session = pyg.transform.scale(pyg.image.load("assets/Menus_assets/sessions_section/BOT.png"), (30, 20)).convert_alpha()
+        self.player_session = pyg.transform.scale(pyg.image.load("assets/Menus_assets/sessions_section/player.png"), (30, 20)).convert_alpha()
+        self.button_img = pyg.image.load("assets/Menus_assets/sessions_section/Button.png").convert_alpha()
+        self.splash_session = pyg.transform.scale(pyg.image.load("assets/Menus_assets/sessions_section/splash.png"), (150, 150)).convert_alpha()
+        self.star_bar_session = pyg.transform.scale(pyg.image.load("assets/Menus_assets/sessions_section/Star_Bar.png"), (367, 244)).convert_alpha()
+
+        # Bouton "Join" spécifique à cette session
+        self.join_button = button.Button(x=691, y=231, image=self.button_img, scale=0.25)
+
+        self.gap = 75
+        self.y = 79
+        
+        # Paramètres qui seront remplis à la création
+        self.titre = "Nouvelle Session"
+        self.nb_bots = 0
+        self.nb_players = 1
+
+    def draw_session(self, y_scrollé):
+        """Affiche la ligne de session avec ses paramètres"""
+        self.join_button.rect.y = y_scrollé + 152
+        
+        # Barre de fond
+        self.screen.blit(self.bar_session, (310, y_scrollé))
+        
+        # Nom de la session (Text)
+        self.menu.draw_text(self.titre, self.menu.font, "Black", 391, y_scrollé + 113)
+        
+        # Bouton Rejoindre et son texte
+        if self.join_button.draw(self.screen):
+            print(f"Tentative de rejoindre : {self.titre}")
+
+        self.menu.draw_text("Join", self.menu.middle_font, "Black", 745, y_scrollé + 186)
+        
+        # Décorations (Splash et Star Bar)
+        self.screen.blit(self.splash_session, (845, y_scrollé + 100))
+        self.screen.blit(self.star_bar_session, (357, y_scrollé + 87))
+        
+        # Icones (IA et Joueurs)
+        self.screen.blit(self.bot_session, (450, y_scrollé + 188))
+        self.screen.blit(self.player_session, (530, y_scrollé + 188))
+
+        # VALEURS des paramètres (Affiche les chiffres saisis !)
+        self.menu.draw_text(str(self.nb_bots), self.menu.middle_font, "Black", 490, y_scrollé + 188)
+        self.menu.draw_text(str(self.nb_players), self.menu.middle_font, "Black", 570, y_scrollé + 188)
+
+        
+class InputBox:
+    def __init__(self, x, y, w, h, text='', button_session=None, menu=None):
+        self.rect = pyg.Rect(x, y, w, h)
+        self.color = pyg.Color('lightskyblue3')
+        self.text = text
+        self.font = pyg.font.SysFont("Arial", 24)
+        self.txt_surface = self.font.render(text, True, self.color)
+        self.active = False
+        self.screen = menu.screen
+        
+        # Variables parameters
+        self.temp_nb_ia = 0
+        self.temp_nb_players = 1
+
+        self.btn_plus_ia = button.Button(600, 320, button_session, 0.05)
+        self.draw_text(text='-', font=self.font, text_col='Black', x=600, y=320)
+        self.btn_moins_ia = button.Button(530, 320, button_session, 0.05)
+        self.draw_text(text='+', font=self.font, text_col='Black', x=530, y=320)
+        self.validate_button = button.Button(550, 520, button_session, 0.5)
+
+    def handle_event(self, event):
+        if event.type == pyg.MOUSEBUTTONDOWN:
+            if self.rect.collidepoint(event.pos):
+                self.active = not self.active
+            else:
+                self.active = False
+            self.color = pyg.Color('dodgerblue2') if self.active else pyg.Color('lightskyblue3')
+        
+        if event.type == pyg.KEYDOWN and self.active:
+            if event.key == pyg.K_BACKSPACE:
+                self.text = self.text[:-1]
+            elif len(self.text) < 15:
+                self.text += event.unicode
+            self.txt_surface = self.font.render(self.text, True, (255, 255, 255))
+
+    def draw(self, screen):
+        
+        screen.blit(self.txt_surface, (self.rect.x + 5, self.rect.y + 5))
+        pyg.draw.rect(screen, self.color, self.rect, 2)
+
+    def draw_text(self, text, font, text_col, x, y):
+        img = font.render(text, True, text_col)
+        self.screen.blit(img, (x, y))
+
+    def clean(self):
+        self.text = ""
+        self.txt_surface = self.font.render(self.text, True, self.color)
+        self.active = False
+        self.color = pyg.Color('lightskyblue3')
+        self.temp_nb_ia = 0
+        self.temp_nb_players = 1
+    

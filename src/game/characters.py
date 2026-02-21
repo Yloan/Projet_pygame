@@ -417,26 +417,26 @@ class Water:
         # ====================================================================
 
 
-        for i in range(WATER_SKILL1_FRAMES):
-            frame = pyg.image.load(self.sprite_skill1).subsurface(i*WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
-            self.effect_character_skill1.append(frame)
+        # for i in range(WATER_SKILL1_FRAMES):
+        #     frame = pyg.image.load(self.sprite_skill1).subsurface(i*WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
+        #     self.effect_character_skill1.append(frame)
 
-            frame_flipped = pyg.transofrm.flip(frame, True, False)
-            self.effect_character_skill1_left.append(frame_flipped)
+        #     frame_flipped = pyg.transofrm.flip(frame, True, False)
+        #     self.effect_character_skill1_left.append(frame_flipped)
 
-        for i in range(WATER_SKILL2_FRAMES):
-            frame = pyg.image.load(self.effect_character_skill2).subsurface(i*WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
-            self.effect_character_skill2.append(frame)
+        # for i in range(WATER_SKILL2_FRAMES):
+        #     frame = pyg.image.load(self.effect_character_skill2).subsurface(i*WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
+        #     self.effect_character_skill2.append(frame)
 
-            frame_flipped = pyg.transform.flip(frame, True, False)
-            self.effect_character_skill2_left.append(frame_flipped)
+        #     frame_flipped = pyg.transform.flip(frame, True, False)
+        #     self.effect_character_skill2_left.append(frame_flipped)
 
-        for i in range(WATER_SKILL3_FRAMES):
-            frame = pyg.image.load(self.effect_character_skill3_1).subsurface(i*WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
-            self.effect_character_skill3_1.append(frame)
+        # for i in range(WATER_SKILL3_FRAMES):
+        #     frame = pyg.image.load(self.effect_character_skill3_1).subsurface(i*WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
+        #     self.effect_character_skill3_1.append(frame)
 
-            frame_flipped = pyg.transform.flip(frame, True, False)
-            self.effect_character_skill3_1_left.append(frame_flipped)
+        #     frame_flipped = pyg.transform.flip(frame, True, False)
+        #     self.effect_character_skill3_1_left.append(frame_flipped)
 
 
         

@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 from console import (
     print_debug,
@@ -9,19 +10,19 @@ from console import (
     print_success,
     print_warning,
 )
-import time
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from ui.server import Serveur
+from server import Serveur
+
 
 def run_offline_server():
     # 1. Initialize the server on localhost
-    server = Serveur(host='127.0.0.1', port=20001)
-    
+    server = Serveur(host="0.0.0.0", port=20001)
+
     # 2. Start the server (this starts the accept_clients thread automatically)
     server.start_server()
-    
+
     print_success(">>> Server is now listening for Katabump connections.")
     print_info("Press Ctrl+C to shut down the server.")
 
@@ -32,11 +33,12 @@ def run_offline_server():
             count = len(server.clients)
             if count > 0:
                 print_info(f"Status: {count} client(s) connected.")
-            time.sleep(10) # Check every 10 seconds
-            
+            time.sleep(10)  # Check every 10 seconds
+
     except KeyboardInterrupt:
         server.stop_server()
         print_info("Server closed by user.")
+
 
 if __name__ == "__main__":
     run_offline_server()

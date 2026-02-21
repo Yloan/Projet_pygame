@@ -84,6 +84,7 @@ class Game:
         self.etat = "menu"  # Current state: "menu" or "game"
         self.etat = "game" # temporary variable for avoid to go trough the menu each time I test the code 
         self.game_started = False  # Flag for menu launch
+        self.dev_display_ = False # Flag for dev display
         
         # ====================================================================
         # LOAD MENU SYSTEM (Reuse display and resources)
@@ -132,8 +133,13 @@ class Game:
         # ====================================================================
         # NETWORK CONFIGURATION
         # ====================================================================
-        self.host = "127.0.0.1"
-        self.port = 12345
+        # self.host = "127.0.0.1"
+        # self.port = 12345
+
+        # connexion online server
+        self.host = "51.68.34.78"
+        self.port = 20001
+
         self._client_socket = None
         self._client_lock = threading.Lock()
         self._send_queue = queue.Queue()
@@ -353,6 +359,28 @@ class Game:
         """
         self.player.update()
 
+    # ====================================================================
+    # Some dev display
+    # ====================================================================
+    def dev_display(self, liste_image=None):
+        x,y = pyg.mouse.get_pos()
+        self.draw_text_center( f"pos mouse --> X: {x}, Y: {y}", self.font, self.TEXT_COL2, 10)
+
+
+        # if liste_image is not None:
+        #     for element in liste_image:
+        #         if hasattr(element, 'rect'):
+        #             rect = element.rect
+        #         elif isinstance(element, pyg.Surface):
+        #             # Si tu n'as que l'image, il faut aussi connaître sa position
+        #             # Ici, on suppose que tu l'as placé quelque part
+        #             rect = element.get_rect() 
+        #         else:
+        #             continue
+
+        #         # Dessiner la bordure
+        #         pyg.draw.rect(self.screen, (0, 255, 0), rect, 2)
+
     # ========================================================================
     # MAIN GAME LOOP
     # ========================================================================
@@ -374,7 +402,8 @@ class Game:
         # ====================================================================
         # Temporary variables (for tests)
         # ====================================================================
-        #self.etat = "game"  # Start directly in game for testing
+        self.etat = "menu"  # Start directly in menu
+        # self.etat = "game"  # Start directly in game
 
         while self.running:
             # ================================================================
@@ -396,6 +425,21 @@ class Game:
                 for event in pyg.event.get():
                     if event.type == pyg.QUIT:
                         self.running = False
+                    elif event.type == pyg.KEYDOWN:
+                        if event.key == pyg.K_ESCAPE:
+                            self.running = False
+                        if event.key == pyg.K_F2:
+                            self.dev_display_ = not self.dev_display_
+                    # CHECK OF SCROLL EVENT
+                    elif event.type == pyg.MOUSEBUTTONDOWN:
+                        if event.button == 4: # MOUSE UP
+                            self.Menu.scroll_y = max(0, self.Menu.scroll_y - 30)
+                        if event.button == 5: # MOUSE down
+                            self.Menu.scroll_y += 30
+
+                    if self.Menu.menu_state == "creation_parameters_session_menu":
+                        self.Menu.input_box.handle_event(event) # Indispensable pour taper au clavier
+
 
                 pyg.display.update()
                 
@@ -411,6 +455,9 @@ class Game:
                         if event.key == pyg.K_ESCAPE:
                             self.running = False
                             self.send_to_server(message="ESC appuyé")
+                        if event.key == pyg.K_F2:
+                            self.dev_display_ = not self.dev_display_
+                            
 
                 # Draw game background
                 self.screen.blit(self.map_back, (0, 0))
@@ -482,9 +529,18 @@ class Game:
                     message=f"Position du joueur : x={player_pos[0]}, y={player_pos[1]}"
                 )
 
-                # Update display
-                pyg.display.update()
-                pyg.display.flip()
+
+
+            if self.dev_display_:
+                try:
+                    self.dev_display()
+                except Exception as e:
+                    print(f'Error dev display| Error --> {e}')
+
+
+            # Update display
+            pyg.display.update()
+            pyg.display.flip()
 
         # Graceful shutdown
         self.shutdown()
