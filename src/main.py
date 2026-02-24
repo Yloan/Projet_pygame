@@ -365,6 +365,7 @@ class Game:
     def dev_display(self, liste_image=None):
         x,y = pyg.mouse.get_pos()
         self.draw_text_center( f"pos mouse --> X: {x}, Y: {y}", self.font, self.TEXT_COL2, 10)
+        
 
 
         # if liste_image is not None:

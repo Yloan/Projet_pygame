@@ -364,7 +364,8 @@ class Menu:
         self.screen.set_clip(zone_visible)
 
         for i,session in enumerate(self.sessions):
-            print(f"Session nb {i}: {session}. Y-->{session.y}")
+            # print(f"Session nb {i}: {session}. Y-->{session.y}")
+            print(f"Session nb {i}: {session}. Y-->{session.y} - title-->{session.titre}")
             session.draw_session(session.y - self.scroll_y)
 
         
@@ -373,14 +374,14 @@ class Menu:
 
         if self.create_session_button.draw(self.screen):
             print("Session created")
-            new_session = Session(self)
+            # new_session = Session(self)
 
             self.menu_state = "creation_parameters_session_menu"
             
-            calculated_y = 79 + (len(self.sessions) * new_session.gap)
-            new_session.y = calculated_y
+            # calculated_y = 79 + (len(self.sessions) * new_session.gap)
+            # new_session.y = calculated_y
             
-            self.sessions.append(new_session)
+            # self.sessions.append(new_session)
 
         self.draw_text(text="Create session", font=self.middle_font, text_col="Black", x=735, y=480)
         if self.exit_button.draw(self.screen):
@@ -682,16 +683,15 @@ class Menu:
         elif self.menu_state == "settings":
             self.handle_settings_menu()
         elif self.menu_state == "creation_parameters_session_menu":
-            self.handle_session_menu() # Dessine l'arrière-plan
+            self.handle_session_menu()
             
             # Fond du modal
             pyg.draw.rect(self.screen, (30, 30, 30), (350, 150, 600, 450))
             
             
             self.draw_text_center("Configuration", self.font, self.TEXT_COL, 170)
-        
-            # Utilisation correcte de l'objet input_box
-            self.input_box.rect.x = 500 # Position fixe
+
+            self.input_box.rect.x = 500
             self.input_box.rect.y = 245
             self.input_box.draw(self.screen)
 
@@ -701,10 +701,12 @@ class Menu:
             if self.input_box.btn_moins_ia.draw(self.screen) and self.input_box.temp_nb_ia > 0: self.input_box.temp_nb_ia -= 1
         
             if self.input_box.validate_button.draw(self.screen):
-                # Créer la session avec les vraies données de l'input_box
                 new_s = Session(self)
                 new_s.titre = self.input_box.text if self.input_box.text != "" else "Sans titre"
                 new_s.nb_bots = self.input_box.temp_nb_ia
+                
+                new_s.y = 79 + (len(self.sessions) * new_s.gap)
+                
                 self.sessions.append(new_s)
                 self.menu_state = "play"
 
@@ -749,11 +751,11 @@ class Session:
         # Bouton "Join" spécifique à cette session
         self.join_button = button.Button(x=691, y=231, image=self.button_img, scale=0.25)
 
-        self.gap = 75
+        self.gap = 125
         self.y = 79
         
         # Paramètres qui seront remplis à la création
-        self.titre = "Nouvelle Session"
+        self.titre = "Sans titre"
         self.nb_bots = 0
         self.nb_players = 1
 
@@ -770,6 +772,7 @@ class Session:
         # Bouton Rejoindre et son texte
         if self.join_button.draw(self.screen):
             print(f"Tentative de rejoindre : {self.titre}")
+            self.menu_state = "choice_characters_1"
 
         self.menu.draw_text("Join", self.menu.middle_font, "Black", 745, y_scrollé + 186)
         
@@ -781,7 +784,7 @@ class Session:
         self.screen.blit(self.bot_session, (450, y_scrollé + 188))
         self.screen.blit(self.player_session, (530, y_scrollé + 188))
 
-        # VALEURS des paramètres (Affiche les chiffres saisis !)
+        # VALEURS des paramètres
         self.menu.draw_text(str(self.nb_bots), self.menu.middle_font, "Black", 490, y_scrollé + 188)
         self.menu.draw_text(str(self.nb_players), self.menu.middle_font, "Black", 570, y_scrollé + 188)
 
@@ -804,7 +807,9 @@ class InputBox:
         self.draw_text(text='-', font=self.font, text_col='Black', x=600, y=320)
         self.btn_moins_ia = button.Button(530, 320, button_session, 0.05)
         self.draw_text(text='+', font=self.font, text_col='Black', x=530, y=320)
+        
         self.validate_button = button.Button(550, 520, button_session, 0.5)
+        self.draw_text(text='Confirm', font=self.font, text_col='Black', x=550, y=520)
 
     def handle_event(self, event):
         if event.type == pyg.MOUSEBUTTONDOWN:
@@ -822,9 +827,22 @@ class InputBox:
             self.txt_surface = self.font.render(self.text, True, (255, 255, 255))
 
     def draw(self, screen):
-        
+        # Dessin du texte de l'InputBox et son contour
         screen.blit(self.txt_surface, (self.rect.x + 5, self.rect.y + 5))
         pyg.draw.rect(screen, self.color, self.rect, 2)
+
+        
+        # Rectangle derrière le '-' (Bouton Plus IA)
+        pyg.draw.rect(screen, (255, 0, 0), (600, 320, 30, 30)) 
+        self.draw_text(text='-', font=self.font, text_col='Black', x=607, y=320)
+
+        # Rectangle derrière le '+' (Bouton Moins IA)
+        pyg.draw.rect(screen, (255, 0, 0), (530, 320, 30, 30))
+        self.draw_text(text='+', font=self.font, text_col='Black', x=535, y=320)
+
+        # Rectangle derrière le 'Confirm' (Bouton Valider)
+        pyg.draw.rect(screen, (255, 0, 0), (545, 515, 110, 40))
+        self.draw_text(text='Confirm', font=self.font, text_col='Black', x=550, y=520)
 
     def draw_text(self, text, font, text_col, x, y):
         img = font.render(text, True, text_col)
