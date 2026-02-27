@@ -16,17 +16,17 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from ui.server import Serveur
 
 def run_offline_server():
-    # 1. Initialize the server on localhost
-    server = Serveur(host='127.0.0.1', port=20001)
+    # Initialize the server on localhost
+    server = Serveur(host='127.0.0.1', port=12345)
     
-    # 2. Start the server (this starts the accept_clients thread automatically)
+    # Start the server (this starts the accept_clients thread automatically)
     server.start_server()
     
     print_success(">>> Server is now listening for Katabump connections.")
     print_info("Press Ctrl+C to shut down the server.")
 
     try:
-        # 3. Keep the main thread alive
+        # Keep the main thread alive
         while True:
             # Periodically check client count
             count = len(server.clients)
