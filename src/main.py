@@ -22,7 +22,6 @@ Recommendations:
 4. Consider using a constants file for magic numbers (window size, host, port)
 """
 
-import os
 import queue
 import socket
 import threading
@@ -32,7 +31,6 @@ import pygame as pyg
 
 import game.characters as player_module
 import ui.menu as menu
-import ui.menu_in_game as menu_in_game
 from game.map_laoder import MapLoader
 from ui.console import (
     print_error,
@@ -44,13 +42,10 @@ from ui.console import (
 from ui.server import Serveur
 
 
-
-
-
 class Game:
     """
     Main game class handling window, game loop, and server communication.
-    
+
     Attributes:
         width (int): Window width in pixels
         height (int): Window height in pixels
@@ -64,13 +59,13 @@ class Game:
     def __init__(self, width=1280, height=720, fullscreen=False):
         """
         Initialize game window, assets, and network configuration.
-        
+
         Args:
             width (int): Window width (default 1280)
             height (int): Window height (default 720)
             fullscreen (bool): Enable fullscreen (default False)
         """
-        
+
         # ====================================================================
         # WINDOW CONFIGURATION
         # ====================================================================
@@ -82,19 +77,17 @@ class Game:
         # GAME STATE VARIABLES
         # ====================================================================
         self.etat = "menu"  # Current state: "menu" or "game"
-        self.etat = "game" # temporary variable for avoid to go trough the menu each time I test the code 
+        self.etat = "game"  # temporary variable for avoid to go trough the menu each time I test the code
         self.game_started = False  # Flag for menu launch
-        self.dev_display_ = False # Flag for dev display
-        
+        self.dev_display_ = False  # Flag for dev display
+
         # ====================================================================
         # LOAD MENU SYSTEM (Reuse display and resources)
         # ====================================================================
         self.Menu = menu.Menu(
-            width=self.width,
-            height=self.height,
-            fullscreen=self.fullscreen
+            width=self.width, height=self.height, fullscreen=self.fullscreen
         )
-        
+
         try:
             # Reuse menu's pygame resources (screen, clock, font, colors)
             self.screen = self.Menu.screen
@@ -137,8 +130,8 @@ class Game:
         # self.port = 12345
 
         # connexion online server
-        self.host = "51.68.34.78"
-        self.port = 20001
+        self.host = "51.75.118.151"
+        self.port = 20055
 
         self._client_socket = None
         self._client_lock = threading.Lock()
@@ -151,7 +144,7 @@ class Game:
     def draw_text(self, text, font, text_col, x, y):
         """
         Render text at specified position.
-        
+
         Args:
             text (str): Text to render
             font (pygame.font.Font): Font to use
@@ -165,7 +158,7 @@ class Game:
     def draw_text_center(self, text, font, text_col, y):
         """
         Render text centered horizontally at vertical position y.
-        
+
         Args:
             text (str): Text to render
             font (pygame.font.Font): Font to use
@@ -183,11 +176,11 @@ class Game:
     def center_x(self, image, scale=1):
         """
         Calculate X coordinate to center image horizontally on screen.
-        
+
         Args:
             image (pygame.Surface): Image to center
             scale (float): Scale factor (default 1)
-            
+
         Returns:
             int: Centered X coordinate
         """
@@ -208,7 +201,7 @@ class Game:
             if self._client_socket:
                 try:
                     self._client_socket.close()
-                except:
+                except Exception:
                     pass
 
             # Create new socket connection
@@ -248,7 +241,17 @@ class Game:
                         time.sleep(1.0)
                         self._connect_to_server()
                     break
-                print_network(f"Message reçu: {data.decode('utf-8')}")
+                message = data.decode("utf-8")
+                print_network(f"Message reçu: {message}")
+
+                # Handle session list updates from server
+                if message.startswith("[SessionsList]:"):
+                    try:
+                        sessions_json = message.split(":", 1)[1]
+                        self.Menu.update_sessions_from_server(sessions_json)
+                    except Exception as e:
+                        print_error(f"Erreur traitement sessions: {e}")
+
             except socket.timeout:
                 continue
             except Exception as e:
@@ -305,7 +308,7 @@ class Game:
     def send_to_server(self, message="Bonjour serveur"):
         """
         Queue a message for sending to server.
-        
+
         Args:
             message (str): Message to send (default "Bonjour serveur")
         """
@@ -324,7 +327,7 @@ class Game:
         """
         print_info("Arrêt du jeu : fermeture connexion et threads")
         self.running = False
-        
+
         # Close client socket safely
         with self._client_lock:
             try:
@@ -363,10 +366,10 @@ class Game:
     # Some dev display
     # ====================================================================
     def dev_display(self, liste_image=None):
-        x,y = pyg.mouse.get_pos()
-        self.draw_text_center( f"pos mouse --> X: {x}, Y: {y}", self.font, self.TEXT_COL2, 10)
-        
-
+        x, y = pyg.mouse.get_pos()
+        self.draw_text_center(
+            f"pos mouse --> X: {x}, Y: {y}", self.font, self.TEXT_COL2, 10
+        )
 
         # if liste_image is not None:
         #     for element in liste_image:
@@ -375,7 +378,7 @@ class Game:
         #         elif isinstance(element, pyg.Surface):
         #             # Si tu n'as que l'image, il faut aussi connaître sa position
         #             # Ici, on suppose que tu l'as placé quelque part
-        #             rect = element.get_rect() 
+        #             rect = element.get_rect()
         #         else:
         #             continue
 
@@ -396,6 +399,14 @@ class Game:
         """
         # Initialize and connect to server
         self.running = True
+
+        # Create local server instance for session management
+        self.local_server = Serveur(host="127.0.0.1", port=12345)
+        self.local_server.start_server()
+
+        # Assign server to menu
+        self.Menu.server = self.local_server
+
         self._connect_to_server()
 
         screen = self.screen
@@ -412,7 +423,7 @@ class Game:
             # ================================================================
             if self.etat == "menu":
                 screen.blit(self.wallpaper, (0, 0))
-                
+
                 if self.game_started:
                     # Main menu display
                     self.Menu.method_menu()
@@ -433,17 +444,25 @@ class Game:
                             self.dev_display_ = not self.dev_display_
                     # CHECK OF SCROLL EVENT
                     elif event.type == pyg.MOUSEBUTTONDOWN:
-                        if event.button == 4: # MOUSE UP
+                        if event.button == 4:  # MOUSE UP
                             self.Menu.scroll_y = max(0, self.Menu.scroll_y - 30)
-                        if event.button == 5: # MOUSE down
+                        if event.button == 5:  # MOUSE down
                             self.Menu.scroll_y += 30
 
                     if self.Menu.menu_state == "creation_parameters_session_menu":
-                        self.Menu.input_box.handle_event(event) # Indispensable pour taper au clavier
-
+                        self.Menu.input_box.handle_event(
+                            event
+                        )  # Indispensable pour taper au clavier
 
                 pyg.display.update()
-                
+
+            # Broadcast sessions to all clients via local server
+            if self.Menu.sessions != [] and self.local_server:
+                try:
+                    self.local_server.broadcast_sessions()
+                except Exception as e:
+                    print_error(f"Erreur lors du broadcast des sessions: {e}")
+
             # ================================================================
             # GAME STATE - Actual gameplay
             # ================================================================
@@ -458,14 +477,12 @@ class Game:
                             self.send_to_server(message="ESC appuyé")
                         if event.key == pyg.K_F2:
                             self.dev_display_ = not self.dev_display_
-                            
 
                 # Draw game background
                 self.screen.blit(self.map_back, (0, 0))
 
                 # Get frame time
                 delta_time = self.clock.tick(60)
-                
 
                 # Get current key presses
                 keys_pressed = pyg.key.get_pressed()
@@ -490,7 +507,6 @@ class Game:
                     self.player.is_attacking_skill3 = True
                     self.player.frame_character_skill3 = 0
 
-
                 # Handle player movement
                 if keys_pressed[pyg.K_UP]:
                     self.player.move("up")
@@ -514,8 +530,14 @@ class Game:
 
                 #         self.player.loop_animation_skill1 += 1
                 #     self.player.loop_animation_skill1 = 0
-                
-                self.player.update_animation(delta_time, is_moving, self.player.is_attacking_skill1, self.player.is_attacking_skill2, self.player.is_attacking_skill3)
+
+                self.player.update_animation(
+                    delta_time,
+                    is_moving,
+                    self.player.is_attacking_skill1,
+                    self.player.is_attacking_skill2,
+                    self.player.is_attacking_skill3,
+                )
 
                 # Get and draw current player sprite
                 current_sprite = self.player.get_current_sprite()
@@ -530,20 +552,24 @@ class Game:
                     message=f"Position du joueur : x={player_pos[0]}, y={player_pos[1]}"
                 )
 
-
-
             if self.dev_display_:
                 try:
                     self.dev_display()
                 except Exception as e:
-                    print(f'Error dev display| Error --> {e}')
-
+                    print(f"Error dev display| Error --> {e}")
 
             # Update display
             pyg.display.update()
             pyg.display.flip()
 
         # Graceful shutdown
+        # Stop local server
+        try:
+            if hasattr(self, "local_server") and self.local_server:
+                self.local_server.stop_server()
+        except Exception as e:
+            print_error(f"Erreur lors de l'arrêt du serveur local: {e}")
+
         self.shutdown()
 
 

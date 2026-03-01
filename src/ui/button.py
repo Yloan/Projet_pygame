@@ -53,18 +53,25 @@ class Button:
         # ====================================================================
         # IMAGE SETUP AND SCALING
         # ====================================================================
-        width = image.get_width()
-        height = image.get_height()
-        self.image = pygame.transform.scale(
-            image, 
-            (int(width * scale), int(height * scale))
-        )
+        if image is not None:
+            width = image.get_width()
+            height = image.get_height()
+            self.image = pygame.transform.scale(
+                image, 
+                (int(width * scale), int(height * scale))
+            )
+        else:
+            self.image = None
         
         # ====================================================================
         # POSITION AND COLLISION SETUP
         # ====================================================================
         # Create rect for collision detection and positioning
-        self.rect = self.image.get_rect(topleft=(x, y))
+        if self.image is not None:
+            self.rect = self.image.get_rect(topleft=(x, y))
+        else:
+            self.rect = pygame.Rect(x, y, 0, 0)
+        
         
         # ====================================================================
         # STATE MANAGEMENT
@@ -86,6 +93,9 @@ class Button:
         Returns:
             bool: True if button was clicked this frame, False otherwise
         """
+        if self.image is None:
+            return False
+
         action = False
         pos = pygame.mouse.get_pos()
 

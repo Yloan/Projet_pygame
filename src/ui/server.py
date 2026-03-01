@@ -6,14 +6,17 @@ This module provides the server for multiplayer game coordination:
 - Message broadcasting between clients
 - Game state synchronization
 - Player connection/disconnection handling
+- Session management with JSON serialization
 
 Current Features:
 - Accepts up to 2 clients
 - Broadcasts messages to all connected clients except sender
 - Notifies clients when game starts
+- Manages game sessions with JSON serialization
+- Stores and distributes session list to clients
 
 Recommendations:
-1. Implement proper message protocol (JSON/binary format)
+1. Implement proper message protocol (JSON/binary format) ✓
 2. Add player state synchronization
 3. Implement game state management on server
 4. Add player authentication/lobbies
@@ -22,23 +25,24 @@ Recommendations:
 7. Implement player timeout detection
 """
 
+import json
 import socket
 import threading
+
 from ui.console import (
-    print_info,
+    print_debug,
     print_error,
+    print_event,
+    print_info,
+    print_network,
     print_success,
     print_warning,
-    print_debug,
-    print_event,
-    print_network,
 )
-
 
 # ============================================================================
 # CONSTANTS - Server configuration
 # ============================================================================
-DEFAULT_HOST = '127.0.0.1'
+DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 12345
 MAX_CLIENTS = 2
 MESSAGE_BUFFER_SIZE = 1024
@@ -47,39 +51,45 @@ MESSAGE_BUFFER_SIZE = 1024
 class Serveur:
     """
     Game server for managing multiplayer connections and communications.
-    
+
     Attributes:
         Port (int): Server port number
         Host (str): Server host address
         clients (list): List of connected client sockets
         server_socket (socket.socket): Main server socket
     """
-    
+
     def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT):
         """
         Initialize game server.
-        
+
         Args:
             host (str): Server address (default 127.0.0.1)
             port (int): Server port (default 12345)
         """
-        
+
         # ====================================================================
         # SERVER CONFIGURATION
         # ====================================================================
         self.Port = port
         self.Host = host
-        
+
         # ====================================================================
         # CONNECTION MANAGEMENT
         # ====================================================================
         self.clients = []  # List of connected client sockets
-        
+
         # ====================================================================
         # SERVER SOCKET SETUP
         # ====================================================================
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.Host, self.Port))
+
+        # ====================================================================
+        # GLOBALS VARIABLES
+        # ====================================================================
+        self.sessions = []  # List of sessions as dictionaries
+        self.sessions_lock = threading.Lock()  # Thread-safe access to sessions
 
     # ========================================================================
     # SERVER LIFECYCLE METHODS
@@ -92,15 +102,15 @@ class Serveur:
         """
         self.server_socket.listen(MAX_CLIENTS)
         print_success(f"Serveur démarré sur {self.Host}:{self.Port}")
-        
+
         # Start accepting clients in background thread
         accept_thread = threading.Thread(target=self.accept_clients, daemon=True)
         accept_thread.start()
-        
+
     # ========================================================================
     # CLIENT CONNECTION HANDLING
     # ========================================================================
-    
+
     def accept_clients(self):
         """
         Accept incoming client connections.
@@ -111,65 +121,68 @@ class Serveur:
                 # Accept new client connection
                 client_socket, addr = self.server_socket.accept()
                 print_event(f"Client connecté depuis {addr}")
-                
+
                 # Add to client list
                 self.clients.append(client_socket)
-                
+
                 # Handle client in separate thread
                 threading.Thread(
-                    target=self.handle_client,
-                    args=(client_socket,),
-                    daemon=True
+                    target=self.handle_client, args=(client_socket,), daemon=True
                 ).start()
-                
+
                 # Notify other clients of new player
                 self.start_game()
             except Exception as e:
                 print_error(f"Erreur lors de l'acceptation d'un client: {e}")
-        
+
     def handle_client(self, client_socket):
         """
         Handle communication with individual client.
         Receives messages from client and broadcasts to others.
-        
+
         Args:
             client_socket (socket.socket): Connected client socket
         """
         while True:
             try:
                 # Receive message from client
-                data = client_socket.recv(MESSAGE_BUFFER_SIZE).decode('utf-8')
-                
+                data = client_socket.recv(MESSAGE_BUFFER_SIZE).decode("utf-8")
+
                 if data:
                     print_network(f"Reçu du client: {data}")
                     # Broadcast message to other clients
                     self.broadcast(data, client_socket)
+
+                    # Handle messages
+                    if data.startswith("[Sessions]"):
+                        self.handle_session_message(data, client_socket)
+
                 else:
                     # Empty data means client disconnected
                     break
             except Exception as e:
                 print_error(f"Erreur lors de la réception: {e}")
                 break
-        
+
         # Cleanup after client disconnects
         try:
             client_socket.close()
         except:
             pass
-        
+
         if client_socket in self.clients:
             self.clients.remove(client_socket)
-        
+
         print_error("Client déconnecté")
 
     # ========================================================================
     # MESSAGE BROADCASTING
     # ========================================================================
-    
+
     def broadcast(self, message, sender_socket):
         """
         Broadcast message to all clients except sender.
-        
+
         Args:
             message (str): Message to broadcast
             sender_socket (socket.socket): Socket of sending client (excluded from broadcast)
@@ -177,7 +190,7 @@ class Serveur:
         for client in self.clients:
             if client != sender_socket:
                 try:
-                    client.send(message.encode('utf-8'))
+                    client.send(message.encode("utf-8"))
                 except Exception as e:
                     print_error(f"Erreur lors de l'envoi du message: {e}")
                     if client in self.clients:
@@ -191,6 +204,88 @@ class Serveur:
     # GAME STATE MANAGEMENT
     # ========================================================================
 
+    # ========================================================================
+    # SESSION MANAGEMENT
+    # ========================================================================
+
+    def handle_session_message(self, data, client_socket):
+        """
+        Handle session-related messages from clients.
+
+        Args:
+            data (str): Message starting with [Sessions]
+            client_socket (socket.socket): Socket of sending client
+        """
+        try:
+            # Extract JSON data from message (format: "[Sessions]:{json_data}")
+            json_str = data.split(":", 1)[1]
+            session_data = json.loads(json_str)
+
+            # Validate and add session
+            if self.validate_session(session_data):
+                with self.sessions_lock:
+                    session_data["id"] = len(self.sessions)  # Assign unique ID
+                    self.sessions.append(session_data)
+                    print_success(f"Session créée: {session_data['titre']}")
+
+                # Broadcast updated sessions to all clients
+                self.broadcast_sessions()
+            else:
+                print_error("Session invalide reçue")
+        except json.JSONDecodeError as e:
+            print_error(f"Erreur de décodage JSON: {e}")
+        except Exception as e:
+            print_error(f"Erreur lors du traitement de la session: {e}")
+
+    def validate_session(self, session_data):
+        """
+        Validate session data structure.
+
+        Args:
+            session_data (dict): Session data to validate
+
+        Returns:
+            bool: True if valid, False otherwise
+        """
+        required_fields = ["titre", "nb_bots", "nb_players"]
+        return all(field in session_data for field in required_fields)
+
+    def broadcast_sessions(self):
+        """
+        Broadcast the current session list to all connected clients.
+        """
+        try:
+            with self.sessions_lock:
+                message = f"[SessionsList]:{json.dumps(self.sessions)}"
+
+            for client in self.clients:
+                try:
+                    client.send(message.encode("utf-8"))
+                except Exception as e:
+                    print_error(f"Erreur lors de l'envoi des sessions: {e}")
+                    if client in self.clients:
+                        try:
+                            client.close()
+                        except:
+                            pass
+                        self.clients.remove(client)
+        except Exception as e:
+            print_error(f"Erreur lors du broadcast des sessions: {e}")
+
+    def get_sessions(self):
+        """
+        Get current sessions list in thread-safe manner.
+
+        Returns:
+            list: List of session dictionaries
+        """
+        with self.sessions_lock:
+            return self.sessions.copy()
+
+    # ========================================================================
+    # GAME STATE MANAGEMENT
+    # ========================================================================
+
     def start_game(self):
         """
         Notify all clients that game has started.
@@ -199,31 +294,28 @@ class Serveur:
         start_message = "Le jeu commence maintenant!"
         self.broadcast(start_message, None)
         print_success(f"Le jeu a démarré avec {len(self.clients)} joueurs.")
-    
+
     # ========================================================================
     # SERVER SHUTDOWN
     # ========================================================================
-    
+
     def stop_server(self):
         """
         Gracefully shutdown server and close all connections.
         """
         print_info("Arrêt du serveur...")
-        
+
         # Close all client connections
         for client in self.clients:
             try:
                 client.close()
             except:
                 pass
-        
+
         # Close server socket
         try:
             self.server_socket.close()
         except:
             pass
-        
+
         print_success("Serveur arrêté.")
-
-
-
