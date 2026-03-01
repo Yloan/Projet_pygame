@@ -275,6 +275,26 @@ class Game:
                     except Exception as e:
                         print_error(f"Erreur attribution Player ID: {e}")
 
+                # Handle player character selection from other players
+                elif message.startswith("[PlayerCharacter]:"):
+                    try:
+                        data = json.loads(message.split(":", 1)[1])
+                        player_id = data.get("player_id")
+                        character_1 = data.get("character_1")
+                        character_2 = data.get("character_2")
+                        character_3 = data.get("character_3")
+                        self.Menu.update_player_character(player_id, character_1, character_2, character_3)
+                    except Exception as e:
+                        print_error(f"Erreur réception sélection perso: {e}")
+
+                # Handle player ready signal
+                elif message.startswith("[PlayerReady]:"):
+                    try:
+                        player_id = int(message.split(":", 1)[1])
+                        self.Menu.update_player_ready(player_id)
+                    except Exception as e:
+                        print_error(f"Erreur réception signal ready: {e}")
+
             except socket.timeout:
                 continue
             except Exception as e:
@@ -476,6 +496,15 @@ class Game:
                 self.send_to_server(f"[JoinedSession]:{self.current_joined_session}")
 
                 self.Menu.pending_session = None  # On vide après envoi
+
+            # Send character selection to server
+            if self.Menu.pending_character_submission is not None:
+                char_data = self.Menu.pending_character_submission
+                self.send_to_server(
+                    f"[PlayerCharacter]:{json.dumps(char_data)}"
+                )
+                self.send_to_server(f"[PlayerReady]:{char_data['player_id']}")
+                self.Menu.pending_character_submission = None  # Clear after sending
 
             # ================================================================
             # GAME STATE - Actual gameplay

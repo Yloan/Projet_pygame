@@ -373,6 +373,24 @@ class Menu:
             3: (1036, 125),
             4: (1036, 442),
         }
+        
+        # ====================================================================
+        # Variables for final character selection (multiplayer)
+        # ====================================================================
+        self.current_session_name = None  # Nom de la session rejointe
+        self.players_characters = {  # Dict pour stocker les 3 persos de chaque joueur: {player_id: [char1, char2, char3]}
+            1: [None, None, None],
+            2: [None, None, None],
+            3: [None, None, None],
+            4: [None, None, None],
+        }
+        self.players_ready = {  # Dict pour tracker qui a cliqué play: {player_id: True/False}
+            1: False,
+            2: False,
+            3: False,
+            4: False,
+        }
+        self.pending_character_submission = None  # {player_id, character_1, character_2, character_3} à envoyer au serveur
 
     def handle_session_menu(self):
         """Gère l'état du menu des sessions"""
@@ -433,6 +451,35 @@ class Menu:
             print(f"Erreur de décodage JSON des sessions: {e}")
         except Exception as e:
             print(f"Erreur lors de la mise à jour des sessions: {e}")
+
+    def update_player_character(self, player_id, character_1, character_2, character_3):
+        """
+        Update character selection for a specific player (3 characters).
+        Called when receiving player selection from server.
+
+        Args:
+            player_id (int): ID of the player (1-4)
+            character_1 (int): Index of first selected character
+            character_2 (int): Index of second selected character
+            character_3 (int): Index of third selected character
+        """
+        if 1 <= player_id <= 4:
+            self.players_characters[player_id] = [character_1, character_2, character_3]
+            from ui.console import print_network
+            print_network(f"Joueur {player_id} a sélectionné les personnages {character_1}, {character_2}, {character_3}")
+
+    def update_player_ready(self, player_id):
+        """
+        Mark a player as ready for game start.
+        Called when receiving ready signal from server.
+
+        Args:
+            player_id (int): ID of the player (1-4)
+        """
+        if 1 <= player_id <= 4:
+            self.players_ready[player_id] = True
+            from ui.console import print_network
+            print_network(f"Joueur {player_id} est READY !")
 
     def center_x(self, image, scale=1):
         """Retourne la coordonnée x pour centrer `image` horizontalement.
@@ -747,6 +794,212 @@ class Menu:
             self.menu_state = "start game"
             self.etat = "game"
 
+    def handle_character_selection_final(self):
+        """
+        Affiche l'écran final de sélection avec les 4 slots joueurs.
+        Chaque joueur sélectionne 3 personnages avant de confirmer.
+        character_1 et character_2 -> petits aperçus
+        character_3 -> grand affichage
+        """
+        # Draw background
+        self.screen.blit(self.choice_chracters, (0, 0))
+        self.draw_text_center("Choose three characters", 
+                             self.font, self.TEXT_COL, 20)
+
+        # Display character selection buttons
+        character_buttons = [
+            (self.character_1_button, 1),
+            (self.character_2_button, 2),
+            (self.character_3_button, 3),
+            (self.character_4_button, 4),
+            (self.character_5_button, 5),
+            (self.character_6_button, 6),
+            (self.character_7_button, 7),
+            (self.character_8_button, 8),
+            (self.character_9_button, 9),
+            (self.character_10_button, 10),
+            (self.character_11_button, 11),
+            (self.character_12_button, 12),
+            (self.character_13_button, 13),
+            (self.character_14_button, 14),
+            (self.character_15_button, 15),
+            (self.character_16_button, 16),
+            (self.character_17_button, 17),
+            (self.character_18_button, 18),
+        ]
+
+        # Handle character button clicks for current player's selection
+        for button_obj, char_num in character_buttons:
+            if button_obj.draw(self.screen):
+                # Store order of selection
+                if not self.character_1:
+                    self.character_1 = char_num
+                elif not self.character_2:
+                    self.character_2 = char_num
+                elif not self.character_3:
+                    self.character_3 = char_num
+
+        # Display the 4 slots with selected characters from other players
+        for player_id in range(1, 5):
+            pos_x, pos_y = self.slot_positions[player_id]
+            characters = self.players_characters[player_id]
+            char_1, char_2, char_3 = characters
+            
+            # Display the main character (the latest selected) in large
+            if char_3 and 1 <= char_3 <= len(self.image_ch):
+                # character_3 in large at slot position
+                char_image = self.image_ch[char_3 - 1]
+                scaled_image = pyg.transform.scale(
+                    char_image,
+                    (int(char_image.get_width() * 10), 
+                     int(char_image.get_height() * 10))
+                )
+                self.screen.blit(scaled_image, (pos_x, pos_y))
+                
+                # character_2 in small preview below
+                if char_2 and 1 <= char_2 <= len(self.image_ch):
+                    small_img = self.image_ch[char_2 - 1]
+                    small_x = pos_x - 40
+                    small_y = pos_y + 214
+                    self.screen.blit(small_img, (small_x, small_y))
+                
+                # character_1 also in small preview (offset more to the right)
+                if char_1 and 1 <= char_1 <= len(self.image_ch):
+                    small_img = self.image_ch[char_1 - 1]
+                    small_x = pos_x + 196
+                    small_y = pos_y + 214
+                    self.screen.blit(small_img, (small_x, small_y))
+                    
+            elif char_2 and 1 <= char_2 <= len(self.image_ch):
+                # character_2 in large at slot position
+                char_image = self.image_ch[char_2 - 1]
+                scaled_image = pyg.transform.scale(
+                    char_image,
+                    (int(char_image.get_width() * 10), 
+                     int(char_image.get_height() * 10))
+                )
+                self.screen.blit(scaled_image, (pos_x, pos_y))
+                
+                # character_1 in small preview
+                if char_1 and 1 <= char_1 <= len(self.image_ch):
+                    small_img = self.image_ch[char_1 - 1]
+                    small_x = pos_x - 40
+                    small_y = pos_y + 214
+                    self.screen.blit(small_img, (small_x, small_y))
+                    
+            elif char_1 and 1 <= char_1 <= len(self.image_ch):
+                # character_1 in large at slot position
+                char_image = self.image_ch[char_1 - 1]
+                scaled_image = pyg.transform.scale(
+                    char_image,
+                    (int(char_image.get_width() * 10), 
+                     int(char_image.get_height() * 10))
+                )
+                self.screen.blit(scaled_image, (pos_x, pos_y))
+            
+            # Display player label and status if has any selection
+            if char_1 or char_2 or char_3:
+                player_label = "YOU" if player_id == self.my_player_id else f"Player {player_id}"
+                self.draw_text(player_label, self.middle_font, 
+                              self.TEXT_COL, pos_x, pos_y - 40)
+                
+                # Display status (READY or WAITING)
+                status_text = "READY" if self.players_ready[player_id] else "WAITING"
+                status_color = (0, 255, 0) if self.players_ready[player_id] else (255, 255, 0)
+                self.draw_text(status_text, self.little_font, 
+                              status_color, pos_x, pos_y - 20)
+            else:
+                # Empty slot - show placeholder (but not for current player)
+                if player_id != self.my_player_id:
+                    self.draw_text(f"Player {player_id}", self.middle_font, 
+                                  self.TEXT_COL2, pos_x + 20, pos_y + 50)
+                    self.draw_text("Waiting...", self.little_font, 
+                                  (255, 255, 0), pos_x + 20, pos_y + 100)
+
+        # Display current player's team (3 selected characters) - cascade display
+        # Get current player's slot position for reference
+        my_slot_x, my_slot_y = self.slot_positions[self.my_player_id]
+        
+        # Display character_3 in large at slot position (EN GROS)
+        if self.character_3:
+            char_image = self.image_ch[self.character_3 - 1]
+            scaled_image = pyg.transform.scale(
+                char_image,
+                (int(char_image.get_width() * 10), 
+                 int(char_image.get_height() * 10))
+            )
+            self.screen.blit(scaled_image, (my_slot_x, my_slot_y))
+            
+            # character_2 in small preview below
+            if self.character_2:
+                small_img = self.image_ch[self.character_2 - 1]
+                small_x = my_slot_x - 40
+                small_y = my_slot_y + 214
+                self.screen.blit(small_img, (small_x, small_y))
+                
+                # character_1 also in small preview (offset more to the right)
+                if self.character_1:
+                    small_img = self.image_ch[self.character_1 - 1]
+                    small_x = my_slot_x + 196
+                    small_y = my_slot_y + 214
+                    self.screen.blit(small_img, (small_x, small_y))
+                    
+        elif self.character_2:
+            # character_2 EN GROS at slot position
+            char_image = self.image_ch[self.character_2 - 1]
+            scaled_image = pyg.transform.scale(
+                char_image,
+                (int(char_image.get_width() * 10), 
+                 int(char_image.get_height() * 10))
+            )
+            self.screen.blit(scaled_image, (my_slot_x, my_slot_y))
+            
+            # character_1 in small preview
+            if self.character_1:
+                small_img = self.image_ch[self.character_1 - 1]
+                small_x = my_slot_x - 40
+                small_y = my_slot_y + 214
+                self.screen.blit(small_img, (small_x, small_y))
+                
+        elif self.character_1:
+            # character_1 EN GROS at slot position
+            char_image = self.image_ch[self.character_1 - 1]
+            scaled_image = pyg.transform.scale(
+                char_image,
+                (int(char_image.get_width() * 10), 
+                 int(char_image.get_height() * 10))
+            )
+            self.screen.blit(scaled_image, (my_slot_x, my_slot_y))
+
+        # Show PLAY button if current player has selected all 3 characters and not already ready
+        if self.character_1 and self.character_2 and self.character_3 and not self.players_ready[self.my_player_id]:
+            if self.start_button.draw(self.screen):
+                # Mark current player as ready
+                self.players_ready[self.my_player_id] = True
+                # Prepare data to send to server with all 3 characters
+                self.pending_character_submission = {
+                    "player_id": self.my_player_id,
+                    "character_1": self.character_1,
+                    "character_2": self.character_2,
+                    "character_3": self.character_3,
+                    "session_name": self.current_session_name
+                }
+                from ui.console import print_network
+                print_network(f"Joueur {self.my_player_id} a cliqué PLAY avec {self.character_1}, {self.character_2}, {self.character_3}")
+        
+        # Check if all players are ready
+        # Calculate how many players should be in this session
+        total_players_in_session = self.number_players + 1  # Include the current player
+        
+        # Count how many players are ready
+        ready_count = sum(1 for p_id in range(1, total_players_in_session + 1) 
+                         if self.players_ready[p_id])
+        
+        # If all expected players are ready, start the game
+        if ready_count == total_players_in_session and total_players_in_session > 0:
+            self.menu_state = "start game"
+            self.etat = "game"
+
     def method_menu(self):
         """Méthode principale gérant tous les états du menu"""
         if self.menu_state == "main":
@@ -813,6 +1066,8 @@ class Menu:
             self.handle_choice_characters_2()
         elif self.menu_state == "choice_characters_3":
             self.handle_choice_characters_3()
+        elif self.menu_state == "character_selection_final":
+            self.handle_character_selection_final()
         elif self.menu_state == "start game":
             self.etat = "game"
         else:
@@ -904,15 +1159,36 @@ class Session:
         # Nom de la session (Text)
         self.menu.draw_text(self.titre, self.menu.font, "Black", 391, y_scrollé + 113)
 
-        # Bouton Rejoindre et son texte
-        if self.join_button.draw(self.screen):
-            print(f"Tentative de rejoindre : {self.titre}")
-            self.menu.menu_state = "play_menu"
-            self.menu.number_players = self.nb_players
-            self.menu.number_bot = self.nb_bots
+        # Check if session is full
+        is_session_full = self.nb_players + self.nb_bots >= 4
+        
+        # Bouton Rejoindre ou FULL et son texte
+        if not is_session_full:
+            if self.join_button.draw(self.screen):
+                print(f"Tentative de rejoindre : {self.titre}")
+                # Réinitialiser les variables de sélection
+                self.menu.character_1 = 0
+                self.menu.character_2 = 0
+                self.menu.character_3 = 0
+                self.menu.current_session_name = self.titre
+                self.menu.number_players = self.nb_players
+                self.menu.number_bot = self.nb_bots
+                
+                # Réinitialiser les sélections de tous les joueurs
+                for p_id in range(1, 5):
+                    self.menu.players_characters[p_id] = [None, None, None]
+                    self.menu.players_ready[p_id] = False
+                
+                self.menu.menu_state = "character_selection_final"
+            
+            button_text = "Join"
+        else:
+            # Session is full - display FULL button (disabled)
+            self.join_button.draw(self.screen)  # Still draw button for visual consistency
+            button_text = "FULL"
 
         self.menu.draw_text(
-            "Join", self.menu.middle_font, "Black", 745, y_scrollé + 186
+            button_text, self.menu.middle_font, "Black", 745, y_scrollé + 186
         )
 
         # Décorations (Splash et Star Bar)
@@ -927,8 +1203,10 @@ class Session:
         self.menu.draw_text(
             str(self.nb_bots), self.menu.middle_font, "Black", 490, y_scrollé + 188
         )
+        # Display available player slots (nb_players - nb_bots, max 4 total)
+        available_slots = max(0, self.nb_players - self.nb_bots)
         self.menu.draw_text(
-            str(self.nb_players), self.menu.middle_font, "Black", 570, y_scrollé + 188
+            str(available_slots), self.menu.middle_font, "Black", 570, y_scrollé + 188
         )
 
 
