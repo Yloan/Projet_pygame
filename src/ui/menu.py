@@ -261,9 +261,9 @@ class Menu:
         )
 
         # # Sessions buttons
-        # self.join_button = button.Button(
-        #     x=691, y=231, image= self.button_session, scale=0.25
-        # )
+        self.join_button = button.Button(
+            x=691, y=231, image=self.button_session, scale=0.25
+        )
 
         self.create_session_button = button.Button(
             x=655, y=400, image=self.button_session, scale=0.5
@@ -336,9 +336,13 @@ class Menu:
         )
 
         # start button
-        start_img = pyg.image.load("assets/buttons/start_button.png").convert_alpha()
-        self.start_button = button.Button(
-            self.center_x(start_img, 1), 600, start_img, 1
+        # start_img = pyg.image.load("assets/buttons/start_button.png").convert_alpha()
+        self.start_button = animated_button.AnimatedButton(
+            self.center_x(self.play_button_frames[0], 1.3),
+            600,
+            self.play_button_frames,
+            BUTTON_SCALE,
+            animation_speed=1,
         )
 
         # ====================================================================
@@ -357,6 +361,12 @@ class Menu:
             100, 100, 140, 32, button_session=self.button_session, menu=self
         )
 
+        # ====================================================================
+        # Variables Characters selections
+        # ====================================================================
+        self.number_players = 0
+        self.number_bot = 0
+
     def handle_session_menu(self):
         """Gère l'état du menu des sessions"""
         self.bg_session = pyg.transform.scale(
@@ -369,9 +379,9 @@ class Menu:
 
         for i, session in enumerate(self.sessions):
             # print(f"Session nb {i}: {session}. Y-->{session.y}")
-            print(
-                f"Session nb {i}: {session}. Y-->{session.y} - title-->{session.titre}"
-            )
+            # print(
+            #     f"Session nb {i}: {session}. Y-->{session.y} - title-->{session.titre}"
+            # )
             session.draw_session(session.y - self.scroll_y)
 
         self.screen.set_clip(None)
@@ -472,20 +482,12 @@ class Menu:
             self.TEXT_COL2,
             65,
         )
-        if self.one_player_button.draw(self.screen):
-            self.menu_state = "one_player"
-            self.number_players = 1
-        if self.two_players_button.draw(self.screen):
-            self.menu_state = "two_players"
-            self.number_players = 2
-        if self.three_players_button.draw(self.screen):
-            self.menu_state = "three_players"
-            self.number_players = 3
-        if self.four_players_button.draw(self.screen):
-            self.menu_state = "choice_characters_1"
-            self.number_players = 4
+
+        # tmp = ["three", "two", "one"]
+        # self.menu_state = f"{tmp[self.number_bot - 1]}{'_player' if self.number_bot == 3 else '_players'}"
+        self.menu_state = "choice_characters_1"
         if self.exit_button.draw(self.screen):
-            self.menu_state = "main"
+            self.menu_state = "play"
 
     def handle_one_player_menu(self):
         """Gère la sélection du nombre de bots pour 1 joueur"""
@@ -777,12 +779,6 @@ class Menu:
                     "gap": 125,
                 }
 
-                # Envoyer au serveur (sera affiché après réception)
-                import json
-
-                message = f"[Sessions]:{json.dumps(session_data)}"
-
-                # Les sessions affichées viendront du serveur uniquement
                 self.pending_session = session_data
 
                 self.menu_state = "play"
@@ -790,7 +786,8 @@ class Menu:
         elif self.menu_state == "play":
             self.input_box.clean()
             self.handle_session_menu()
-            # self.handle_play_menu()
+        elif self.menu_state == "play_menu":
+            self.handle_play_menu()
         elif self.menu_state == "one_player":
             self.handle_one_player_menu()
         elif self.menu_state == "two_players":
@@ -897,7 +894,9 @@ class Session:
         # Bouton Rejoindre et son texte
         if self.join_button.draw(self.screen):
             print(f"Tentative de rejoindre : {self.titre}")
-            self.menu_state = "choice_characters_1"
+            self.menu.menu_state = "play_menu"
+            self.menu.number_players = self.nb_players
+            self.menu.number_bot = self.nb_bots
 
         self.menu.draw_text(
             "Join", self.menu.middle_font, "Black", 745, y_scrollé + 186
