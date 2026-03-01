@@ -88,8 +88,8 @@ class Serveur:
         # ====================================================================
         # GLOBALS VARIABLES
         # ====================================================================
-        self.sessions = []  # List of sessions as dictionaries
-        self.sessions_lock = threading.Lock()  # Thread-safe access to sessions
+        self.sessions = []
+        self.sessions_lock = threading.Lock()
 
     # ========================================================================
     # SERVER LIFECYCLE METHODS
@@ -155,7 +155,29 @@ class Serveur:
 
                     # Handle messages
                     if data.startswith("[Sessions]"):
-                        self.handle_session_message(data, client_socket)
+                        try:
+                            json_str = data.split(":", 1)[1]
+                            session_data = json.loads(json_str)
+
+                            with self.sessions_lock:
+                                session_data["id"] = len(self.sessions)
+                                self.sessions.append(session_data)
+                                print_success(
+                                    f"Session créée: {session_data.get('titre', 'Sans titre')}"
+                                )
+
+                            # Envoyer la liste complète à tous
+                            self.broadcast_sessions()
+                        except json.JSONDecodeError as e:
+                            print_error(f"Erreur JSON: {e}")
+                        except Exception as e:
+                            print_error(f"Erreur session: {e}")
+
+                    if data.startswith("[CreateSession]:"):
+                        new_session_data = json.loads(data.split(":", 1)[1])
+                        with self.sessions_lock:
+                            self.sessions.append(new_session_data)
+                        self.broadcast_sessions()  # On prévient tout le monde
 
                 else:
                     # Empty data means client disconnected
@@ -181,79 +203,27 @@ class Serveur:
 
     def broadcast(self, message, sender_socket):
         """
-        Broadcast message to all clients except sender.
+        Broadcast message to all clients.
 
         Args:
             message (str): Message to broadcast
             sender_socket (socket.socket): Socket of sending client (excluded from broadcast)
         """
-        for client in self.clients:
-            if client != sender_socket:
+        with self.sessions_lock:
+            sessions_json = json.dumps(self.sessions)
+            message = f"[SessionsList]:{sessions_json}"
+            for client in self.clients:
                 try:
                     client.send(message.encode("utf-8"))
-                except Exception as e:
-                    print_error(f"Erreur lors de l'envoi du message: {e}")
-                    if client in self.clients:
-                        try:
-                            client.close()
-                        except:
-                            pass
-                        self.clients.remove(client)
-
-    # ========================================================================
-    # GAME STATE MANAGEMENT
-    # ========================================================================
+                except:
+                    pass
 
     # ========================================================================
     # SESSION MANAGEMENT
     # ========================================================================
 
-    def handle_session_message(self, data, client_socket):
-        """
-        Handle session-related messages from clients.
-
-        Args:
-            data (str): Message starting with [Sessions]
-            client_socket (socket.socket): Socket of sending client
-        """
-        try:
-            # Extract JSON data from message (format: "[Sessions]:{json_data}")
-            json_str = data.split(":", 1)[1]
-            session_data = json.loads(json_str)
-
-            # Validate and add session
-            if self.validate_session(session_data):
-                with self.sessions_lock:
-                    session_data["id"] = len(self.sessions)  # Assign unique ID
-                    self.sessions.append(session_data)
-                    print_success(f"Session créée: {session_data['titre']}")
-
-                # Broadcast updated sessions to all clients
-                self.broadcast_sessions()
-            else:
-                print_error("Session invalide reçue")
-        except json.JSONDecodeError as e:
-            print_error(f"Erreur de décodage JSON: {e}")
-        except Exception as e:
-            print_error(f"Erreur lors du traitement de la session: {e}")
-
-    def validate_session(self, session_data):
-        """
-        Validate session data structure.
-
-        Args:
-            session_data (dict): Session data to validate
-
-        Returns:
-            bool: True if valid, False otherwise
-        """
-        required_fields = ["titre", "nb_bots", "nb_players"]
-        return all(field in session_data for field in required_fields)
-
     def broadcast_sessions(self):
-        """
-        Broadcast the current session list to all connected clients.
-        """
+        """Envoie la liste des sessions à tous les clients"""
         try:
             with self.sessions_lock:
                 message = f"[SessionsList]:{json.dumps(self.sessions)}"
@@ -262,7 +232,7 @@ class Serveur:
                 try:
                     client.send(message.encode("utf-8"))
                 except Exception as e:
-                    print_error(f"Erreur lors de l'envoi des sessions: {e}")
+                    print_error(f"Erreur envoi sessions: {e}")
                     if client in self.clients:
                         try:
                             client.close()
@@ -270,17 +240,7 @@ class Serveur:
                             pass
                         self.clients.remove(client)
         except Exception as e:
-            print_error(f"Erreur lors du broadcast des sessions: {e}")
-
-    def get_sessions(self):
-        """
-        Get current sessions list in thread-safe manner.
-
-        Returns:
-            list: List of session dictionaries
-        """
-        with self.sessions_lock:
-            return self.sessions.copy()
+            print_error(f"Erreur broadcast sessions: {e}")
 
     # ========================================================================
     # GAME STATE MANAGEMENT

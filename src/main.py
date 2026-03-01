@@ -22,6 +22,7 @@ Recommendations:
 4. Consider using a constants file for magic numbers (window size, host, port)
 """
 
+import json
 import queue
 import socket
 import threading
@@ -39,7 +40,6 @@ from ui.console import (
     print_success,
     print_warning,
 )
-from ui.server import Serveur
 
 
 class Game:
@@ -80,6 +80,8 @@ class Game:
         self.etat = "game"  # temporary variable for avoid to go trough the menu each time I test the code
         self.game_started = False  # Flag for menu launch
         self.dev_display_ = False  # Flag for dev display
+
+        self.delta_time_sessions_send = 0  # Counter for send sessions to server
 
         # ====================================================================
         # LOAD MENU SYSTEM (Reuse display and resources)
@@ -252,6 +254,13 @@ class Game:
                     except Exception as e:
                         print_error(f"Erreur traitement sessions: {e}")
 
+                # Broadcast sessions received from server to menu
+                if message.startswith("[Sessions]"):
+                    try:
+                        self.Menu.update_sessions_from_server(message.split(":", 1)[1])
+                    except Exception as e:
+                        print_error(f"Erreur mise à jour sessions: {e}")
+
             except socket.timeout:
                 continue
             except Exception as e:
@@ -392,21 +401,9 @@ class Game:
     def run(self):
         """
         Main game loop:
-        1. Initialize running state and connect to server
-        2. Handle events (menu navigation, quit)
-        3. Update and render based on current game state
-        4. Shutdown properly on exit
         """
         # Initialize and connect to server
         self.running = True
-
-        # Create local server instance for session management
-        self.local_server = Serveur(host="127.0.0.1", port=12345)
-        self.local_server.start_server()
-
-        # Assign server to menu
-        self.Menu.server = self.local_server
-
         self._connect_to_server()
 
         screen = self.screen
@@ -424,14 +421,13 @@ class Game:
             if self.etat == "menu":
                 screen.blit(self.wallpaper, (0, 0))
 
-                if self.game_started:
-                    # Main menu display
-                    self.Menu.method_menu()
-                    # Check if menu state changed to game
-                    if self.Menu.etat == "game":
-                        self.etat = "game"
-                else:
-                    self.game_started = True
+                self.Menu.method_menu()
+                if self.Menu.etat == "game":
+                    self.etat = "game"
+                    # Transmission des événements à l'InputBox si nécessaire
+                if self.Menu.menu_state == "creation_parameters_session_menu":
+                    for event in pyg.event.get():
+                        self.Menu.input_box.handle_event(event)
 
                 # Handle menu events
                 for event in pyg.event.get():
@@ -454,14 +450,14 @@ class Game:
                             event
                         )  # Indispensable pour taper au clavier
 
-                pyg.display.update()
-
-            # Broadcast sessions to all clients via local server
-            if self.Menu.sessions != [] and self.local_server:
-                try:
-                    self.local_server.broadcast_sessions()
-                except Exception as e:
-                    print_error(f"Erreur lors du broadcast des sessions: {e}")
+            self.delta_time_sessions_send += 1
+            # Send sessions to server
+            if self.Menu.pending_session is not None:
+                # On envoie la demande de création au serveur
+                self.send_to_server(
+                    f"[CreateSession]:{json.dumps(self.Menu.pending_session)}"
+                )
+                self.Menu.pending_session = None  # On vide après envoi
 
             # ================================================================
             # GAME STATE - Actual gameplay
@@ -563,13 +559,6 @@ class Game:
             pyg.display.flip()
 
         # Graceful shutdown
-        # Stop local server
-        try:
-            if hasattr(self, "local_server") and self.local_server:
-                self.local_server.stop_server()
-        except Exception as e:
-            print_error(f"Erreur lors de l'arrêt du serveur local: {e}")
-
         self.shutdown()
 
 

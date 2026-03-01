@@ -19,13 +19,11 @@ Recommendations:
 
 import json
 import sys
-from typing import Optional
 
 import pygame as pyg
 
 import game.characters as player_module
 from ui import Buttons as ObjButton
-from ui.server import Serveur
 from utils.paths import get_asset_path
 
 from . import animated_button, button
@@ -349,17 +347,11 @@ class Menu:
         # self.images_session = [self.bg_session, self.bar_session, self.bot_session, self.button_session, self.player_session, self.splash_session, self.star_bar_session]
 
         # ====================================================================
-        # Server variables
-        # ====================================================================
-        self.server: Optional[Serveur] = (
-            None  # Reference to server instance (set from main)
-        )
-
-        # ====================================================================
         # Variables sessions
         # ====================================================================
-        self.sessions = []  # Local sessions (will be synced with server)
+        self.sessions = []  # Sessions from server only
         self.scroll_y = 0
+        self.pending_session = None  # Session en attente d'envoi au serveur
 
         self.input_box = InputBox(
             100, 100, 140, 32, button_session=self.button_session, menu=self
@@ -400,28 +392,6 @@ class Menu:
         )
         if self.exit_button.draw(self.screen):
             self.menu_state = "main"
-
-    def send_session_to_server(self, session):
-        """
-        Send a session to the server as JSON.
-
-        Args:
-            session (Session): Session object to send to server
-        """
-        if self.server is None:
-            print("Serveur non connecté")
-            return
-
-        try:
-            # Convert session to dictionary
-            session_dict = session.to_dict()
-            # Create JSON message
-            message = f"[Sessions]:{json.dumps(session_dict)}"
-            # Send to all connected clients via server
-            self.server.broadcast(message, None)
-            print(f"Session '{session.titre}' envoyée au serveur")
-        except Exception as e:
-            print(f"Erreur lors de l'envoi de la session: {e}")
 
     def update_sessions_from_server(self, sessions_json):
         """
@@ -796,18 +766,24 @@ class Menu:
                 self.input_box.temp_nb_ia -= 1
 
             if self.input_box.validate_button.draw(self.screen):
-                new_s = Session(self)
-                new_s.titre = (
-                    self.input_box.text if self.input_box.text != "" else "Sans titre"
-                )
-                new_s.nb_bots = self.input_box.temp_nb_ia
+                # Créer une session temporaire juste pour envoyer les données
+                session_data = {
+                    "titre": self.input_box.text
+                    if self.input_box.text != ""
+                    else "Sans titre",
+                    "nb_bots": self.input_box.temp_nb_ia,
+                    "nb_players": 1,
+                    "y": 79,
+                    "gap": 125,
+                }
 
-                new_s.y = 79 + (len(self.sessions) * new_s.gap)
+                # Envoyer au serveur (sera affiché après réception)
+                import json
 
-                self.sessions.append(new_s)
+                message = f"[Sessions]:{json.dumps(session_data)}"
 
-                # Envoyer la session au serveur
-                self.send_session_to_server(new_s)
+                # Les sessions affichées viendront du serveur uniquement
+                self.pending_session = session_data
 
                 self.menu_state = "play"
 
