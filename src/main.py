@@ -139,6 +139,11 @@ class Game:
         self._client_lock = threading.Lock()
         self._send_queue = queue.Queue()
 
+        # ====================================================================
+        # Session join
+        # ====================================================================
+        self.current_joined_session = None
+
     # ========================================================================
     # TEXT RENDERING METHODS
     # ========================================================================
@@ -255,11 +260,20 @@ class Game:
                         print_error(f"Erreur traitement sessions: {e}")
 
                 # Broadcast sessions received from server to menu
-                if message.startswith("[Sessions]"):
+                elif message.startswith("[Sessions]"):
                     try:
                         self.Menu.update_sessions_from_server(message.split(":", 1)[1])
                     except Exception as e:
                         print_error(f"Erreur mise à jour sessions: {e}")
+
+                # À l'intérieur de ton _receive_loop, ajoute ce bloc :
+                elif message.startswith("[YourPlayerID]:"):
+                    try:
+                        player_id = int(message.split(":", 1)[1])
+                        self.Menu.my_player_id = player_id
+                        print_success(f"Je suis le joueur {player_id} à l'écran !")
+                    except Exception as e:
+                        print_error(f"Erreur attribution Player ID: {e}")
 
             except socket.timeout:
                 continue
@@ -457,6 +471,10 @@ class Game:
                 self.send_to_server(
                     f"[CreateSession]:{json.dumps(self.Menu.pending_session)}"
                 )
+                self.current_joined_session = self.Menu.pending_session["titre"]
+
+                self.send_to_server(f"[JoinedSession]:{self.current_joined_session}")
+
                 self.Menu.pending_session = None  # On vide après envoi
 
             # ================================================================

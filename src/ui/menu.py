@@ -366,6 +366,13 @@ class Menu:
         # ====================================================================
         self.number_players = 0
         self.number_bot = 0
+        self.my_player_id = 1  # Position 1 par défaut si on joue offline
+        self.slot_positions = {
+            1: (64, 125),
+            2: (64, 442),
+            3: (1036, 125),
+            4: (1036, 442),
+        }
 
     def handle_session_menu(self):
         """Gère l'état du menu des sessions"""
@@ -538,11 +545,12 @@ class Menu:
             self.menu_state = "play"
 
     def draw_character_preview(self, char_index):
-        """Affiche l'aperçu d'un personnage à l'écran"""
+        """Affiche l'aperçu du personnage à la position du joueur"""
         try:
             idx = int(char_index)
         except Exception:
             idx = 0
+
         if idx and 1 <= idx <= len(self.image_ch):
             sel_img = self.image_ch[idx - 1]
             s = max(1.0, float(self.char_preview_scale))
@@ -553,7 +561,12 @@ class Menu:
                     int(sel_img.get_height() * s),
                 ),
             )
-            self.screen.blit(scaled, (self.center_x(sel_img, 50), 127))
+
+            # On récupère les coordonnées en fonction du joueur (par défaut slot 1)
+            pos_x, pos_y = self.slot_positions.get(self.my_player_id, (64, 125))
+
+            # On dessine le personnage aux bonnes coordonnées
+            self.screen.blit(scaled, (pos_x, pos_y))
 
     def draw_small_character_preview(self, char_index, x_offset):
         """Affiche un petit aperçu d'un personnage"""

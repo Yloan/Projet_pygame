@@ -91,6 +91,8 @@ class Serveur:
         self.sessions = []
         self.sessions_lock = threading.Lock()
 
+        self.sessions_clients_joined = {}
+
     # ========================================================================
     # SERVER LIFECYCLE METHODS
     # ========================================================================
@@ -177,7 +179,53 @@ class Serveur:
                         new_session_data = json.loads(data.split(":", 1)[1])
                         with self.sessions_lock:
                             self.sessions.append(new_session_data)
+                            self.sessions_clients_joined[new_session_data["titre"]] = []
                         self.broadcast_sessions()  # On prévient tout le monde
+
+                    if data.startswith("[JoinedSession]:"):
+                        session_name = data.split(":", 1)[1]
+
+                        # Trouver les infos de la session pour connaître le nombre de bots
+                        session_info = next(
+                            (s for s in self.sessions if s["titre"] == session_name),
+                            None,
+                        )
+
+                        if session_info:
+                            # Calcul du nombre max de joueurs humains
+                            nb_bots = session_info.get("nb_bots", 0)
+                            max_humans = 4 - nb_bots
+
+                            with self.sessions_lock:
+                                if session_name not in self.sessions_clients_joined:
+                                    self.sessions_clients_joined[session_name] = []
+
+                                current_players = len(
+                                    self.sessions_clients_joined[session_name]
+                                )
+
+                                # Vérifier s'il reste de la place
+                                if current_players < max_humans:
+                                    self.sessions_clients_joined[session_name].append(
+                                        client_socket
+                                    )
+                                    player_id = (
+                                        current_players + 1
+                                    )  # Donne 1, 2, 3 ou 4
+
+                                    # On prévient le client de son numéro
+                                    client_socket.send(
+                                        f"[YourPlayerID]:{player_id}".encode("utf-8")
+                                    )
+                                    print_success(
+                                        f"Joueur assigné ID {player_id} dans {session_name} (Bots: {nb_bots})"
+                                    )
+                                else:
+                                    # La session est pleine (pour les humains)
+                                    client_socket.send(b"[Error]:Session pleine")
+                                    print_warning(
+                                        f"Session {session_name} pleine, connexion refusée pour ce joueur."
+                                    )
 
                 else:
                     # Empty data means client disconnected

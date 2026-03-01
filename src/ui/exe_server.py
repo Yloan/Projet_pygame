@@ -34,6 +34,9 @@ def run_offline_server():
             if count > 0:
                 print_info(f"Status: {count} client(s) connected.")
                 print_info(f"Sessions: {server.sessions}")
+                for session in server.sessions_clients_joined.items():
+                    if session[1] != []:
+                        print_info(f"{session[0]}:{session[1]}")
             time.sleep(10)  # Check every 10 seconds
 
     except KeyboardInterrupt:
