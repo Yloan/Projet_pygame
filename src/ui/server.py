@@ -175,14 +175,14 @@ class Serveur:
                         except Exception as e:
                             print_error(f"Erreur session: {e}")
 
-                    if data.startswith("[CreateSession]:"):
+                    elif data.startswith("[CreateSession]:"):
                         new_session_data = json.loads(data.split(":", 1)[1])
                         with self.sessions_lock:
                             self.sessions.append(new_session_data)
                             self.sessions_clients_joined[new_session_data["titre"]] = []
                         self.broadcast_sessions()  # On prévient tout le monde
 
-                    if data.startswith("[JoinedSession]:"):
+                    elif data.startswith("[JoinedSession]:"):
                         session_name = data.split(":", 1)[1]
 
                         # Trouver les infos de la session pour connaître le nombre de bots
@@ -226,6 +226,15 @@ class Serveur:
                                     print_warning(
                                         f"Session {session_name} pleine, connexion refusée pour ce joueur."
                                     )
+                    elif (
+                        data.startswith("[PlayerCharacter]:")
+                        or data.startswith("[PlayerReady]:")
+                        or data.startswith("Position du joueur")
+                    ):
+                        self.broadcast_all_except_one(data, client_socket)
+
+                    else:
+                        self.broadcast_all_except_one(data, client_socket)
 
                 else:
                     # Empty data means client disconnected
@@ -249,22 +258,26 @@ class Serveur:
     # MESSAGE BROADCASTING
     # ========================================================================
 
-    def broadcast(self, message, sender_socket):
+    def broadcast(self, message, sender_socket=None):
         """
         Broadcast message to all clients.
-
-        Args:
-            message (str): Message to broadcast
-            sender_socket (socket.socket): Socket of sending client (excluded from broadcast)
         """
-        with self.sessions_lock:
-            sessions_json = json.dumps(self.sessions)
-            message = f"[SessionsList]:{sessions_json}"
-            for client in self.clients:
-                try:
+        for client in self.clients:
+            try:
+                client.send(message.encode("utf-8"))
+            except:
+                pass
+
+    def broadcast_all_except_one(self, message, sender_socket):
+        """
+        Broadcast message to all clients except the sender one.
+        """
+        for client in self.clients:
+            try:
+                if client != sender_socket:
                     client.send(message.encode("utf-8"))
-                except:
-                    pass
+            except:
+                pass
 
     # ========================================================================
     # SESSION MANAGEMENT
