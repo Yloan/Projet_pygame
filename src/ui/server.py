@@ -148,7 +148,9 @@ class Serveur:
         while True:
             try:
                 # Receive message from client
-                data = client_socket.recv(MESSAGE_BUFFER_SIZE).decode("utf-8")
+                data = (
+                    client_socket.recv(MESSAGE_BUFFER_SIZE).decode("utf-8").split("\n")
+                )
 
                 if data:
                     print_network(f"Reçu du client: {data}")
@@ -251,20 +253,18 @@ class Serveur:
 
     def broadcast(self, message, sender_socket):
         """
-        Broadcast message to all clients.
+        Broadcast message to all clients except himself.
 
         Args:
             message (str): Message to broadcast
             sender_socket (socket.socket): Socket of sending client (excluded from broadcast)
         """
-        with self.sessions_lock:
-            sessions_json = json.dumps(self.sessions)
-            message = f"[SessionsList]:{sessions_json}"
-            for client in self.clients:
+        for client in self.clients:
+            if client != sender_socket:
                 try:
                     client.send(message.encode("utf-8"))
-                except:
-                    pass
+                except Exception as e:
+                    print_error(f"Error during broadcasting: {e}")
 
     # ========================================================================
     # SESSION MANAGEMENT
