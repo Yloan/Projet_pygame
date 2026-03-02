@@ -142,7 +142,7 @@ class Game:
         # ====================================================================
         # Session join
         # ====================================================================
-        self.current_joined_session = None
+        self.current_joined_session = None # Current joined session
 
     # ========================================================================
     # TEXT RENDERING METHODS
