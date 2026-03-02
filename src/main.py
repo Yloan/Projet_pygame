@@ -283,9 +283,7 @@ class Game:
                         character_1 = data.get("character_1")
                         character_2 = data.get("character_2")
                         character_3 = data.get("character_3")
-                        self.Menu.update_player_character(
-                            player_id, character_1, character_2, character_3
-                        )
+                        self.Menu.update_player_character(player_id, character_1, character_2, character_3)
                     except Exception as e:
                         print_error(f"Erreur réception sélection perso: {e}")
 
@@ -502,8 +500,10 @@ class Game:
             # Send character selection to server
             if self.Menu.pending_character_submission is not None:
                 char_data = self.Menu.pending_character_submission
-                self.send_to_server(f"[PlayerCharacter]:{json.dumps(char_data)}\n")
-                self.send_to_server(f"[PlayerReady]:{char_data['player_id']}\n")
+                self.send_to_server(
+                    f"[PlayerCharacter]:{json.dumps(char_data)}"
+                )
+                self.send_to_server(f"[PlayerReady]:{char_data['player_id']}")
                 self.Menu.pending_character_submission = None  # Clear after sending
 
             # ================================================================
