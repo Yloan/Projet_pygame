@@ -1,22 +1,3 @@
-"""
-MENU SYSTEM MODULE - Main menu and game menus
-
-This module handles all menu systems for the game:
-- Main menu with play/settings/exit options
-- Settings menu (video, audio, keybindings)
-- Character selection menu
-- Game lobby menu for multiplayer setup
-
-The Menu class manages menu state transitions and rendering.
-
-Recommendations:
-1. Extract menu states into separate menu classes
-2. Use a state machine pattern for better menu management
-3. Create a central button manager to avoid duplication
-4. Add menu animations and transitions
-5. Implement a proper layout system for button positioning
-"""
-
 import json
 import sys
 
@@ -28,64 +9,29 @@ from utils.paths import get_asset_path
 
 from . import animated_button, button
 
-# ============================================================================
-# CONSTANTS - Menu configuration
-# ============================================================================
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 BUTTON_SCALE = 2
 
 
 class Menu:
-    """
-    Main Menu class handling all menu screens and navigation.
-
-    Menu States:
-        - "main": Main menu screen (play, settings, exit)
-        - "character_selection": Character selection screen
-        - "settings": Settings submenu
-        - "game": Game started state
-    """
-
     def __init__(self, width=WINDOW_WIDTH, height=WINDOW_HEIGHT, fullscreen=False):
-        """
-        Initialize menu system with window configuration.
-
-        Args:
-            width (int): Window width (default 1280)
-            height (int): Window height (default 720)
-            fullscreen (bool): Enable fullscreen (default False)
-        """
-
-        # ====================================================================
         # WINDOW CONFIGURATION
-        # ====================================================================
         self.width = width
         self.height = height
         self.fullscreen = fullscreen
-
-        # ====================================================================
         # PLAYER INITIALIZATION
-        # ====================================================================
         self.player = player_module.Furnace()
-
-        # ====================================================================
         # MENU STATE VARIABLES
-        # ====================================================================
-        self.etat = "menu"  # Current menu state
+        self.etat = "menu"
         self.game_started = False
-        self.menu_state = "main"  # Main submenu state
-
-        # Character selection variables
+        self.menu_state = "main"
         self.number_players = 0
         self.number_bot = 0
         self.character_1 = 0
         self.character_2 = 0
         self.character_3 = 0
-
-        # ====================================================================
         # PYGAME INITIALIZATION
-        # ====================================================================
         pyg.init()
 
         # Display setup
@@ -93,50 +39,30 @@ class Menu:
         self.screen = pyg.display.set_mode((self.width, self.height), flags)
         pyg.display.set_caption("Jeu Multijoueur")
         self.clock = pyg.time.Clock()
-
-        # ====================================================================
         # FONT AND COLOR SETUP
-        # ====================================================================
         self.font = pyg.font.SysFont("arialblack", 40)
         self.middle_font = pyg.font.SysFont("arialblack", 20)
         self.little_font = pyg.font.SysFont("arialblack", 10)
-        self.TEXT_COL = (255, 255, 255)  # White
-        self.TEXT_COL2 = (255, 0, 0)  # Red
-
-        # ====================================================================
+        self.TEXT_COL = (255, 255, 255)
+        self.TEXT_COL2 = (255, 0, 0)
         # LOAD MENU BACKGROUNDS
-        # ====================================================================
         self.wallpaper = pyg.image.load(
             "assets/buttons/21-MENUS/MAIN MENU-Sheet.png"
         ).convert_alpha()
-        # Scale wallpaper to fill window
         self.wallpaper = pyg.transform.scale(self.wallpaper, (self.width, self.height))
         self.choice_chracters = pyg.image.load(
             "assets/wallpapers/SELECT-SCREEN.png"
         ).convert_alpha()
-        # Scale character selection background to fill window
         self.choice_chracters = pyg.transform.scale(
             self.choice_chracters, (self.width, self.height)
         )
-
-        # ====================================================================
-        # play button frames
-        # ====================================================================
-
+        # PLAY BUTTON FRAMES
         play_button = ObjButton.PlayButton()
         self.play_button_frames = play_button.play_button_frames
-
-        # ====================================================================
-        # Settings button frames
-        # ====================================================================
-
+        # SETTINGS BUTTON FRAMES
         settings_button = ObjButton.OptionsButton()
         self.settings_button_frames = settings_button.settings_button_frames
-
-        # ====================================================================
-        # Exit button frames
-        # ====================================================================
-
+        # EXIT BUTTON FRAMES
         exit_button = ObjButton.ExitButton()
         self.exit_button_frames = exit_button.exit_button_frames
 
@@ -171,11 +97,7 @@ class Menu:
         Back_selection_character_img = pyg.image.load(
             "assets/buttons/Back_selection_character.png"
         ).convert_alpha()
-
-        # # ====================================================================
-        # # Images for session's interface
-        # # ====================================================================
-
+        # IMAGES FOR SESSION INTERFACE
         self.bg_session = pyg.image.load(
             "assets/Menus_assets/sessions_section/Browse_Sessions.png"
         ).convert_alpha()
@@ -187,10 +109,7 @@ class Menu:
         # self.player_session = pyg.image.load("assets/Menus_assets/sessions_section/player.png").convert_alpha()
         # self.splash_session = pyg.image.load("assets/Menus_assets/sessions_section/splash.png").convert_alpha()
         # self.star_bar_session = pyg.image.load("assets/Menus_assets/sessions_section/Star_Bar.png").convert_alpha()
-
-        # ====================================================================
         # LOAD CHARACTER SELECTION IMAGES
-        # ====================================================================
         image_ch = []
         for i in range(1, 19):
             Img = pyg.image.load(
@@ -198,14 +117,9 @@ class Menu:
             ).convert_alpha()
             image_ch.append(Img)
 
-        # Store character images for display
         self.image_ch = image_ch
-        self.char_preview_scale = 9.5  # Character preview scale factor
-
-        # ====================================================================
+        self.char_preview_scale = 9.5
         # CREATE BUTTON INSTANCES
-        # ====================================================================
-        # Main menu buttons with animations (horizontally centered)
         self.play_button = animated_button.AnimatedButton(
             self.center_x(self.play_button_frames[0], 1.5),
             370,
@@ -344,26 +258,14 @@ class Menu:
             BUTTON_SCALE,
             animation_speed=1,
         )
-
-        # ====================================================================
-        # dev settings
-        # ====================================================================
-        # self.images_session = [self.bg_session, self.bar_session, self.bot_session, self.button_session, self.player_session, self.splash_session, self.star_bar_session]
-
-        # ====================================================================
-        # Variables sessions
-        # ====================================================================
-        self.sessions = []  # Sessions from server only
+        # VARIABLES SESSIONS
+        self.sessions = []
         self.scroll_y = 0
-        self.pending_session = None  # Session en attente d'envoi au serveur
-
+        self.pending_session = None
         self.input_box = InputBox(
             100, 100, 140, 32, button_session=self.button_session, menu=self
         )
-
-        # ====================================================================
-        # Variables Characters selections
-        # ====================================================================
+        # VARIABLES CHARACTERS SELECTIONS
         self.number_players = 0
         self.number_bot = 0
         self.my_player_id = 1  # Position 1 par défaut si on joue offline
@@ -429,12 +331,6 @@ class Menu:
             self.menu_state = "main"
 
     def update_sessions_from_server(self, sessions_json):
-        """
-        Update local sessions list from server JSON data.
-
-        Args:
-            sessions_json (str): JSON string containing sessions list
-        """
         try:
             sessions_data = json.loads(sessions_json)
             self.sessions = []
@@ -482,10 +378,6 @@ class Menu:
             print_network(f"Joueur {player_id} est READY !")
 
     def center_x(self, image, scale=1):
-        """Retourne la coordonnée x pour centrer `image` horizontalement.
-
-        `scale` est le facteur de mise à l'échelle appliqué lors de la création du bouton.
-        """
         w = int(image.get_width() * scale)
         return (self.width - w) // 2
 
@@ -1115,12 +1007,6 @@ class Session:
         self.nb_players = 1
 
     def to_dict(self):
-        """
-        Convert session to dictionary for JSON serialization.
-
-        Returns:
-            dict: Session data that can be serialized to JSON
-        """
         return {
             "titre": self.titre,
             "nb_bots": self.nb_bots,
@@ -1131,16 +1017,6 @@ class Session:
 
     @staticmethod
     def from_dict(data, menu):
-        """
-        Create a Session instance from dictionary data.
-
-        Args:
-            data (dict): Dictionary containing session data
-            menu: Menu instance for rendering
-
-        Returns:
-            Session: New Session instance with data from dictionary
-        """
         session = Session(menu)
         session.titre = data.get("titre", "Sans titre")
         session.nb_bots = data.get("nb_bots", 0)

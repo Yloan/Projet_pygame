@@ -18,7 +18,7 @@ from ui.server import Serveur
 
 def run_offline_server():
     # Initialize the server on localhost
-    server = Serveur(host="0.0.0.0", port=20055)
+    server = Serveur(host="0.0.0.0", port=20070)
 
     # Start the server (this starts the accept_clients thread automatically)
     server.start_server()

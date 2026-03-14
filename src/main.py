@@ -1,27 +1,3 @@
-"""
-MAIN GAME MODULE - Main entry point for the multiplayer game
-
-This module handles:
-- Game initialization and window setup
-- Main game loop and state management (menu/game)
-- Player movement and animation
-- Network communication with server
-- Game shutdown and resource cleanup
-
-Main Flow:
-1. Initialize Game class with display settings
-2. Load menu system and game assets
-3. Connect to server and start communication threads
-4. Run main game loop handling events and rendering
-5. Properly shutdown on exit
-
-Recommendations:
-1. Consider separating game logic from rendering into different methods
-2. Implement proper state machine pattern for game states
-3. Add event handler method to reduce code duplication
-4. Consider using a constants file for magic numbers (window size, host, port)
-"""
-
 import json
 import queue
 import socket
@@ -43,49 +19,17 @@ from ui.console import (
 
 
 class Game:
-    """
-    Main game class handling window, game loop, and server communication.
-
-    Attributes:
-        width (int): Window width in pixels
-        height (int): Window height in pixels
-        fullscreen (bool): Enable fullscreen mode
-        screen (pygame.Surface): Main display surface
-        player (Character): Current player character instance
-        etat (str): Current game state ('menu' or 'game')
-        running (bool): Game loop running flag
-    """
 
     def __init__(self, width=1280, height=720, fullscreen=False):
-        """
-        Initialize game window, assets, and network configuration.
 
-        Args:
-            width (int): Window width (default 1280)
-            height (int): Window height (default 720)
-            fullscreen (bool): Enable fullscreen (default False)
-        """
-
-        # ====================================================================
-        # WINDOW CONFIGURATION
-        # ====================================================================
         self.width = width
         self.height = height
         self.fullscreen = fullscreen
-
-        # ====================================================================
-        # GAME STATE VARIABLES
-        # ====================================================================
-        self.etat = "menu"  # Current state: "menu" or "game"
-        self.etat = "game"  # temporary variable for avoid to go trough the menu each time I test the code
-        self.game_started = False  # Flag for menu launch
-        self.dev_display_ = False  # Flag for dev display
-
-        self.delta_time_sessions_send = 0  # Counter for send sessions to server
-
-        # ====================================================================
-        # LOAD MENU SYSTEM (Reuse display and resources)
-        # ====================================================================
+        self.etat = "menu"
+        self.etat = "game"
+        self.game_started = False
+        self.dev_display_ = False
+        self.delta_time_sessions_send = 0
         self.Menu = menu.Menu(
             width=self.width, height=self.height, fullscreen=self.fullscreen
         )
@@ -111,98 +55,45 @@ class Game:
             self.wallpaper = pyg.Surface((self.width, self.height))
             self.clock = pyg.time.Clock()
 
-        # ====================================================================
         # LOAD GAME MAP
-        # ====================================================================
         map_loader = MapLoader(None)
         background, foreground = map_loader.load_map()
         self.map_back = pyg.transform.scale(background, (self.width, self.height))
         self.map_front = pyg.transform.scale(foreground, (self.width, self.height))
 
-        # ====================================================================
         # LOAD PLAYER CHARACTER
-        # ====================================================================
         self.player = player_module.Water()
-        self.running = False
+        self.running = False 
 
-        # ====================================================================
         # NETWORK CONFIGURATION
-        # ====================================================================
         # self.host = "127.0.0.1"
         # self.port = 12345
 
         # connexion online server
-        self.host = "51.75.118.151"
-        self.port = 20055
+        self.host = "51.75.118.171"
+        self.port = 20070
 
         self._client_socket = None
         self._client_lock = threading.Lock()
         self._send_queue = queue.Queue()
 
-        # ====================================================================
-        # Session join
-        # ====================================================================
-        self.current_joined_session = None # Current joined session
-
-    # ========================================================================
-    # TEXT RENDERING METHODS
-    # ========================================================================
+        # SESSION JOIN
+        self.current_joined_session = None
 
     def draw_text(self, text, font, text_col, x, y):
-        """
-        Render text at specified position.
-
-        Args:
-            text (str): Text to render
-            font (pygame.font.Font): Font to use
-            text_col (tuple): RGB color tuple
-            x (int): X coordinate
-            y (int): Y coordinate
-        """
         img = font.render(text, True, text_col)
         self.screen.blit(img, (x, y))
 
     def draw_text_center(self, text, font, text_col, y):
-        """
-        Render text centered horizontally at vertical position y.
-
-        Args:
-            text (str): Text to render
-            font (pygame.font.Font): Font to use
-            text_col (tuple): RGB color tuple
-            y (int): Y coordinate
-        """
         img = font.render(text, True, text_col)
         x = (self.width - img.get_width()) // 2
         self.screen.blit(img, (x, y))
 
-    # ========================================================================
-    # UTILITY METHODS
-    # ========================================================================
-
     def center_x(self, image, scale=1):
-        """
-        Calculate X coordinate to center image horizontally on screen.
-
-        Args:
-            image (pygame.Surface): Image to center
-            scale (float): Scale factor (default 1)
-
-        Returns:
-            int: Centered X coordinate
-        """
         w = int(image.get_width() * scale)
         return (self.width - w) // 2
 
-    # ========================================================================
-    # NETWORK COMMUNICATION METHODS
-    # ========================================================================
-
     def _connect_to_server(self):
-        """
-        Establish persistent connection to game server.
-        Starts background threads for message sending and receiving.
-        """
         try:
             # Close existing socket if any
             if self._client_socket:
@@ -226,10 +117,6 @@ class Game:
             self._client_socket = None
 
     def _receive_loop(self):
-        """
-        Background thread handling incoming messages from server.
-        Automatically reconnects on connection loss.
-        """
         while self.running:
             if not self._client_socket:
                 time.sleep(0.5)
@@ -275,26 +162,6 @@ class Game:
                     except Exception as e:
                         print_error(f"Erreur attribution Player ID: {e}")
 
-                # Handle player character selection from other players
-                elif message.startswith("[PlayerCharacter]:"):
-                    try:
-                        data = json.loads(message.split(":", 1)[1])
-                        player_id = data.get("player_id")
-                        character_1 = data.get("character_1")
-                        character_2 = data.get("character_2")
-                        character_3 = data.get("character_3")
-                        self.Menu.update_player_character(player_id, character_1, character_2, character_3)
-                    except Exception as e:
-                        print_error(f"Erreur réception sélection perso: {e}")
-
-                # Handle player ready signal
-                elif message.startswith("[PlayerReady]:"):
-                    try:
-                        player_id = int(message.split(":", 1)[1])
-                        self.Menu.update_player_ready(player_id)
-                    except Exception as e:
-                        print_error(f"Erreur réception signal ready: {e}")
-
             except socket.timeout:
                 continue
             except Exception as e:
@@ -311,10 +178,6 @@ class Game:
                 break
 
     def _send_loop(self):
-        """
-        Background thread handling outgoing messages to server.
-        Automatically reconnects on connection loss.
-        """
         while self.running:
             try:
                 message = self._send_queue.get(timeout=0.5)
@@ -349,25 +212,12 @@ class Game:
                     self._connect_to_server()
 
     def send_to_server(self, message="Bonjour serveur"):
-        """
-        Queue a message for sending to server.
-
-        Args:
-            message (str): Message to send (default "Bonjour serveur")
-        """
         self._send_queue.put(message)
 
-    # ========================================================================
     # GAME STATE MANAGEMENT
-    # ========================================================================
 
     def shutdown(self):
-        """
-        Gracefully shutdown game:
-        - Stop network communication
-        - Close socket connection
-        - Quit pygame
-        """
+
         print_info("Arrêt du jeu : fermeture connexion et threads")
         self.running = False
 
@@ -394,71 +244,42 @@ class Game:
         except Exception:
             pass
 
-    # ========================================================================
     # GAME UPDATE AND RENDERING
-    # ========================================================================
 
     def update(self):
-        """
-        Update game state each frame.
-        Called during main game loop.
-        """
         self.player.update()
 
-    # ====================================================================
     # Some dev display
-    # ====================================================================
     def dev_display(self, liste_image=None):
         x, y = pyg.mouse.get_pos()
         self.draw_text_center(
             f"pos mouse --> X: {x}, Y: {y}", self.font, self.TEXT_COL2, 10
         )
 
-        # if liste_image is not None:
-        #     for element in liste_image:
-        #         if hasattr(element, 'rect'):
-        #             rect = element.rect
-        #         elif isinstance(element, pyg.Surface):
-        #             # Si tu n'as que l'image, il faut aussi connaître sa position
-        #             # Ici, on suppose que tu l'as placé quelque part
-        #             rect = element.get_rect()
-        #         else:
-        #             continue
 
-        #         # Dessiner la bordure
-        #         pyg.draw.rect(self.screen, (0, 255, 0), rect, 2)
-
-    # ========================================================================
     # MAIN GAME LOOP
-    # ========================================================================
 
     def run(self):
-        """
-        Main game loop:
-        """
+
         # Initialize and connect to server
         self.running = True
         self._connect_to_server()
 
         screen = self.screen
 
-        # ====================================================================
         # Temporary variables (for tests)
-        # ====================================================================
+
         self.etat = "menu"  # Start directly in menu
         # self.etat = "game"  # Start directly in game
 
         while self.running:
-            # ================================================================
             # MENU STATE
-            # ================================================================
             if self.etat == "menu":
                 screen.blit(self.wallpaper, (0, 0))
 
                 self.Menu.method_menu()
                 if self.Menu.etat == "game":
                     self.etat = "game"
-                    # Transmission des événements à l'InputBox si nécessaire
                 if self.Menu.menu_state == "creation_parameters_session_menu":
                     for event in pyg.event.get():
                         self.Menu.input_box.handle_event(event)
@@ -472,7 +293,6 @@ class Game:
                             self.running = False
                         if event.key == pyg.K_F2:
                             self.dev_display_ = not self.dev_display_
-                    # CHECK OF SCROLL EVENT
                     elif event.type == pyg.MOUSEBUTTONDOWN:
                         if event.button == 4:  # MOUSE UP
                             self.Menu.scroll_y = max(0, self.Menu.scroll_y - 30)
@@ -482,12 +302,11 @@ class Game:
                     if self.Menu.menu_state == "creation_parameters_session_menu":
                         self.Menu.input_box.handle_event(
                             event
-                        )  # Indispensable pour taper au clavier
+                        )
 
             self.delta_time_sessions_send += 1
             # Send sessions to server
             if self.Menu.pending_session is not None:
-                # On envoie la demande de création au serveur
                 self.send_to_server(
                     f"[CreateSession]:{json.dumps(self.Menu.pending_session)}"
                 )
@@ -497,18 +316,7 @@ class Game:
 
                 self.Menu.pending_session = None  # On vide après envoi
 
-            # Send character selection to server
-            if self.Menu.pending_character_submission is not None:
-                char_data = self.Menu.pending_character_submission
-                self.send_to_server(
-                    f"[PlayerCharacter]:{json.dumps(char_data)}"
-                )
-                self.send_to_server(f"[PlayerReady]:{char_data['player_id']}")
-                self.Menu.pending_character_submission = None  # Clear after sending
-
-            # ================================================================
             # GAME STATE - Actual gameplay
-            # ================================================================
             if self.etat == "game":
                 # Event handling
                 for event in pyg.event.get():
@@ -560,20 +368,6 @@ class Game:
                 if keys_pressed[pyg.K_RIGHT]:
                     self.player.move("right")
 
-                # Update player animation
-                # if is_attacking_skill1:
-                #     while self.player.loop_animation_skill1 < player_module.WATER_SKILL1_FRAMES + 1:
-                #         self.player.update_animation(delta_time, is_moving, is_attacking_skill1)
-                #         time.sleep(0.1)
-                #         current_sprite = self.player.get_current_sprite()
-
-                #         self.screen.blit(current_sprite, self.player.position)
-                #         pyg.display.update()
-                #         pyg.display.flip()
-
-                #         self.player.loop_animation_skill1 += 1
-                #     self.player.loop_animation_skill1 = 0
-
                 self.player.update_animation(
                     delta_time,
                     is_moving,
@@ -610,11 +404,6 @@ class Game:
 
 
 if __name__ == "__main__":
-    """
-    Game entry point:
-    1. Create Game instance with display configuration
-    2. Start game loop
-    """
     # Initialize and run game with fullscreen enabled
     game = Game(width=1280, height=720, fullscreen=True)
     game.run()

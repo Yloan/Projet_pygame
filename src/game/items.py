@@ -1,27 +1,7 @@
-"""
-ITEMS MODULE - Game items and loot system
-
-This module handles all game items:
-- Item classes (weapons, armor, consumables, etc.)
-- Item effects and properties
-- Inventory management
-- Item pickups and drops
-
-Recommendations:
-1. Create a base Item class with common properties
-2. Implement item rarity system (common, rare, epic, legendary)
-3. Add item effects/buffs system
-4. Implement inventory management system
-5. Add item descriptions and UI elements
-"""
-
 import pygame as pyg
 from utils.paths import get_asset_path
 
 
-# ============================================================================
-# CONSTANTS - Item configuration
-# ============================================================================
 ITEM_RARITY_COMMON = 1
 ITEM_RARITY_RARE = 2
 ITEM_RARITY_EPIC = 3
@@ -67,10 +47,6 @@ class Item:
         self.position = (x, y)
         self.picked_up = False
     
-    # ========================================================================
-    # ITEM INFORMATION METHODS
-    # ========================================================================
-    
     def get_info(self):
         """
         Get item information dictionary.
@@ -93,10 +69,6 @@ class Item:
             tuple: RGB color tuple
         """
         return RARITY_COLORS.get(self.rarity, RARITY_COLORS[ITEM_RARITY_COMMON])
-    
-    # ========================================================================
-    # ITEM INTERACTION METHODS
-    # ========================================================================
     
     def use(self, player=None):
         """

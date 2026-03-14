@@ -1,8 +1,3 @@
-"""
-TEST SCRIPT - Session JSON Serialization
-Démonstration de la sérialisation JSON des sessions
-"""
-
 import json
 import os
 import sys

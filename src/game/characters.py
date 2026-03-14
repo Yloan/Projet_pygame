@@ -1,26 +1,8 @@
-"""
-CHARACTER MODULE - Defines all playable characters and their behavior
-
-This module contains character classes for the game, each with:
-- Stats management (health, speed, position)
-- Animation system (idle, walk, hurt, death states)
-- Movement and combat mechanics
-- Skill system for special abilities
-
-Recommendations:
-1. Consider creating a base Character class to reduce code duplication
-2. Add constants for animation frames and speeds at module level
-3. Implement a state machine for better animation transitions
-"""
-
 import pygame as pyg
 
 from utils.paths import get_asset_path
 
 
-# ============================================================================
-# CONSTANTS - Animation and sprite configuration
-# ============================================================================
 FURNACE_FRAME_WIDTH = 40
 FURNACE_FRAME_HEIGHT = 40
 FURNACE_IDLE_FRAMES = 12
@@ -61,26 +43,17 @@ class Furnace:
     
     def __init__(self):
         """Initialize Furnace character with default stats and load sprite assets."""
-        
-        # ====================================================================
-        # CHARACTER STATS
-        # ====================================================================
+
         self.health = 100
         self.speed = 2
         self.position = (400, 400)
-        
-        # ====================================================================
-        # LOAD SPRITE ASSETS
-        # ====================================================================
+
         sprite_path_IDLE = get_asset_path("sprites", "Furnace", "FIRE-IDLE-Sheet.png")
         sprite_path_WALK = get_asset_path("sprites", "Furnace", "FIRE-WALK-Sheet.png")
 
         self.player_spritesheet_IDLE = pyg.image.load(sprite_path_IDLE)
         self.player_spritesheet_WALK = pyg.image.load(sprite_path_WALK)
 
-        # ====================================================================
-        # EXTRACT IDLE ANIMATION FRAMES
-        # ====================================================================
         self.frames_IDLE = []
         for i in range(FURNACE_IDLE_FRAMES):
             frame = self.player_spritesheet_IDLE.subsurface(
@@ -88,9 +61,6 @@ class Furnace:
             )
             self.frames_IDLE.append(frame)
 
-        # ====================================================================
-        # EXTRACT WALK ANIMATION FRAMES (RIGHT DIRECTION)
-        # ====================================================================
         self.fram_WALK = []
         for i in range(FURNACE_WALK_FRAMES):
             frame = self.player_spritesheet_WALK.subsurface(
@@ -98,9 +68,6 @@ class Furnace:
             )
             self.fram_WALK.append(frame)
 
-        # ====================================================================
-        # EXTRACT WALK ANIMATION FRAMES (LEFT DIRECTION - FLIPPED)
-        # ====================================================================
         self.frame_WALK_left = []
         for i in range(FURNACE_WALK_FRAMES):
             frame = self.player_spritesheet_WALK.subsurface(
@@ -109,9 +76,6 @@ class Furnace:
             frame_flipped = pyg.transform.flip(frame, True, False)
             self.frame_WALK_left.append(frame_flipped)
 
-        # ====================================================================
-        # EXTRACT IDLE ANIMATION FRAMES (LEFT DIRECTION - FLIPPED)
-        # ====================================================================
         self.frame_IDLE_left = []
         for i in range(FURNACE_IDLE_FRAMES):
             frame = self.player_spritesheet_IDLE.subsurface(
@@ -119,21 +83,12 @@ class Furnace:
             )
             frame_flipped = pyg.transform.flip(frame, True, False)
             self.frame_IDLE_left.append(frame_flipped)
-
-        # ====================================================================
-        # ANIMATION STATE VARIABLES
-        # ====================================================================
-        self.frame_IDLE = 0  # Current idle animation frame index
-        self.frame_WALK = 0  # Current walk animation frame index
-        self.tem_an_IDLE = 0  # Elapsed time for idle animation
-        self.tem_an_WALK = 0  # Elapsed time for walk animation
-        self.direction = "right"  # Current direction (left or right)
-        self.is_moving = False  # Movement state flag
-
-
-    # ========================================================================
-    # MOVEMENT METHODS
-    # ========================================================================
+        self.frame_IDLE = 0
+        self.frame_WALK = 0
+        self.tem_an_IDLE = 0
+        self.tem_an_WALK = 0
+        self.direction = "right"
+        self.is_moving = False
     
     def move(self, direction):
         """
@@ -152,10 +107,6 @@ class Furnace:
         elif direction == "right":
             self.position = (self.position[0] + self.speed, self.position[1])
             self.direction = "right"
-
-    # ========================================================================
-    # HEALTH MANAGEMENT METHODS
-    # ========================================================================
 
     def take_damage(self, amount):
         """
@@ -181,10 +132,6 @@ class Furnace:
         if self.health > 100:
             self.health = 100
 
-    # ========================================================================
-    # STATUS AND INFORMATION METHODS
-    # ========================================================================
-
     def get_status(self):
         """
         Get current character status.
@@ -193,10 +140,6 @@ class Furnace:
             dict: Dictionary containing health and position
         """
         return {"health": self.health, "position": self.position}
-
-    # ========================================================================
-    # ANIMATION METHODS
-    # ========================================================================
 
     def update_animation(self, delta_time, is_moving):
         """
@@ -294,10 +237,7 @@ class Water:
     
     def __init__(self):
         """Initialize Water character with default stats and load sprite assets."""
-        
-        # ====================================================================
         # CHARACTER STATS
-        # ====================================================================
         self.health = 100
         self.speed = 2
         self.position = (400, 400)

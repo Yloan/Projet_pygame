@@ -7,30 +7,19 @@ import game.characters as player_module
 from utils.paths import get_asset_path
 from ui import Buttons as ObjButton
 
-# ============================================================================
-# CONSTANTS - Menu configuration
-# ============================================================================
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 BUTTON_SCALE = 2
 
 class Menu_in_game:
     def __init__(self, width=WINDOW_WIDTH, height=WINDOW_HEIGHT, fullscreen=False):
-        # ====================================================================
-        # WINDOW CONFIGURATION
-        # ====================================================================
+
         self.width = width
         self.height = height
         self.fullscreen = fullscreen
-
-        # ====================================================================
         # PLAYER INITIALIZATION
-        # ====================================================================
         self.player = player_module.Furnace()
-
-        # ====================================================================
         # MENU STATE VARIABLES
-        # ====================================================================
         self.etat = "menu_in_game"  # Current menu state
         self.game_started = True
         self.menu_state = "main"  # Main submenu state
@@ -41,31 +30,13 @@ class Menu_in_game:
 
         #define colors
         TEXT_COL = (255, 255, 255)
-
-        # ====================================================================
-        # LOAD BUTTON IMAGES
-        # ====================================================================
-        # Main menu buttons
-        
-
-        # ====================================================================
-        # play button frames
-        # ====================================================================
-
+        # PLAY BUTTON FRAMES
         play_button = ObjButton.PlayButton()
         self.play_button_frames = play_button.play_button_frames
-
-        # ====================================================================
-        # Settings button frames
-        # ====================================================================
-
+        # SETTINGS BUTTON FRAMES
         settings_button = ObjButton.OptionsButton()
         self.settings_button_frames = settings_button.settings_button_frames
-
-        # ====================================================================
-        # Exit button frames
-        # ====================================================================
-
+        # EXIT BUTTON FRAMES
         exit_button = ObjButton.ExitButton()
         self.exit_button_frames = exit_button.exit_button_frames
 
@@ -74,11 +45,7 @@ class Menu_in_game:
             "assets/buttons/button_settings.png"
         ).convert_alpha()
         exit_img = pyg.image.load("assets/buttons/button_exit.png").convert_alpha()
-
-
-        # ====================================================================
         # PYGAME INITIALIZATION
-        # ====================================================================
         pyg.init()
 
         # Display setup
@@ -86,36 +53,20 @@ class Menu_in_game:
         self.screen = pyg.display.set_mode((self.width, self.height), flags)
         pyg.display.set_caption("Jeu Multijoueur")
         self.clock = pyg.time.Clock()
-
-        # ====================================================================
         # FONT AND COLOR SETUP
-        # ====================================================================
         self.font = pyg.font.SysFont("arialblack", 40)
-        self.TEXT_COL = (255, 255, 255)  # White
-
-        # ====================================================================
-        # LOAD BUTTON IMAGES
-        # ====================================================================
-        # Main menu buttons
-        
-
-        # ====================================================================
-        # play button frames
-        # ====================================================================
-
+        self.TEXT_COL = (255, 255, 255)
+        # LOAD BUTTON IMAGES AGAIN
+        # PLAY BUTTON FRAMES
         play_button = ObjButton.PlayButton()
         self.play_button_frames = play_button.play_button_frames
 
-        # ====================================================================
         # Settings button frames
-        # ====================================================================
 
         settings_button = ObjButton.OptionsButton()
         self.settings_button_frames = settings_button.settings_button_frames
 
-        # ====================================================================
         # Exit button frames
-        # ====================================================================
 
         exit_button = ObjButton.ExitButton()
         self.exit_button_frames = exit_button.exit_button_frames
@@ -132,9 +83,6 @@ class Menu_in_game:
         keys_img = pyg.image.load("assets/buttons/button_keys.png").convert_alpha()
         back_img = pyg.image.load("assets/buttons/button_back.png").convert_alpha()
 
-        # ====================================================================
-        # CREATE BUTTON INSTANCES
-        # ====================================================================
         # Main menu buttons with animations (horizontally centered)
         self.play_button = animated_button.AnimatedButton(
             self.center_x(self.play_button_frames[0], 1.5), 

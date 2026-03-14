@@ -1,26 +1,7 @@
-"""
-ENEMY MODULE - Enemy character classes and AI
-
-This module contains enemy character classes for the game:
-- Various enemy types with different behaviors and stats
-- AI behavior patterns (patrol, chase, attack)
-- Enemy-specific abilities and attack patterns
-
-Recommendations:
-1. Create a base Enemy class to share common functionality
-2. Implement proper AI state machine (IDLE, PATROL, CHASE, ATTACK, DEATH)
-3. Add pathfinding for intelligent enemy movement
-4. Implement aggression ranges and vision detection
-5. Add different difficulty levels for enemy behavior
-"""
-
 import pygame as pyg
 from utils.paths import get_asset_path
 
 
-# ============================================================================
-# CONSTANTS - Enemy configuration
-# ============================================================================
 ENEMY_BASE_HEALTH = 50
 ENEMY_BASE_SPEED = 3
 ENEMY_BASE_DAMAGE = 10
@@ -50,25 +31,14 @@ class Enemy:
             health (int): Initial health (default from constant)
             speed (int): Movement speed (default from constant)
         """
-        
-        # ====================================================================
-        # CHARACTER STATS
-        # ====================================================================
+
         self.health = health
         self.speed = speed
         self.position = (x, y)
         self.damage = ENEMY_BASE_DAMAGE
         self.direction = "right"
-        
-        # ====================================================================
-        # AI BEHAVIOR VARIABLES
-        # ====================================================================
-        self.state = "IDLE"  # Current AI state: IDLE, PATROL, CHASE, ATTACK, DEATH
-        self.target = None  # Target player or waypoint
-        
-    # ========================================================================
-    # MOVEMENT METHODS
-    # ========================================================================
+        self.state = "IDLE"
+        self.target = None
     
     def move(self, direction):
         """
@@ -87,10 +57,6 @@ class Enemy:
         elif direction == "right":
             self.position = (self.position[0] + self.speed, self.position[1])
             self.direction = "right"
-    
-    # ========================================================================
-    # COMBAT METHODS
-    # ========================================================================
     
     def take_damage(self, amount):
         """
@@ -113,10 +79,6 @@ class Enemy:
         distance = self._calculate_distance(target.position)
         if distance <= ENEMY_ATTACK_RANGE:
             target.take_damage(self.damage)
-    
-    # ========================================================================
-    # AI BEHAVIOR METHODS
-    # ========================================================================
     
     def _calculate_distance(self, target_pos):
         """
@@ -165,14 +127,9 @@ class Enemy:
         distance = self._calculate_distance(player.position)
         return distance <= ENEMY_VISION_RANGE
     
-    # ========================================================================
-    # STATUS MANAGEMENT
-    # ========================================================================
-    
     def death(self):
-        """Handle enemy death - can be overridden by subclasses."""
+        """Handle enemy death."""
         self.state = "DEATH"
-        # Drop loot or trigger events
     
     def get_status(self):
         """
@@ -186,10 +143,6 @@ class Enemy:
             "position": self.position,
             "state": self.state
         }
-    
-    # ========================================================================
-    # GAME LOOP UPDATE
-    # ========================================================================
     
     def update(self, player=None):
         """
