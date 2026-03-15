@@ -270,10 +270,10 @@ class Menu:
         self.number_bot = 0
         self.my_player_id = 1  # Position 1 par défaut si on joue offline
         self.slot_positions = {
-            1: (64, 125),
-            2: (64, 442),
-            3: (1036, 125),
-            4: (1036, 442),
+            2: (64, 125),
+            3: (64, 442),
+            4: (1036, 125),
+            1: (1036, 442),
         }
         
         # Variables for final character selection (multiplayer)
