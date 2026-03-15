@@ -710,10 +710,14 @@ class Menu:
         ]
 
         if self.Back_selection_character.draw(self.screen):
-            if self.pending_session:
-                self.menu_state = "play"
-                # decrementer le nombre de joueurs dans la session
-                self.pending_session.number_players -= 1
+            self.menu_state = "play"
+            self.character_1 = 0
+            self.character_2 = 0
+            self.character_3 = 0
+            # Signal pour que main.py envoie [LeaveSession] au serveur
+            if self.current_session_name:
+                self.pending_leave_session = self.current_session_name
+            self.current_session_name = None
 
         # Handle character button clicks for current player's selection
         for button_obj, char_num in character_buttons:

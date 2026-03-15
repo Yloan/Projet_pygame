@@ -125,6 +125,12 @@ class Serveur:
                                     self.sessions_clients_joined[session_name].append(
                                         client_socket
                                     )
+                                    for s in self.sessions:
+                                        if s["titre"] == session_name:
+                                            s["nb_players"] = s.get("nb_players", 0) + 1
+                                            break
+
+                                    self.broadcast_sessions()
                                     player_id = (
                                         current_players + 1
                                     )  # Donne 1, 2, 3 ou 4
@@ -148,6 +154,18 @@ class Serveur:
                             print_network("CharacterUpdate diffusé")
                         except Exception as e:
                             print_error(f"Erreur broadcast CharacterUpdate: {e}")
+
+                    if data.startswith("[LeaveSession]:"):
+                        session_name = data.split(":", 1)[1]
+                        with self.sessions_lock:
+                            if session_name in self.sessions_clients_joined:
+                                if client_socket in self.sessions_clients_joined[session_name]:
+                                    self.sessions_clients_joined[session_name].remove(client_socket)
+                            for s in self.sessions:
+                                if s["titre"] == session_name:
+                                    s["nb_players"] = max(0, s.get("nb_players", 1) - 1)
+                                    break
+                        self.broadcast_sessions()
 
                 else:
                     break
