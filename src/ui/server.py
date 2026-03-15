@@ -130,7 +130,6 @@ class Serveur:
                                             s["nb_players"] = s.get("nb_players", 0) + 1
                                             break
 
-                                    self.broadcast_sessions()
                                     player_id = (
                                         current_players + 1
                                     )  # Donne 1, 2, 3 ou 4
@@ -148,6 +147,7 @@ class Serveur:
                                     print_warning(
                                         f"Session {session_name} pleine, connexion refusée pour ce joueur."
                                     )
+                        self.broadcast_sessions()
                     if data.startswith("[CharacterUpdate]:"):
                         try:
                             self.broadcast_raw(data, exclude_socket=client_socket)
