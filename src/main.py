@@ -17,6 +17,8 @@ from ui.console import (
     print_warning,
 )
 
+MESSAGE_DELIMITER = '\n'
+
 
 class Game:
 
@@ -77,6 +79,8 @@ class Game:
         self._client_lock = threading.Lock()
         self._send_queue = queue.Queue()
 
+        self.recv_buffer = ""
+
         # SESSION JOIN
         self.current_joined_session = None
         self.position = self.Menu.slot_positions[1]
@@ -123,64 +127,58 @@ class Game:
                 time.sleep(0.5)
                 continue
             try:
-                data = self._client_socket.recv(1024)
-                if not data:
-                    print_warning("Connexion fermée par le serveur")
-                    # Trigger reconnection
-                    try:
-                        self._client_socket.close()
-                    except Exception:
-                        pass
-                    self._client_socket = None
-                    if self.running:
-                        time.sleep(1.0)
-                        self._connect_to_server()
-                    break
-                message = data.decode("utf-8")
-                print_network(f"Message reçu: {message}")
+                chunk = self._client_socket.recv(4096).decode("utf-8")
+                self.recv_buffer += chunk
+                messages = self.recv_buffer.split("\n")
+                self.recv_buffer = messages[-1]
 
-                # Handle session list updates from server
-                if message.startswith("[SessionsList]:"):
-                    try:
-                        sessions_json = message.split(":", 1)[1]
-                        self.Menu.update_sessions_from_server(sessions_json)
-                    except Exception as e:
-                        print_error(f"Erreur traitement sessions: {e}")
+                for message in messages[:-1]:
+                    if not message:
+                        continue
 
-                # Broadcast sessions received from server to menu
-                elif message.startswith("[Sessions]"):
-                    try:
-                        self.Menu.update_sessions_from_server(message.split(":", 1)[1])
-                    except Exception as e:
-                        print_error(f"Erreur mise à jour sessions: {e}")
+                    print_network(f"Message reçu: {message}")
 
-                # À l'intérieur de ton _receive_loop, ajoute ce bloc :
-                elif message.startswith("[YourPlayerID]:"):
-                    try:
-                        player_id = int(message.split(":", 1)[1])
-                        self.Menu.my_player_id = player_id
-                        print_success(f"Je suis le joueur {player_id} à l'écran !")
-                    except Exception as e:
-                        print_error(f"Erreur attribution Player ID: {e}")
+                    # Handle session list updates from server
+                    if message.startswith("[SessionsList]:"):
+                        try:
+                            sessions_json = message.split(":", 1)[1]
+                            self.Menu.update_sessions_from_server(sessions_json)
+                        except Exception as e:
+                            print_error(f"Erreur traitement sessions: {e}")
 
-                elif message.startswith("[CharacterUpdate]:"):
-                    try:
-                        data = json.loads(message.split(":", 1)[1])
-                        self.Menu.update_player_character(
-                            data["player_id"],
-                            data["character_1"],
-                            data["character_2"],
-                            data["character_3"]
-                        )
-                    except Exception as e:
-                        print_error(f"Erreur CharacterUpdate: {e}")
+                    # Broadcast sessions received from server to menu
+                    elif message.startswith("[Sessions]"):
+                        try:
+                            self.Menu.update_sessions_from_server(message.split(":", 1)[1])
+                        except Exception as e:
+                            print_error(f"Erreur mise à jour sessions: {e}")
 
-                elif message.startswith("[PlayerReady]:"):
-                    try:
-                        data = json.loads(message.split(":", 1)[1])
-                        self.Menu.update_player_ready(data["player_id"])
-                    except Exception as e:
-                        print_error(f"Erreur PlayerReady: {e}")
+                    elif message.startswith("[YourPlayerID]:"):
+                        try:
+                            player_id = int(message.split(":", 1)[1])
+                            self.Menu.my_player_id = player_id
+                            print_success(f"Je suis le joueur {player_id} à l'écran !")
+                        except Exception as e:
+                            print_error(f"Erreur attribution Player ID: {e}")
+
+                    elif message.startswith("[CharacterUpdate]:"):
+                        try:
+                            data = json.loads(message.split(":", 1)[1])
+                            self.Menu.update_player_character(
+                                data["player_id"],
+                                data["character_1"],
+                                data["character_2"],
+                                data["character_3"]
+                            )
+                        except Exception as e:
+                            print_error(f"Erreur CharacterUpdate: {e}")
+
+                    elif message.startswith("[PlayerReady]:"):
+                        try:
+                            data = json.loads(message.split(":", 1)[1])
+                            self.Menu.update_player_ready(data["player_id"])
+                        except Exception as e:
+                            print_error(f"Erreur PlayerReady: {e}")
 
             except socket.timeout:
                 continue
@@ -205,7 +203,7 @@ class Game:
                 continue
             try:
                 if self._client_socket:
-                    self._client_socket.send(message.encode("utf-8"))
+                    self._client_socket.send((message + MESSAGE_DELIMITER).encode("utf-8"))
                 else:
                     print_warning(f"Non connecté, message non envoyé: {message}")
                     try:
