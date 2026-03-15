@@ -141,6 +141,13 @@ class Game:
                 except Exception as e:
                     print_error(f"Erreur PlayerReady: {e}")
 
+            elif message.startswith("[PlayerUnready]:"):
+                try:
+                    player_id = int(message.split(":", 1)[1])
+                    self.Menu.players_ready[player_id] = False
+                except Exception as e:
+                    print_error(f"Erreur PlayerUnready: {e}")
+
     def _connect_to_server(self):
         try:
             # Close existing socket if any
@@ -375,6 +382,11 @@ class Game:
             if self.Menu.pending_leave_session is not None:
                 self.send_to_server(f"[LeaveSession]:{self.Menu.pending_leave_session}")
                 self.Menu.pending_leave_session = None
+
+            
+            if self.Menu.pending_unready:
+                self.send_to_server(f"[PlayerUnready]:{self.Menu.my_player_id}")
+                self.Menu.pending_unready = False
 
             # GAME STATE - Actual gameplay
             if self.etat == "game":

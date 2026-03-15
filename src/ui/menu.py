@@ -292,8 +292,11 @@ class Menu:
         }
         self.pending_character_submission = None  # {player_id, character_1, character_2, character_3} à envoyer au serveur
         self.pending_character_update = False # MAJ UI characters selection
+        self.pending_unready = False
         self.pending_leave_session = None
         self.pending_join_session = None
+
+        self._prev_mouse = False
 
     def handle_session_menu(self):
         """Gère l'état du menu des sessions"""
@@ -745,12 +748,21 @@ class Menu:
         # Les slots > max_human_slot sont des bots
         max_human_slot = 4 - self.number_bot
 
-        # Display the 4 slots with selected characters from other players
+        # Détection clic franc (mousedown ce frame, pas le frame d'avant)
+        cur_mouse = pyg.mouse.get_pressed()[0]
+        just_clicked = cur_mouse and not self._prev_mouse
+        self._prev_mouse = cur_mouse
+        mouse_pos = pyg.mouse.get_pos()
+
         for player_id in range(1, 5):
             if player_id > max_human_slot:
-                self.draw_text("BOT", self.middle_font, (150, 150, 255), pos_x + 20, pos_y + 50)
+                px, py = self.slot_positions[player_id]
+                self.draw_text("BOT", self.middle_font, (150, 150, 255), px + 20, py + 50)
                 continue
             pos_x, pos_y = self.slot_positions[player_id]
+
+
+
             characters = self.players_characters[player_id]
             char_1, char_2, char_3 = characters
             
@@ -806,78 +818,41 @@ class Menu:
                 )
                 self.screen.blit(scaled_image, (pos_x, pos_y))
             
-            # Display player label and status if has any selection
+            if just_clicked and player_id == self.my_player_id and not self.players_ready[self.my_player_id]:
+                rect_char2 = pyg.Rect(pos_x - 40, pos_y + 214, 64, 64)
+                rect_char1 = pyg.Rect(pos_x + 196, pos_y + 214, 64, 64)
+                if char_2 and rect_char2.collidepoint(mouse_pos):
+                    self.character_2, self.character_3 = self.character_3, self.character_2
+                    self.pending_character_update = True
+                elif char_1 and rect_char1.collidepoint(mouse_pos):
+                    self.character_1, self.character_3 = self.character_3, self.character_1
+                    self.pending_character_update = True
+
+            if just_clicked and player_id == self.my_player_id and self.players_ready[self.my_player_id]:
+                rect_ready = pyg.Rect(pos_x, pos_y - 25, 120, 20)
+                if rect_ready.collidepoint(mouse_pos):
+                    self.players_ready[self.my_player_id] = False
+                    self.pending_unready = True
+
             if char_1 or char_2 or char_3:
                 player_label = "YOU" if player_id == self.my_player_id else f"Player {player_id}"
                 self.draw_text(player_label, self.middle_font, 
                               self.TEXT_COL, pos_x, pos_y - 40)
                 
-                # Display status (READY or WAITING)
                 status_text = "READY" if self.players_ready[player_id] else "WAITING"
                 status_color = (0, 255, 0) if self.players_ready[player_id] else (255, 255, 0)
                 self.draw_text(status_text, self.little_font, 
                               status_color, pos_x, pos_y - 20)
+                
+
             else:
-                # Empty slot - show placeholder (but not for current player)
                 if player_id != self.my_player_id and player_id < self.number_bot:
                     self.draw_text(f"Player {player_id}", self.middle_font, 
                                   self.TEXT_COL2, pos_x + 20, pos_y + 50)
                     self.draw_text("Waiting...", self.little_font, 
                                   (255, 255, 0), pos_x + 20, pos_y + 100)
 
-        # Display current player's team (3 selected characters) - cascade display
-        # Get current player's slot position for reference
         my_slot_x, my_slot_y = self.slot_positions[self.my_player_id]
-        
-        # Display character_3 in large at slot position
-        # if self.character_3:
-        #     char_image = self.image_ch[self.character_3 - 1]
-        #     scaled_image = pyg.transform.scale(
-        #         char_image,
-        #         (int(char_image.get_width() * 10), 
-        #          int(char_image.get_height() * 10))
-        #     )
-        #     self.screen.blit(scaled_image, (my_slot_x, my_slot_y))
-            
-        #     # character_2 in small preview below
-        #     if self.character_2:
-        #         small_img = self.image_ch[self.character_2 - 1]
-        #         small_x = my_slot_x - 40
-        #         small_y = my_slot_y + 214
-        #         self.screen.blit(small_img, (small_x, small_y))
-                
-        #         # character_1 also in small preview
-        #         if self.character_1:
-        #             small_img = self.image_ch[self.character_1 - 1]
-        #             small_x = my_slot_x + 196
-        #             small_y = my_slot_y + 214
-        #             self.screen.blit(small_img, (small_x, small_y))
-                    
-        # elif self.character_2:
-        #     char_image = self.image_ch[self.character_2 - 1]
-        #     scaled_image = pyg.transform.scale(
-        #         char_image,
-        #         (int(char_image.get_width() * 10), 
-        #          int(char_image.get_height() * 10))
-        #     )
-        #     self.screen.blit(scaled_image, (my_slot_x, my_slot_y))
-            
-        #     # character_1 in small preview
-        #     if self.character_1:
-        #         small_img = self.image_ch[self.character_1 - 1]
-        #         small_x = my_slot_x - 40
-        #         small_y = my_slot_y + 214
-        #         self.screen.blit(small_img, (small_x, small_y))
-                
-        # elif self.character_1:
-        #     # character_1 EN GROS at slot position
-        #     char_image = self.image_ch[self.character_1 - 1]
-        #     scaled_image = pyg.transform.scale(
-        #         char_image,
-        #         (int(char_image.get_width() * 10), 
-        #          int(char_image.get_height() * 10))
-        #     )
-        #     self.screen.blit(scaled_image, (my_slot_x, my_slot_y))
 
         # Show PLAY button if current player has selected all 3 characters and not already ready
         if self.character_1 and self.character_2 and self.character_3 and not self.players_ready[self.my_player_id]:
@@ -896,11 +871,9 @@ class Menu:
                 print_network(f"Joueur {self.my_player_id} a cliqué PLAY avec {self.character_1}, {self.character_2}, {self.character_3}")
         
         # Check if all players are ready
-        # Calculate how many players should be in this session
         total_players_in_session = self.number_players + 1  # Include the current player
         
         # Count how many players are ready
-        # Remplacer total_players_in_session / ready_count par :
         ready_count = sum(1 for p_id in range(1, max_human_slot + 1) if self.players_ready[p_id])
         if ready_count == max_human_slot and max_human_slot > 0:
             self.menu_state = "start game"

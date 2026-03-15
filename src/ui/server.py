@@ -36,6 +36,7 @@ class Serveur:
         self.sessions_clients_joined = {}
 
         self.recv_buffers = {}
+        self.sessions_characters = {}
 
     def start_server(self):
         self.server_socket.listen(MAX_CLIENTS)
@@ -128,6 +129,8 @@ class Serveur:
             with self.sessions_lock:
                 self.sessions.append(new_session_data)
                 self.sessions_clients_joined[new_session_data["titre"]] = []
+                self.sessions_characters[new_session_data["titre"]] = {}
+
             self.broadcast_sessions()
 
         elif data.startswith("[JoinedSession]:"):
@@ -159,6 +162,16 @@ class Serveur:
                         print_success(
                             f"Joueur assigné ID {player_id} dans {session_name} (Bots: {nb_bots})"
                         )
+                        existing = self.sessions_characters.get(session_name, {})
+                        for pid, chars in existing.items():
+                            sync_data = {
+                                "player_id": pid,
+                                "character_1": chars[0],
+                                "character_2": chars[1],
+                                "character_3": chars[2],
+                                "session_name": session_name,
+                            }
+                            self._send(client_socket, f"[CharacterUpdate]:{json.dumps(sync_data)}")
                     else:
                         self._send(client_socket, "[Error]:Session pleine")
                         print_warning(
@@ -168,9 +181,26 @@ class Serveur:
             self.broadcast_sessions()
 
         elif data.startswith("[CharacterUpdate]:"):
+            try:
+                update = json.loads(data.split(":", 1)[1])
+                session_name = update.get("session_name")
+                player_id = update.get("player_id")
+                if session_name and player_id:
+                    if session_name not in self.sessions_characters:
+                        self.sessions_characters[session_name] = {}
+                    self.sessions_characters[session_name][player_id] = [
+                        update.get("character_1"),
+                        update.get("character_2"),
+                        update.get("character_3"),
+                    ]
+            except Exception as e:
+                print_error(f"Erreur stockage CharacterUpdate: {e}")
             self.broadcast_raw(data, exclude_socket=client_socket)
             print_network("CharacterUpdate diffusé")
 
+        elif data.startswith("[PlayerUnready]:"):
+            self.broadcast_raw(data, exclude_socket=client_socket)
+            print_network("PlayerUnready diffusé")
         elif data.startswith("[LeaveSession]:"):
             session_name = data.split(":", 1)[1]
             with self.sessions_lock:
