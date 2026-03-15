@@ -166,6 +166,13 @@ class Serveur:
                                     s["nb_players"] = max(0, s.get("nb_players", 1) - 1)
                                     break
                         self.broadcast_sessions()
+                        
+                    if data.startswith("[PlayerReady]:"):
+                        try:
+                            self.broadcast_raw(data, exclude_socket=client_socket)
+                            print_network("PlayerReady diffusé")
+                        except Exception as e:
+                            print_error(f"Erreur broadcast PlayerReady: {e}")
 
                 else:
                     break

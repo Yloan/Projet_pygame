@@ -163,6 +163,25 @@ class Game:
                     except Exception as e:
                         print_error(f"Erreur attribution Player ID: {e}")
 
+                elif message.startswith("[CharacterUpdate]:"):
+                    try:
+                        data = json.loads(message.split(":", 1)[1])
+                        self.Menu.update_player_character(
+                            data["player_id"],
+                            data["character_1"],
+                            data["character_2"],
+                            data["character_3"]
+                        )
+                    except Exception as e:
+                        print_error(f"Erreur CharacterUpdate: {e}")
+
+                elif message.startswith("[PlayerReady]:"):
+                    try:
+                        data = json.loads(message.split(":", 1)[1])
+                        self.Menu.update_player_ready(data["player_id"])
+                    except Exception as e:
+                        print_error(f"Erreur PlayerReady: {e}")
+
             except socket.timeout:
                 continue
             except Exception as e:
@@ -308,29 +327,36 @@ class Game:
 
             self.delta_time_sessions_send += 1
             # Send sessions to server
+            
             if self.Menu.pending_session is not None:
-                self.send_to_server(
-                    f"[CreateSession]:{json.dumps(self.Menu.pending_session)}"
-                )
+                self.send_to_server(f"[CreateSession]:{json.dumps(self.Menu.pending_session)}")
                 self.current_joined_session = self.Menu.pending_session["titre"]
-
                 self.send_to_server(f"[JoinedSession]:{self.current_joined_session}")
+                self.Menu.pending_session = None
 
-                self.Menu.pending_session = None  # On vide après envoi
-                if self.Menu.pending_character_update:
-                    update_data = {
-                        "player_id": self.Menu.my_player_id,
-                        "character_1": self.Menu.character_1,
-                        "character_2": self.Menu.character_2,
-                        "character_3": self.Menu.character_3,
-                        "session_name": self.Menu.current_session_name,
-                    }
-                    self.send_to_server(f"[CharacterUpdate]:{json.dumps(update_data)}")
-                    self.Menu.pending_character_update = False
+            if hasattr(self.Menu, 'pending_join_session') and self.Menu.pending_join_session is not None:
+                self.current_joined_session = self.Menu.pending_join_session
+                self.send_to_server(f"[JoinedSession]:{self.current_joined_session}")
+                self.Menu.pending_join_session = None
 
-                if self.Menu.pending_leave_session is not None:
-                    self.send_to_server(f"[LeaveSession]:{self.Menu.pending_leave_session}")
-                    self.Menu.pending_leave_session = None
+            if self.Menu.pending_character_update:
+                update_data = {
+                    "player_id": self.Menu.my_player_id,
+                    "character_1": self.Menu.character_1,
+                    "character_2": self.Menu.character_2,
+                    "character_3": self.Menu.character_3,
+                    "session_name": self.Menu.current_session_name,
+                }
+                self.send_to_server(f"[CharacterUpdate]:{json.dumps(update_data)}")
+                self.Menu.pending_character_update = False
+
+            if hasattr(self.Menu, 'pending_character_submission') and self.Menu.pending_character_submission is not None:
+                self.send_to_server(f"[PlayerReady]:{json.dumps(self.Menu.pending_character_submission)}")
+                self.Menu.pending_character_submission = None
+
+            if self.Menu.pending_leave_session is not None:
+                self.send_to_server(f"[LeaveSession]:{self.Menu.pending_leave_session}")
+                self.Menu.pending_leave_session = None
 
             # GAME STATE - Actual gameplay
             if self.etat == "game":

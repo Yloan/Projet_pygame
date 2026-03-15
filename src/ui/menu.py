@@ -293,6 +293,7 @@ class Menu:
         self.pending_character_submission = None  # {player_id, character_1, character_2, character_3} à envoyer au serveur
         self.pending_character_update = False # MAJ UI characters selection
         self.pending_leave_session = None
+        self.pending_join_session = None
 
     def handle_session_menu(self):
         """Gère l'état du menu des sessions"""
@@ -1068,10 +1069,9 @@ class Session:
                     self.menu.players_characters[p_id] = [None, None, None]
                     self.menu.players_ready[p_id] = False
 
-                if self.nb_players + self.nb_bots < 4:
-                    self.nb_players+=1
                 
-                    self.menu.menu_state = "character_selection_final"
+                self.menu.pending_join_session = self.titre
+                self.menu.menu_state = "character_selection_final"
             
             button_text = "Join"
         else:
