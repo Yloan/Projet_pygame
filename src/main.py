@@ -350,6 +350,8 @@ class Game:
                 self.send_to_server(f"[JoinedSession]:{self.current_joined_session}")
                 self.Menu.pending_session = None
 
+                self.Menu.menu_state = "waiting_player_id"
+
             if hasattr(self.Menu, 'pending_join_session') and self.Menu.pending_join_session is not None:
                 self.current_joined_session = self.Menu.pending_join_session
                 self.send_to_server(f"[JoinedSession]:{self.current_joined_session}")
