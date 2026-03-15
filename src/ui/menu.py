@@ -1052,7 +1052,7 @@ class Session:
         self.menu.draw_text(self.titre, self.menu.font, "Black", 391, y_scrollé + 113)
 
         # Check if session is full
-        is_session_full = self.nb_players + self.nb_bots >= 4
+        is_session_full = self.nb_players + self.nb_bots > 4
         
         # Bouton Rejoindre ou FULL et son texte
         if not is_session_full:
