@@ -78,6 +78,8 @@ class Game:
         self._client_socket = None
         self._client_lock = threading.Lock()
         self._send_queue = queue.Queue()
+        self._recv_queue = queue.Queue()
+        self.recv_buffer = ""
 
         self.recv_buffer = ""
 
@@ -97,6 +99,44 @@ class Game:
     def center_x(self, image, scale=1):
         w = int(image.get_width() * scale)
         return (self.width - w) // 2
+    
+
+    def _process_network_messages(self):
+        while not self._recv_queue.empty():
+            message = self._recv_queue.get_nowait()
+
+            if message.startswith("[SessionsList]:"):
+                try:
+                    self.Menu.update_sessions_from_server(message.split(":", 1)[1])
+                except Exception as e:
+                    print_error(f"Erreur traitement sessions: {e}")
+
+            elif message.startswith("[YourPlayerID]:"):
+                try:
+                    player_id = int(message.split(":", 1)[1]) - 1
+                    self.Menu.my_player_id = player_id
+                    print_success(f"Je suis le joueur {player_id}")
+                except Exception as e:
+                    print_error(f"Erreur player ID: {e}")
+
+            elif message.startswith("[CharacterUpdate]:"):
+                try:
+                    data = json.loads(message.split(":", 1)[1])
+                    self.Menu.update_player_character(
+                        data["player_id"],
+                        data["character_1"],
+                        data["character_2"],
+                        data["character_3"]
+                    )
+                except Exception as e:
+                    print_error(f"Erreur CharacterUpdate: {e}")
+
+            elif message.startswith("[PlayerReady]:"):
+                try:
+                    data = json.loads(message.split(":", 1)[1])
+                    self.Menu.update_player_ready(data["player_id"])
+                except Exception as e:
+                    print_error(f"Erreur PlayerReady: {e}")
 
     def _connect_to_server(self):
         try:
@@ -135,50 +175,8 @@ class Game:
                 for message in messages[:-1]:
                     if not message:
                         continue
-
                     print_network(f"Message reçu: {message}")
-
-                    # Handle session list updates from server
-                    if message.startswith("[SessionsList]:"):
-                        try:
-                            sessions_json = message.split(":", 1)[1]
-                            self.Menu.update_sessions_from_server(sessions_json)
-                        except Exception as e:
-                            print_error(f"Erreur traitement sessions: {e}")
-
-                    # Broadcast sessions received from server to menu
-                    elif message.startswith("[Sessions]"):
-                        try:
-                            self.Menu.update_sessions_from_server(message.split(":", 1)[1])
-                        except Exception as e:
-                            print_error(f"Erreur mise à jour sessions: {e}")
-
-                    elif message.startswith("[YourPlayerID]:"):
-                        try:
-                            player_id = int(message.split(":", 1)[1]) - 1
-                            self.Menu.my_player_id = player_id
-                            print_success(f"Je suis le joueur {player_id} à l'écran !")
-                        except Exception as e:
-                            print_error(f"Erreur attribution Player ID: {e}")
-
-                    elif message.startswith("[CharacterUpdate]:"):
-                        try:
-                            data = json.loads(message.split(":", 1)[1])
-                            self.Menu.update_player_character(
-                                data["player_id"],
-                                data["character_1"],
-                                data["character_2"],
-                                data["character_3"]
-                            )
-                        except Exception as e:
-                            print_error(f"Erreur CharacterUpdate: {e}")
-
-                    elif message.startswith("[PlayerReady]:"):
-                        try:
-                            data = json.loads(message.split(":", 1)[1])
-                            self.Menu.update_player_ready(data["player_id"])
-                        except Exception as e:
-                            print_error(f"Erreur PlayerReady: {e}")
+                    self._recv_queue.put(message)
 
             except socket.timeout:
                 continue
@@ -301,6 +299,7 @@ class Game:
         # self.etat = "game"  # Start directly in game
 
         while self.running:
+            self._process_network_messages()
             # MENU STATE
             if self.etat == "menu":
                 screen.blit(self.wallpaper, (0, 0))
