@@ -737,6 +737,9 @@ class Menu:
                 elif not self.character_3:
                     self.character_3 = char_num
                     self.pending_character_update = True
+                elif not self.players_ready[self.my_player_id]:
+                    self.character_3 = char_num
+                    self.pending_character_update = True
 
         # Sync sélection locale dans le dict partagé
         self.players_characters[self.my_player_id] = [
@@ -1025,7 +1028,7 @@ class Session:
         self.menu.draw_text(self.titre, self.menu.font, "Black", 391, y_scrollé + 113)
 
         # Check if session is full
-        is_session_full = self.nb_players + self.nb_bots > 4
+        is_session_full = self.nb_players + self.nb_bots >= 4
         
         # Bouton Rejoindre ou FULL et son texte
         if not is_session_full:
