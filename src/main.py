@@ -148,6 +148,14 @@ class Game:
                 except Exception as e:
                     print_error(f"Erreur PlayerUnready: {e}")
 
+            elif message.startswith("[PlayerLeft]:"):
+                try:
+                    player_id = int(message.split(":", 1)[1])
+                    self.Menu.players_characters[player_id] = [None, None, None]
+                    self.Menu.players_ready[player_id] = False
+                except Exception as e:
+                    print_error(f"Erreur PlayerLeft: {e}")
+
     def _connect_to_server(self):
         try:
             # Close existing socket if any

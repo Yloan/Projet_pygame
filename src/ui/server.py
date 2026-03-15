@@ -26,7 +26,7 @@ class Serveur:
 
         self.Port = port
         self.Host = host
-        # CONNECTION MANAGEMENT
+        # CONNECTION MANAGMENT
         self.clients = []
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.Host, self.Port))
@@ -37,6 +37,7 @@ class Serveur:
 
         self.recv_buffers = {}
         self.sessions_characters = {}
+        self.socket_players_id = {}
 
     def start_server(self):
         self.server_socket.listen(MAX_CLIENTS)
@@ -158,6 +159,7 @@ class Serveur:
                                 break
                         player_id = current_players + 1
 
+                        self.socket_player_ids[client_socket] = (session_name, player_id)
                         self._send(client_socket, f"[YourPlayerID]:{player_id}")
                         print_success(
                             f"Joueur assigné ID {player_id} dans {session_name} (Bots: {nb_bots})"
@@ -211,6 +213,14 @@ class Serveur:
                     if s["titre"] == session_name:
                         s["nb_players"] = max(0, s.get("nb_players", 1) - 1)
                         break
+
+                if client_socket in self.socket_player_ids:
+                    left_session, left_pid = self.socket_player_ids.pop(client_socket)
+                    if left_session in self.sessions_characters:
+                        self.sessions_characters[left_session].pop(left_pid, None)
+                    # Prévenir les autres que ce slot est vide
+                    self.broadcast_raw(f"[PlayerLeft]:{left_pid}", exclude_socket=client_socket)
+                    
             self.broadcast_sessions()
 
         elif data.startswith("[PlayerReady]:"):
