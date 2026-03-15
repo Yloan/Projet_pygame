@@ -37,7 +37,7 @@ class Serveur:
 
         self.recv_buffers = {}
         self.sessions_characters = {}
-        self.socket_players_id = {}
+        self.socket_player_ids = {}
 
     def start_server(self):
         self.server_socket.listen(MAX_CLIENTS)
@@ -220,7 +220,7 @@ class Serveur:
                         self.sessions_characters[left_session].pop(left_pid, None)
                     # Prévenir les autres que ce slot est vide
                     self.broadcast_raw(f"[PlayerLeft]:{left_pid}", exclude_socket=client_socket)
-                    
+
             self.broadcast_sessions()
 
         elif data.startswith("[PlayerReady]:"):

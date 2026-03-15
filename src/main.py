@@ -8,6 +8,8 @@ import pygame as pyg
 
 import game.characters as player_module
 import ui.menu as menu
+import ui.Music as music_module
+import utils.paths as __path__
 from game.map_laoder import MapLoader
 from ui.console import (
     print_error,
@@ -86,6 +88,26 @@ class Game:
         # SESSION JOIN
         self.current_joined_session = None
         self.position = self.Menu.slot_positions[1]
+
+        # MUSIC
+        self.current_music = 0
+        self.musics = []
+
+        self.musics_names = [
+            'Slower_blitzkrieg.mp3'
+        ]
+
+        for music_file in self.musics_names:
+            chemin_complet = __path__.ensure_asset_exists('musics', music_file)
+            music = music_module.MusicPlayer(chemin_complet)
+            self.musics.append(music)
+
+    def switch_music(self, i=None):
+        if i is not None:
+            self.current_music = i
+
+        else:
+            self.current_music+=1
 
     def draw_text(self, text, font, text_col, x, y):
         img = font.render(text, True, text_col)
@@ -315,8 +337,12 @@ class Game:
 
         self.etat = "menu"  # Start directly in menu
         # self.etat = "game"  # Start directly in game
-
+        pyg.mixer.init()
+        self.musics[self.current_music].play()
         while self.running:
+
+            # Launch music
+
             self._process_network_messages()
             # MENU STATE
             if self.etat == "menu":
