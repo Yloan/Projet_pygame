@@ -79,6 +79,7 @@ class Game:
 
         # SESSION JOIN
         self.current_joined_session = None
+        self.position = self.Menu.slot_positions[1]
 
     def draw_text(self, text, font, text_col, x, y):
         img = font.render(text, True, text_col)
@@ -304,6 +305,7 @@ class Game:
                             event
                         )
 
+
             self.delta_time_sessions_send += 1
             # Send sessions to server
             if self.Menu.pending_session is not None:
@@ -315,6 +317,16 @@ class Game:
                 self.send_to_server(f"[JoinedSession]:{self.current_joined_session}")
 
                 self.Menu.pending_session = None  # On vide après envoi
+                if self.Menu.pending_character_update:
+                    update_data = {
+                        "player_id": self.Menu.my_player_id,
+                        "character_1": self.Menu.character_1,
+                        "character_2": self.Menu.character_2,
+                        "character_3": self.Menu.character_3,
+                        "session_name": self.Menu.current_session_name,
+                    }
+                    self.send_to_server(f"[CharacterUpdate]:{json.dumps(update_data)}")
+                    self.Menu.pending_character_update = False
 
             # GAME STATE - Actual gameplay
             if self.etat == "game":

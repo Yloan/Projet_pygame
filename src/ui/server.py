@@ -54,6 +54,14 @@ class Serveur:
                 self.start_game()
             except Exception as e:
                 print_error(f"Erreur lors de l'acceptation d'un client: {e}")
+        
+    def broadcast_raw(self, message, exclude_socket=None):
+        for client in self.clients:
+            if client != exclude_socket:
+                try:
+                    client.send(message.encode("utf-8"))
+                except Exception as e:
+                    print_error(f"Erreur broadcast_raw: {e}")
 
     def handle_client(self, client_socket):
         while True:
@@ -134,6 +142,12 @@ class Serveur:
                                     print_warning(
                                         f"Session {session_name} pleine, connexion refusée pour ce joueur."
                                     )
+                    if data.startswith("[CharacterUpdate]:"):
+                        try:
+                            self.broadcast_raw(data, exclude_socket=client_socket)
+                            print_network("CharacterUpdate diffusé")
+                        except Exception as e:
+                            print_error(f"Erreur broadcast CharacterUpdate: {e}")
 
                 else:
                     break

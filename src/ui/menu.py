@@ -276,9 +276,7 @@ class Menu:
             4: (1036, 442),
         }
         
-        # ====================================================================
         # Variables for final character selection (multiplayer)
-        # ====================================================================
         self.current_session_name = None  # Nom de la session rejointe
         self.players_characters = {  # Dict pour stocker les 3 persos de chaque joueur: {player_id: [char1, char2, char3]}
             1: [None, None, None],
@@ -293,6 +291,7 @@ class Menu:
             4: False,
         }
         self.pending_character_submission = None  # {player_id, character_1, character_2, character_3} à envoyer au serveur
+        self.pending_character_update = False # MAJ UI characters selection
 
     def handle_session_menu(self):
         """Gère l'état du menu des sessions"""
@@ -305,10 +304,6 @@ class Menu:
         self.screen.set_clip(zone_visible)
 
         for i, session in enumerate(self.sessions):
-            # print(f"Session nb {i}: {session}. Y-->{session.y}")
-            # print(
-            #     f"Session nb {i}: {session}. Y-->{session.y} - title-->{session.titre}"
-            # )
             session.draw_session(session.y - self.scroll_y)
 
         self.screen.set_clip(None)
@@ -687,12 +682,6 @@ class Menu:
             self.etat = "game"
 
     def handle_character_selection_final(self):
-        """
-        Affiche l'écran final de sélection avec les 4 slots joueurs.
-        Chaque joueur sélectionne 3 personnages avant de confirmer.
-        character_1 et character_2 -> petits aperçus
-        character_3 -> grand affichage
-        """
         # Draw background
         self.screen.blit(self.choice_chracters, (0, 0))
         self.draw_text_center("Choose three characters", 
@@ -720,19 +709,41 @@ class Menu:
             (self.character_18_button, 18),
         ]
 
+        if self.Back_selection_character.draw(self.screen):
+            if self.pending_session:
+                self.menu_state = "play"
+                # decrementer le nombre de joueurs dans la session
+                self.pending_session.number_players -= 1
+
         # Handle character button clicks for current player's selection
         for button_obj, char_num in character_buttons:
             if button_obj.draw(self.screen):
                 # Store order of selection
                 if not self.character_1:
                     self.character_1 = char_num
+                    self.pending_character_update = True
                 elif not self.character_2:
                     self.character_2 = char_num
+                    self.pending_character_update = True
                 elif not self.character_3:
                     self.character_3 = char_num
+                    self.pending_character_update = True
+
+        # Sync sélection locale dans le dict partagé
+        self.players_characters[self.my_player_id] = [
+            self.character_1 or None,
+            self.character_2 or None,
+            self.character_3 or None,
+        ]
+
+        # Les slots > max_human_slot sont des bots
+        max_human_slot = 4 - self.number_bot
 
         # Display the 4 slots with selected characters from other players
         for player_id in range(1, 5):
+            if player_id > max_human_slot:
+                self.draw_text("BOT", self.middle_font, (150, 150, 255), pos_x + 20, pos_y + 50)
+                continue
             pos_x, pos_y = self.slot_positions[player_id]
             characters = self.players_characters[player_id]
             char_1, char_2, char_3 = characters
@@ -802,7 +813,7 @@ class Menu:
                               status_color, pos_x, pos_y - 20)
             else:
                 # Empty slot - show placeholder (but not for current player)
-                if player_id != self.my_player_id:
+                if player_id != self.my_player_id and player_id < self.number_bot:
                     self.draw_text(f"Player {player_id}", self.middle_font, 
                                   self.TEXT_COL2, pos_x + 20, pos_y + 50)
                     self.draw_text("Waiting...", self.little_font, 
@@ -812,56 +823,55 @@ class Menu:
         # Get current player's slot position for reference
         my_slot_x, my_slot_y = self.slot_positions[self.my_player_id]
         
-        # Display character_3 in large at slot position (EN GROS)
-        if self.character_3:
-            char_image = self.image_ch[self.character_3 - 1]
-            scaled_image = pyg.transform.scale(
-                char_image,
-                (int(char_image.get_width() * 10), 
-                 int(char_image.get_height() * 10))
-            )
-            self.screen.blit(scaled_image, (my_slot_x, my_slot_y))
+        # Display character_3 in large at slot position
+        # if self.character_3:
+        #     char_image = self.image_ch[self.character_3 - 1]
+        #     scaled_image = pyg.transform.scale(
+        #         char_image,
+        #         (int(char_image.get_width() * 10), 
+        #          int(char_image.get_height() * 10))
+        #     )
+        #     self.screen.blit(scaled_image, (my_slot_x, my_slot_y))
             
-            # character_2 in small preview below
-            if self.character_2:
-                small_img = self.image_ch[self.character_2 - 1]
-                small_x = my_slot_x - 40
-                small_y = my_slot_y + 214
-                self.screen.blit(small_img, (small_x, small_y))
+        #     # character_2 in small preview below
+        #     if self.character_2:
+        #         small_img = self.image_ch[self.character_2 - 1]
+        #         small_x = my_slot_x - 40
+        #         small_y = my_slot_y + 214
+        #         self.screen.blit(small_img, (small_x, small_y))
                 
-                # character_1 also in small preview (offset more to the right)
-                if self.character_1:
-                    small_img = self.image_ch[self.character_1 - 1]
-                    small_x = my_slot_x + 196
-                    small_y = my_slot_y + 214
-                    self.screen.blit(small_img, (small_x, small_y))
+        #         # character_1 also in small preview
+        #         if self.character_1:
+        #             small_img = self.image_ch[self.character_1 - 1]
+        #             small_x = my_slot_x + 196
+        #             small_y = my_slot_y + 214
+        #             self.screen.blit(small_img, (small_x, small_y))
                     
-        elif self.character_2:
-            # character_2 EN GROS at slot position
-            char_image = self.image_ch[self.character_2 - 1]
-            scaled_image = pyg.transform.scale(
-                char_image,
-                (int(char_image.get_width() * 10), 
-                 int(char_image.get_height() * 10))
-            )
-            self.screen.blit(scaled_image, (my_slot_x, my_slot_y))
+        # elif self.character_2:
+        #     char_image = self.image_ch[self.character_2 - 1]
+        #     scaled_image = pyg.transform.scale(
+        #         char_image,
+        #         (int(char_image.get_width() * 10), 
+        #          int(char_image.get_height() * 10))
+        #     )
+        #     self.screen.blit(scaled_image, (my_slot_x, my_slot_y))
             
-            # character_1 in small preview
-            if self.character_1:
-                small_img = self.image_ch[self.character_1 - 1]
-                small_x = my_slot_x - 40
-                small_y = my_slot_y + 214
-                self.screen.blit(small_img, (small_x, small_y))
+        #     # character_1 in small preview
+        #     if self.character_1:
+        #         small_img = self.image_ch[self.character_1 - 1]
+        #         small_x = my_slot_x - 40
+        #         small_y = my_slot_y + 214
+        #         self.screen.blit(small_img, (small_x, small_y))
                 
-        elif self.character_1:
-            # character_1 EN GROS at slot position
-            char_image = self.image_ch[self.character_1 - 1]
-            scaled_image = pyg.transform.scale(
-                char_image,
-                (int(char_image.get_width() * 10), 
-                 int(char_image.get_height() * 10))
-            )
-            self.screen.blit(scaled_image, (my_slot_x, my_slot_y))
+        # elif self.character_1:
+        #     # character_1 EN GROS at slot position
+        #     char_image = self.image_ch[self.character_1 - 1]
+        #     scaled_image = pyg.transform.scale(
+        #         char_image,
+        #         (int(char_image.get_width() * 10), 
+        #          int(char_image.get_height() * 10))
+        #     )
+        #     self.screen.blit(scaled_image, (my_slot_x, my_slot_y))
 
         # Show PLAY button if current player has selected all 3 characters and not already ready
         if self.character_1 and self.character_2 and self.character_3 and not self.players_ready[self.my_player_id]:
@@ -884,11 +894,9 @@ class Menu:
         total_players_in_session = self.number_players + 1  # Include the current player
         
         # Count how many players are ready
-        ready_count = sum(1 for p_id in range(1, total_players_in_session + 1) 
-                         if self.players_ready[p_id])
-        
-        # If all expected players are ready, start the game
-        if ready_count == total_players_in_session and total_players_in_session > 0:
+        # Remplacer total_players_in_session / ready_count par :
+        ready_count = sum(1 for p_id in range(1, max_human_slot + 1) if self.players_ready[p_id])
+        if ready_count == max_human_slot and max_human_slot > 0:
             self.menu_state = "start game"
             self.etat = "game"
 
@@ -926,13 +934,12 @@ class Menu:
                 self.input_box.temp_nb_ia -= 1
 
             if self.input_box.validate_button.draw(self.screen):
-                # Créer une session temporaire juste pour envoyer les données
                 session_data = {
                     "titre": self.input_box.text
                     if self.input_box.text != ""
                     else "Sans titre",
                     "nb_bots": self.input_box.temp_nb_ia,
-                    "nb_players": 1,
+                    "nb_players": 0,
                     "y": 79,
                     "gap": 125,
                 }
@@ -998,6 +1005,7 @@ class Session:
             x=691, y=231, image=self.button_img, scale=0.25
         )
 
+
         self.gap = 125
         self.y = 79
 
@@ -1054,8 +1062,11 @@ class Session:
                 for p_id in range(1, 5):
                     self.menu.players_characters[p_id] = [None, None, None]
                     self.menu.players_ready[p_id] = False
+
+                if self.nb_players + self.nb_bots < 4:
+                    self.nb_players+=1
                 
-                self.menu.menu_state = "character_selection_final"
+                    self.menu.menu_state = "character_selection_final"
             
             button_text = "Join"
         else:
