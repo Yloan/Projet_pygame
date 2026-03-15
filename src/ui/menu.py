@@ -1073,7 +1073,7 @@ class Session:
 
                 
                 self.menu.pending_join_session = self.titre
-                self.menu.menu_state = "character_selection_final"
+                self.menu.menu_state = "waiting_player_id"
             
             button_text = "Join"
         else:
