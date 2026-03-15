@@ -971,6 +971,8 @@ class Menu:
             self.handle_choice_characters_2()
         elif self.menu_state == "choice_characters_3":
             self.handle_choice_characters_3()
+        elif self.menu_state == "waiting_player_id":
+            self.draw_text_center("Connexion à la session...", self.middle_font, self.TEXT_COL, self.height // 2)
         elif self.menu_state == "character_selection_final":
             self.handle_character_selection_final()
         elif self.menu_state == "start game":

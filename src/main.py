@@ -113,9 +113,12 @@ class Game:
 
             elif message.startswith("[YourPlayerID]:"):
                 try:
-                    player_id = int(message.split(":", 1)[1]) - 1
+                    player_id = int(message.split(":", 1)[1])
                     self.Menu.my_player_id = player_id
                     print_success(f"Je suis le joueur {player_id}")
+                    if self.Menu.menu_state == "waiting_player_id":
+                        self.Menu.menu_state = "character_selection_final"
+                        
                 except Exception as e:
                     print_error(f"Erreur player ID: {e}")
 
