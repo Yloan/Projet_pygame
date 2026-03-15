@@ -328,6 +328,10 @@ class Game:
                     self.send_to_server(f"[CharacterUpdate]:{json.dumps(update_data)}")
                     self.Menu.pending_character_update = False
 
+                if self.Menu.pending_leave_session is not None:
+                    self.send_to_server(f"[LeaveSession]:{self.Menu.pending_leave_session}")
+                    self.Menu.pending_leave_session = None
+
             # GAME STATE - Actual gameplay
             if self.etat == "game":
                 # Event handling

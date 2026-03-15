@@ -292,6 +292,7 @@ class Menu:
         }
         self.pending_character_submission = None  # {player_id, character_1, character_2, character_3} à envoyer au serveur
         self.pending_character_update = False # MAJ UI characters selection
+        self.pending_leave_session = None
 
     def handle_session_menu(self):
         """Gère l'état du menu des sessions"""
