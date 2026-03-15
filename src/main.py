@@ -155,7 +155,7 @@ class Game:
 
                     elif message.startswith("[YourPlayerID]:"):
                         try:
-                            player_id = int(message.split(":", 1)[1])
+                            player_id = int(message.split(":", 1)[1]) - 1
                             self.Menu.my_player_id = player_id
                             print_success(f"Je suis le joueur {player_id} à l'écran !")
                         except Exception as e:
@@ -237,6 +237,16 @@ class Game:
     def shutdown(self):
 
         print_info("Arrêt du jeu : fermeture connexion et threads")
+
+        if self.current_joined_session and self._client_socket:
+            try:
+                self._client_socket.send(
+                    f"[LeaveSession]:{self.current_joined_session}\n".encode("utf-8")
+                )
+            except Exception:
+                pass
+            self.current_joined_session = None
+
         self.running = False
 
         # Close client socket safely
@@ -305,9 +315,15 @@ class Game:
                 # Handle menu events
                 for event in pyg.event.get():
                     if event.type == pyg.QUIT:
+                        if self.current_joined_session:
+                            self.send_to_server(f"[LeaveSession]:{self.current_joined_session}")
+                            self.current_joined_session = None
                         self.running = False
                     elif event.type == pyg.KEYDOWN:
                         if event.key == pyg.K_ESCAPE:
+                            if self.current_joined_session:
+                                self.send_to_server(f"[LeaveSession]:{self.current_joined_session}")
+                                self.current_joined_session = None
                             self.running = False
                         if event.key == pyg.K_F2:
                             self.dev_display_ = not self.dev_display_
