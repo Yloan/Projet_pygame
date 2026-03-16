@@ -21,7 +21,6 @@ MSG_DELIMITER = "\n"
 
 
 class Serveur:
-
     def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT):
 
         self.Port = port
@@ -117,7 +116,9 @@ class Serveur:
                 with self.sessions_lock:
                     session_data["id"] = len(self.sessions)
                     self.sessions.append(session_data)
-                    print_success(f"Session créée: {session_data.get('titre', 'Sans titre')}")
+                    print_success(
+                        f"Session créée: {session_data.get('titre', 'Sans titre')}"
+                    )
                 self.broadcast_sessions()
             except json.JSONDecodeError as e:
                 print_error(f"Erreur JSON: {e}")
@@ -159,7 +160,10 @@ class Serveur:
                                 break
                         player_id = current_players + 1
 
-                        self.socket_player_ids[client_socket] = (session_name, player_id)
+                        self.socket_player_ids[client_socket] = (
+                            session_name,
+                            player_id,
+                        )
                         self._send(client_socket, f"[YourPlayerID]:{player_id}")
                         print_success(
                             f"Joueur assigné ID {player_id} dans {session_name} (Bots: {nb_bots})"
@@ -173,7 +177,10 @@ class Serveur:
                                 "character_3": chars[2],
                                 "session_name": session_name,
                             }
-                            self._send(client_socket, f"[CharacterUpdate]:{json.dumps(sync_data)}")
+                            self._send(
+                                client_socket,
+                                f"[CharacterUpdate]:{json.dumps(sync_data)}",
+                            )
                     else:
                         self._send(client_socket, "[Error]:Session pleine")
                         print_warning(
@@ -219,7 +226,9 @@ class Serveur:
                     if left_session in self.sessions_characters:
                         self.sessions_characters[left_session].pop(left_pid, None)
                     # Prévenir les autres que ce slot est vide
-                    self.broadcast_raw(f"[PlayerLeft]:{left_pid}", exclude_socket=client_socket)
+                    self.broadcast_raw(
+                        f"[PlayerLeft]:{left_pid}", exclude_socket=client_socket
+                    )
 
             self.broadcast_sessions()
 
