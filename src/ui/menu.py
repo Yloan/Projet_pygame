@@ -1073,8 +1073,7 @@ class Session:
         self.menu.draw_text(
             str(self.nb_bots), self.menu.middle_font, "Black", 490, y_scrollé + 188
         )
-        # Display available player slots (nb_players - nb_bots, max 4 total)
-        available_slots = max(0, self.nb_players - self.nb_bots)
+        available_slots = self.nb_players
         self.menu.draw_text(
             str(available_slots), self.menu.middle_font, "Black", 570, y_scrollé + 188
         )
