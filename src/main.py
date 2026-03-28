@@ -388,10 +388,10 @@ class Game:
             if self.Menu.pending_session is not None:
                 self.send_to_server(f"[CreateSession]:{json.dumps(self.Menu.pending_session)}")
                 self.current_joined_session = self.Menu.pending_session["titre"]
-                self.send_to_server(f"[JoinedSession]:{self.current_joined_session}")
+                # self.send_to_server(f"[JoinedSession]:{self.current_joined_session}")
                 self.Menu.pending_session = None
 
-                self.Menu.menu_state = "waiting_player_id"
+                # self.Menu.menu_state = "waiting_player_id"
 
             if hasattr(self.Menu, 'pending_join_session') and self.Menu.pending_join_session is not None:
                 self.current_joined_session = self.Menu.pending_join_session

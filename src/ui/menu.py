@@ -270,10 +270,10 @@ class Menu:
         self.number_bot = 0
         self.my_player_id = 1  # Position 1 par défaut si on joue offline
         self.slot_positions = {
-            2: (64, 125),
-            3: (64, 442),
-            4: (1036, 125),
-            1: (1036, 442),
+            1: (64, 125),
+            2: (64, 442),
+            3: (1036, 125),
+            4: (1036, 442),
         }
         
         # Variables for final character selection (multiplayer)
@@ -996,7 +996,7 @@ class Session:
         # Paramètres qui seront remplis à la création
         self.titre = "Sans titre"
         self.nb_bots = 0
-        self.nb_players = 1
+        self.nb_players = 0
 
     def to_dict(self):
         return {
@@ -1073,8 +1073,7 @@ class Session:
         self.menu.draw_text(
             str(self.nb_bots), self.menu.middle_font, "Black", 490, y_scrollé + 188
         )
-        # Display available player slots (nb_players - nb_bots, max 4 total)
-        available_slots = max(0, self.nb_players - self.nb_bots)
+        available_slots = self.nb_players
         self.menu.draw_text(
             str(available_slots), self.menu.middle_font, "Black", 570, y_scrollé + 188
         )
