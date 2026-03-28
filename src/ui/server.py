@@ -157,7 +157,12 @@ class Serveur:
                             if s["titre"] == session_name:
                                 s["nb_players"] = s.get("nb_players", 0) + 1
                                 break
-                        player_id = current_players + 1
+                        taken_ids = {
+                            pid for (sname, pid) in self.socket_player_ids.values()
+                            if sname == session_name
+                        }
+                        player_id = next(i for i in range(1, 5) if i not in taken_ids)
+
 
                         self.socket_player_ids[client_socket] = (session_name, player_id)
                         self._send(client_socket, f"[YourPlayerID]:{player_id}")
