@@ -1,4 +1,5 @@
 import json
+import random
 import socket
 import threading
 
@@ -19,6 +20,8 @@ MAX_CLIENTS = 2
 MESSAGE_BUFFER_SIZE = 4096
 MSG_DELIMITER = "\n"
 
+MAPS_NOT_IMPLEMENTED_YET = [2, 3, 4, 5, 6]
+
 
 class Serveur:
     def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT):
@@ -36,7 +39,10 @@ class Serveur:
 
         self.recv_buffers = {}
         self.sessions_characters = {}
-        self.socket_player_ids = {}
+
+        self.socket_player_ids: dict[object, tuple[str, int]] = {}
+        self.socket_maps_selection: dict[str, dict[int, int]] = {}
+        self.socket_maps_players: dict[str, dict[int, int]] = {}
 
     def start_server(self):
         self.server_socket.listen(MAX_CLIENTS)
@@ -133,6 +139,28 @@ class Serveur:
                 self.sessions_clients_joined[new_session_data["titre"]] = []
                 self.sessions_characters[new_session_data["titre"]] = {}
 
+                nb_bots = new_session_data.get("nb_bots", 0)
+                session_name = new_session_data["titre"]
+                if nb_bots > 0:
+                    if session_name not in self.socket_maps_selection:
+                        self.socket_maps_selection[session_name] = {
+                            i: 0 for i in range(1, 7)
+                        }
+                    if session_name not in self.socket_maps_players:
+                        self.socket_maps_players[session_name] = {}
+                    max_humans = 4 - nb_bots
+                    for bot_num in range(nb_bots):
+                        bot_id = max_humans + 1 + bot_num
+                        bot_map = random.choice(
+                            [
+                                m
+                                for m in range(1, 7)
+                                if m not in MAPS_NOT_IMPLEMENTED_YET
+                            ]
+                        )
+                        self.socket_maps_selection[session_name][bot_map] += 1
+                        self.socket_maps_players[session_name][bot_id] = bot_map
+
             self.broadcast_sessions()
 
         elif data.startswith("[JoinedSession]:"):
@@ -159,11 +187,11 @@ class Serveur:
                                 s["nb_players"] = s.get("nb_players", 0) + 1
                                 break
                         taken_ids = {
-                            pid for (sname, pid) in self.socket_player_ids.values()
+                            pid
+                            for (sname, pid) in self.socket_player_ids.values()
                             if sname == session_name
                         }
                         player_id = next(i for i in range(1, 5) if i not in taken_ids)
-
 
                         self.socket_player_ids[client_socket] = (
                             session_name,
@@ -173,6 +201,13 @@ class Serveur:
                         print_success(
                             f"Joueur assigné ID {player_id} dans {session_name} (Bots: {nb_bots})"
                         )
+                        current_votes = self.socket_maps_players.get(session_name, {})
+                        if current_votes:
+                            votes_str = {str(k): v for k, v in current_votes.items()}
+                            self._send(
+                                client_socket,
+                                f"[MapVotesUpdate]:{json.dumps(votes_str)}",
+                            )
                         existing = self.sessions_characters.get(session_name, {})
                         for pid, chars in existing.items():
                             sync_data = {
@@ -240,6 +275,83 @@ class Serveur:
         elif data.startswith("[PlayerReady]:"):
             self.broadcast_raw(data, exclude_socket=client_socket)
             print_network("PlayerReady diffusé")
+
+        elif data.startswith("[ChooseMap]:"):
+            choosen_map = int(data.split(":")[1])
+
+            session_name, player_id = self.socket_player_ids.get(
+                client_socket, (None, None)
+            )
+            if session_name is None:
+                return
+
+            if session_name not in self.socket_maps_selection:
+                self.socket_maps_selection[session_name] = {
+                    1: 0,
+                    2: 0,
+                    3: 0,
+                    4: 0,
+                    5: 0,
+                    6: 0,
+                }
+                self.socket_maps_players[session_name] = {}
+                session_info = next(
+                    (s for s in self.sessions if s["titre"] == session_name), None
+                )
+                if session_info:
+                    nb_bots = session_info.get("nb_bots", 0)
+                    max_humans = 4 - nb_bots
+                    for bot_num in range(nb_bots):
+                        bot_id = max_humans + 1 + bot_num
+                        bot_map = random.choice(
+                            [
+                                m
+                                for m in range(1, 7)
+                                if m not in MAPS_NOT_IMPLEMENTED_YET
+                            ]
+                        )
+                        self.socket_maps_selection[session_name][bot_map] += 1
+                        self.socket_maps_players[session_name][bot_id] = bot_map
+            if session_name not in self.socket_maps_players:
+                self.socket_maps_players[session_name] = {}
+
+            self.socket_maps_selection[session_name][choosen_map] += 1
+            self.socket_maps_players[session_name][player_id] = choosen_map
+            self._broadcast_map_votes(session_name)
+
+            votes = self.socket_maps_selection[session_name]
+            total = sum(votes.values())
+            best_map = max(votes, key=lambda k: votes[k])
+
+            if total == 4:
+                self.broadcast_raw(
+                    exclude_socket=None, message=f"[StartGame]:{best_map}"
+                )
+                del self.socket_maps_selection[session_name]
+                self.socket_maps_players.pop(session_name, None)
+
+        elif data.startswith("[UnchooseMap]:"):
+            unchoosen_map = int(data.split(":")[1])
+
+            result = self.socket_player_ids.get(client_socket)
+            if result is None:
+                return
+            session_name, player_id = result
+
+            if session_name not in self.socket_maps_selection:
+                return
+
+            self.socket_maps_selection[session_name][unchoosen_map] = max(
+                0, self.socket_maps_selection[session_name][unchoosen_map] - 1
+            )
+            if session_name in self.socket_maps_players:
+                self.socket_maps_players[session_name].pop(player_id, None)
+            self._broadcast_map_votes(session_name)
+
+    def _broadcast_map_votes(self, session_name):
+        votes = self.socket_maps_players.get(session_name, {})
+        votes_str = {str(k): v for k, v in votes.items()}
+        self.broadcast_raw(message=f"[MapVotesUpdate]:{json.dumps(votes_str)}")
 
     # SESSION MANAGEMENT
 

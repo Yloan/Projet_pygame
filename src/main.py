@@ -1,5 +1,6 @@
 import json
 import queue
+import random
 import socket
 import threading
 import time
@@ -19,11 +20,10 @@ from ui.console import (
     print_warning,
 )
 
-MESSAGE_DELIMITER = '\n'
+MESSAGE_DELIMITER = "\n"
 
 
 class Game:
-
     def __init__(self, width=1280, height=720, fullscreen=False):
 
         self.width = width
@@ -59,23 +59,17 @@ class Game:
             self.wallpaper = pyg.Surface((self.width, self.height))
             self.clock = pyg.time.Clock()
 
-        # LOAD GAME MAP
-        map_loader = MapLoader(None)
-        background, foreground = map_loader.load_map()
-        self.map_back = pyg.transform.scale(background, (self.width, self.height))
-        self.map_front = pyg.transform.scale(foreground, (self.width, self.height))
-
         # LOAD PLAYER CHARACTER
         self.player = player_module.Water()
-        self.running = False 
+        self.running = False
 
         # NETWORK CONFIGURATION
         # self.host = "127.0.0.1"
         # self.port = 12345
 
         # connexion online server
-        self.host = "51.75.118.171"
-        self.port = 20070
+        self.host = "51.75.118.75"
+        self.port = 20140
 
         self._client_socket = None
         self._client_lock = threading.Lock()
@@ -89,16 +83,19 @@ class Game:
         self.current_joined_session = None
         self.position = self.Menu.slot_positions[1]
 
+        # Map selection
+        self.choose_map = False
+        self.map_choosen = None
+        self.bot_choose = False
+
         # MUSIC
         self.current_music = 0
         self.musics = []
 
-        self.musics_names = [
-            'Slower_blitzkrieg.mp3'
-        ]
+        self.musics_names = ["Slower_blitzkrieg.mp3"]
 
         for music_file in self.musics_names:
-            chemin_complet = __path__.ensure_asset_exists('musics', music_file)
+            chemin_complet = __path__.ensure_asset_exists("musics", music_file)
             music = music_module.MusicPlayer(chemin_complet)
             self.musics.append(music)
 
@@ -107,7 +104,7 @@ class Game:
             self.current_music = i
 
         else:
-            self.current_music+=1
+            self.current_music += 1
 
     def draw_text(self, text, font, text_col, x, y):
         img = font.render(text, True, text_col)
@@ -121,7 +118,6 @@ class Game:
     def center_x(self, image, scale=1):
         w = int(image.get_width() * scale)
         return (self.width - w) // 2
-    
 
     def _process_network_messages(self):
         while not self._recv_queue.empty():
@@ -140,7 +136,7 @@ class Game:
                     print_success(f"Je suis le joueur {player_id}")
                     if self.Menu.menu_state == "waiting_player_id":
                         self.Menu.menu_state = "character_selection_final"
-                        
+
                 except Exception as e:
                     print_error(f"Erreur player ID: {e}")
 
@@ -151,7 +147,7 @@ class Game:
                         data["player_id"],
                         data["character_1"],
                         data["character_2"],
-                        data["character_3"]
+                        data["character_3"],
                     )
                 except Exception as e:
                     print_error(f"Erreur CharacterUpdate: {e}")
@@ -177,6 +173,32 @@ class Game:
                     self.Menu.players_ready[player_id] = False
                 except Exception as e:
                     print_error(f"Erreur PlayerLeft: {e}")
+
+            elif message.startswith("[MapVotesUpdate]:"):
+                try:
+                    votes = json.loads(message.split(":", 1)[1])
+                    self.Menu.update_map_votes(votes)
+                except Exception as e:
+                    print_error(f"Erreur MapVotesUpdate: {e}")
+
+            elif message.startswith("[StartGame]:"):
+                self.Menu.map_player_votes = {}
+                self.choose_map = False
+                self.map_choosen = None
+                try:
+                    map = int(message.split(":")[1])
+                    # LOAD GAME MAP
+                    map_loader = MapLoader(None, map)
+                    background, foreground = map_loader.load_map()
+                    self.map_back = pyg.transform.scale(
+                        background, (self.width, self.height)
+                    )
+                    self.map_front = pyg.transform.scale(
+                        foreground, (self.width, self.height)
+                    )
+                    self.etat = "game"
+                except Exception as e:
+                    print_error(f"Error Starting game: {e}")
 
     def _connect_to_server(self):
         try:
@@ -241,7 +263,9 @@ class Game:
                 continue
             try:
                 if self._client_socket:
-                    self._client_socket.send((message + MESSAGE_DELIMITER).encode("utf-8"))
+                    self._client_socket.send(
+                        (message + MESSAGE_DELIMITER).encode("utf-8")
+                    )
                 else:
                     print_warning(f"Non connecté, message non envoyé: {message}")
                     try:
@@ -283,11 +307,16 @@ class Game:
                 )
             except Exception:
                 pass
+
+            if self.choose_map:
+                try:
+                    self.send_to_server(message=f"[UnchooseMap]:{self.map_choosen}")
+                except Exception as e:
+                    print_error(f"Error shutdown : {e}")
             self.current_joined_session = None
 
         self.running = False
 
-        # Close client socket safely
         with self._client_lock:
             try:
                 if self._client_socket:
@@ -297,7 +326,6 @@ class Game:
                 pass
             self._client_socket = None
 
-        # Clear message queue
         try:
             while not self._send_queue.empty():
                 self._send_queue.get_nowait()
@@ -322,7 +350,6 @@ class Game:
             f"pos mouse --> X: {x}, Y: {y}", self.font, self.TEXT_COL2, 10
         )
 
-
     # MAIN GAME LOOP
 
     def run(self):
@@ -337,10 +364,12 @@ class Game:
 
         self.etat = "menu"  # Start directly in menu
         # self.etat = "game"  # Start directly in game
+
+        # Init game's musics
         pyg.mixer.init()
         self.musics[self.current_music].play()
-        while self.running:
 
+        while self.running:
             # Launch music
 
             self._process_network_messages()
@@ -359,13 +388,17 @@ class Game:
                 for event in pyg.event.get():
                     if event.type == pyg.QUIT:
                         if self.current_joined_session:
-                            self.send_to_server(f"[LeaveSession]:{self.current_joined_session}")
+                            self.send_to_server(
+                                f"[LeaveSession]:{self.current_joined_session}"
+                            )
                             self.current_joined_session = None
                         self.running = False
                     elif event.type == pyg.KEYDOWN:
                         if event.key == pyg.K_ESCAPE:
                             if self.current_joined_session:
-                                self.send_to_server(f"[LeaveSession]:{self.current_joined_session}")
+                                self.send_to_server(
+                                    f"[LeaveSession]:{self.current_joined_session}"
+                                )
                                 self.current_joined_session = None
                             self.running = False
                         if event.key == pyg.K_F2:
@@ -376,24 +409,55 @@ class Game:
                         if event.button == 5:  # MOUSE down
                             self.Menu.scroll_y += 30
 
-                    if self.Menu.menu_state == "creation_parameters_session_menu":
-                        self.Menu.input_box.handle_event(
-                            event
-                        )
+                        if self.Menu.menu_state == "maps_selection":
+                            if event.button == 1:
+                                if self.choose_map:
+                                    self.send_to_server(
+                                        message=f"[UnchooseMap]:{self.map_choosen}"
+                                    )
+                                    self.Menu.map_player_votes.pop(self.Menu.my_player_id, None)
 
+                                for (
+                                    num_map,
+                                    slot_map,
+                                ) in self.Menu.rects_img_maps.items():
+                                    if slot_map.collidepoint(event.pos):
+                                        self.send_to_server(
+                                            message=f"[ChooseMap]:{num_map}"
+                                        )
+                                        print_info(f"Clique on map number : {num_map}")
+                                        self.Menu.map_player_votes[self.Menu.my_player_id] = num_map
+                                        self.map_choosen = num_map
+                                        self.choose_map = True
+                                        break
+
+                    if self.Menu.menu_state == "creation_parameters_session_menu":
+                        self.Menu.input_box.handle_event(event)
 
             self.delta_time_sessions_send += 1
             # Send sessions to server
-            
+
+            # if self.Menu.menu_state == "maps_selection":
+            #     nbots = self.Menu.number_bot
+            #     for i in range(nbots):
+            #         self.send_to_server(
+            #             message=f"[BotChooseMap]:{random.randint(1, 6)}"
+            #         )
+
             if self.Menu.pending_session is not None:
-                self.send_to_server(f"[CreateSession]:{json.dumps(self.Menu.pending_session)}")
+                self.send_to_server(
+                    f"[CreateSession]:{json.dumps(self.Menu.pending_session)}"
+                )
                 self.current_joined_session = self.Menu.pending_session["titre"]
                 # self.send_to_server(f"[JoinedSession]:{self.current_joined_session}")
                 self.Menu.pending_session = None
 
                 # self.Menu.menu_state = "waiting_player_id"
 
-            if hasattr(self.Menu, 'pending_join_session') and self.Menu.pending_join_session is not None:
+            if (
+                hasattr(self.Menu, "pending_join_session")
+                and self.Menu.pending_join_session is not None
+            ):
                 self.current_joined_session = self.Menu.pending_join_session
                 self.send_to_server(f"[JoinedSession]:{self.current_joined_session}")
                 self.Menu.pending_join_session = None
@@ -409,21 +473,26 @@ class Game:
                 self.send_to_server(f"[CharacterUpdate]:{json.dumps(update_data)}")
                 self.Menu.pending_character_update = False
 
-            if hasattr(self.Menu, 'pending_character_submission') and self.Menu.pending_character_submission is not None:
-                self.send_to_server(f"[PlayerReady]:{json.dumps(self.Menu.pending_character_submission)}")
+            if (
+                hasattr(self.Menu, "pending_character_submission")
+                and self.Menu.pending_character_submission is not None
+            ):
+                self.send_to_server(
+                    f"[PlayerReady]:{json.dumps(self.Menu.pending_character_submission)}"
+                )
                 self.Menu.pending_character_submission = None
 
             if self.Menu.pending_leave_session is not None:
                 self.send_to_server(f"[LeaveSession]:{self.Menu.pending_leave_session}")
                 self.Menu.pending_leave_session = None
 
-            
             if self.Menu.pending_unready:
                 self.send_to_server(f"[PlayerUnready]:{self.Menu.my_player_id}")
                 self.Menu.pending_unready = False
 
             # GAME STATE - Actual gameplay
             if self.etat == "game":
+                self.Menu.menu_state = "main"
                 # Event handling
                 for event in pyg.event.get():
                     if event.type == pyg.QUIT:
