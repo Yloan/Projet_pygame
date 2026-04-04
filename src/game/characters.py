@@ -1,6 +1,8 @@
 import pygame as pyg
+import os
 
 from utils.paths import get_asset_path
+from ui.animated_idle import AnimatedCharacter
 
 FURNACE_FRAME_WIDTH = 40
 FURNACE_FRAME_HEIGHT = 40
@@ -455,3 +457,106 @@ class Water:
 
     def update(self):
         pass
+
+
+class Character:
+    def __init__(self, character_name, config, position=(400, 400), health=100, speed=2):
+        self.character_name = character_name
+        self.health = health
+        self.speed = speed
+        self.position = position
+        self.direction = "right"
+        self.is_moving = False
+        self.current_state = 'idle'
+
+        # Config is a dict like:
+        # {
+        #     'idle': {'filename': 'IDLE-Sheet.png', 'frame_count': 12, 'speed': 100},
+        #     'move': {'filename': 'MOVE-Sheet.png', 'frame_count': 5, 'speed': 200},
+        # }
+
+        self.animations = {}
+        for anim_name, anim_config in config.items():
+            self.animations[anim_name] = AnimatedCharacter.from_spritesheet(
+                "sprites", character_name, anim_config['filename'],
+                frame_width=40, frame_height=40, frame_count=anim_config['frame_count'],
+                animation_speed_ms=anim_config['speed']
+            )
+
+    def move(self, direction):
+        if direction == "up":
+            self.position = (self.position[0], self.position[1] - self.speed)
+        elif direction == "down":
+            self.position = (self.position[0], self.position[1] + self.speed)
+        elif direction == "left":
+            self.position = (self.position[0] - self.speed, self.position[1])
+            self.direction = "left"
+        elif direction == "right":
+            self.position = (self.position[0] + self.speed, self.position[1])
+            self.direction = "right"
+
+    def take_damage(self, amount):
+        self.health -= amount
+        if self.health < 0:
+            self.health = 0
+
+    def heal(self, amount):
+        self.health += amount
+        if self.health > 100:
+            self.health = 100
+
+    def get_status(self):
+        return {"health": self.health, "position": self.position}
+
+    def update_animation(self, delta_time, is_moving):
+        self.is_moving = is_moving
+        if is_moving:
+            self.current_state = 'move'
+        else:
+            self.current_state = 'idle'
+        self.animations[self.current_state].update(delta_time)
+
+    def get_current_sprite(self):
+        anim = self.animations[self.current_state]
+        frame = anim.frames[anim.current_frame]
+        if self.direction == "left":
+            frame = pyg.transform.flip(frame, True, False)
+        return frame
+
+    # SKILL SYSTEM - to be implemented per character or generically
+
+    def skill1(self):
+        """First special skill - To be implemented."""
+        pass
+
+    def skill2(self):
+        """Second special skill - To be implemented."""
+        pass
+
+    def skill3(self):
+        """Third special skill - To be implemented."""
+        pass
+
+    # GAME LOOP UPDATE
+
+    def update(self):
+        pass
+
+
+def load_all_characters():
+    characters = {}
+    base_path = get_asset_path("sprites")
+    for i in range(1, 19):  # 1 to 18
+        char_name = f"Character-{i}"
+        char_path = os.path.join(base_path, char_name)
+        if os.path.exists(char_path):
+            # Assume standard config if files exist
+            idle_file = os.path.join(char_path, "IDLE-Sheet.png")
+            move_file = os.path.join(char_path, "MOVE-Sheet.png")
+            if os.path.exists(idle_file) and os.path.exists(move_file):
+                config = {
+                    'idle': {'filename': 'IDLE-Sheet.png', 'frame_count': 12, 'speed': 100},
+                    'move': {'filename': 'MOVE-Sheet.png', 'frame_count': 5, 'speed': 200},
+                }
+                characters[char_name] = Character(char_name, config)
+    return characters
