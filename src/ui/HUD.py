@@ -190,6 +190,9 @@ class HUD:
         self.assCooldownDuration = 0.0
 
         self.scale = SCALE
+        self.currentResist = 0
+
+        self.id_player = 3
 
     def update(self, dt):
         try:
@@ -246,6 +249,14 @@ class HUD:
             return 0
         except Exception as e:
             print_error(f"Error while update HUD {e}")
+            return 1
+
+    def setResist(self, value):
+        try:
+            self.currentResist = max(0, min(value, TOTAL_CHUNK_RESIST - 1))
+            return 0
+        except Exception as e:
+            print_error(f"Error while set resist {e}")
             return 1
 
     def draw(self, surface, x, y):
