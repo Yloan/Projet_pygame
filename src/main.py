@@ -18,12 +18,13 @@ from ui.console import (
     print_success,
     print_warning,
 )
+from ui.HUD import HUD
 
-MESSAGE_DELIMITER = '\n'
+MESSAGE_DELIMITER = "\n"
+HUD_POSITIONS = {1: (10, 10), 2: (1130, 10), 3: (10, 580), 4: (1130, 580)}
 
 
 class Game:
-
     def __init__(self, width=1280, height=720, fullscreen=False):
 
         self.width = width
@@ -67,15 +68,15 @@ class Game:
 
         # LOAD PLAYER CHARACTER
         self.player = player_module.Water()
-        self.running = False 
+        self.running = False
 
         # NETWORK CONFIGURATION
         # self.host = "127.0.0.1"
         # self.port = 12345
 
         # connexion online server
-        self.host = "51.75.118.171"
-        self.port = 20070
+        self.host = "147.135.213.72"
+        self.port = 20057
 
         self._client_socket = None
         self._client_lock = threading.Lock()
@@ -93,21 +94,23 @@ class Game:
         self.current_music = 0
         self.musics = []
 
-        self.musics_names = [
-            'Slower_blitzkrieg.mp3'
-        ]
+        self.musics_names = ["Slower_blitzkrieg.mp3"]
 
         for music_file in self.musics_names:
-            chemin_complet = __path__.ensure_asset_exists('musics', music_file)
+            chemin_complet = __path__.ensure_asset_exists("musics", music_file)
             music = music_module.MusicPlayer(chemin_complet)
             self.musics.append(music)
+
+        # Variables HUD
+        self.other_huds = {}
+        self.hud = None
 
     def switch_music(self, i=None):
         if i is not None:
             self.current_music = i
 
         else:
-            self.current_music+=1
+            self.current_music += 1
 
     def draw_text(self, text, font, text_col, x, y):
         img = font.render(text, True, text_col)
@@ -121,7 +124,6 @@ class Game:
     def center_x(self, image, scale=1):
         w = int(image.get_width() * scale)
         return (self.width - w) // 2
-    
 
     def _process_network_messages(self):
         while not self._recv_queue.empty():
@@ -137,10 +139,11 @@ class Game:
                 try:
                     player_id = int(message.split(":", 1)[1])
                     self.Menu.my_player_id = player_id
+                    self.hud = HUD(player_id)
                     print_success(f"Je suis le joueur {player_id}")
                     if self.Menu.menu_state == "waiting_player_id":
                         self.Menu.menu_state = "character_selection_final"
-                        
+
                 except Exception as e:
                     print_error(f"Erreur player ID: {e}")
 
@@ -151,7 +154,7 @@ class Game:
                         data["player_id"],
                         data["character_1"],
                         data["character_2"],
-                        data["character_3"]
+                        data["character_3"],
                     )
                 except Exception as e:
                     print_error(f"Erreur CharacterUpdate: {e}")
@@ -177,6 +180,13 @@ class Game:
                     self.Menu.players_ready[player_id] = False
                 except Exception as e:
                     print_error(f"Erreur PlayerLeft: {e}")
+
+            elif message.startswith("[HUDUpdate]:"):
+                data = json.loads(message.split(":", 1)[1])
+                pid = data["player_id"]
+                if pid != self.Menu.my_player_id:
+                    if pid in self.other_huds:
+                        self.other_huds[pid].updateFromServer(data["hud"])
 
     def _connect_to_server(self):
         try:
@@ -241,7 +251,9 @@ class Game:
                 continue
             try:
                 if self._client_socket:
-                    self._client_socket.send((message + MESSAGE_DELIMITER).encode("utf-8"))
+                    self._client_socket.send(
+                        (message + MESSAGE_DELIMITER).encode("utf-8")
+                    )
                 else:
                     print_warning(f"Non connecté, message non envoyé: {message}")
                     try:
@@ -322,6 +334,11 @@ class Game:
             f"pos mouse --> X: {x}, Y: {y}", self.font, self.TEXT_COL2, 10
         )
 
+    def _broadcast_hud_state(self):
+        if not hasattr(self, "hud") or self.hud is None:
+            return
+        payload = {"player_id": self.Menu.my_player_id, "hud": self.hud.toNetworkData()}
+        self.send_to_server(f"[HUDUpdate]:{json.dumps(payload)}")
 
     # MAIN GAME LOOP
 
@@ -340,7 +357,6 @@ class Game:
         pyg.mixer.init()
         self.musics[self.current_music].play()
         while self.running:
-
             # Launch music
 
             self._process_network_messages()
@@ -359,13 +375,17 @@ class Game:
                 for event in pyg.event.get():
                     if event.type == pyg.QUIT:
                         if self.current_joined_session:
-                            self.send_to_server(f"[LeaveSession]:{self.current_joined_session}")
+                            self.send_to_server(
+                                f"[LeaveSession]:{self.current_joined_session}"
+                            )
                             self.current_joined_session = None
                         self.running = False
                     elif event.type == pyg.KEYDOWN:
                         if event.key == pyg.K_ESCAPE:
                             if self.current_joined_session:
-                                self.send_to_server(f"[LeaveSession]:{self.current_joined_session}")
+                                self.send_to_server(
+                                    f"[LeaveSession]:{self.current_joined_session}"
+                                )
                                 self.current_joined_session = None
                             self.running = False
                         if event.key == pyg.K_F2:
@@ -377,23 +397,25 @@ class Game:
                             self.Menu.scroll_y += 30
 
                     if self.Menu.menu_state == "creation_parameters_session_menu":
-                        self.Menu.input_box.handle_event(
-                            event
-                        )
-
+                        self.Menu.input_box.handle_event(event)
 
             self.delta_time_sessions_send += 1
             # Send sessions to server
-            
+
             if self.Menu.pending_session is not None:
-                self.send_to_server(f"[CreateSession]:{json.dumps(self.Menu.pending_session)}")
+                self.send_to_server(
+                    f"[CreateSession]:{json.dumps(self.Menu.pending_session)}"
+                )
                 self.current_joined_session = self.Menu.pending_session["titre"]
                 # self.send_to_server(f"[JoinedSession]:{self.current_joined_session}")
                 self.Menu.pending_session = None
 
                 # self.Menu.menu_state = "waiting_player_id"
 
-            if hasattr(self.Menu, 'pending_join_session') and self.Menu.pending_join_session is not None:
+            if (
+                hasattr(self.Menu, "pending_join_session")
+                and self.Menu.pending_join_session is not None
+            ):
                 self.current_joined_session = self.Menu.pending_join_session
                 self.send_to_server(f"[JoinedSession]:{self.current_joined_session}")
                 self.Menu.pending_join_session = None
@@ -409,21 +431,27 @@ class Game:
                 self.send_to_server(f"[CharacterUpdate]:{json.dumps(update_data)}")
                 self.Menu.pending_character_update = False
 
-            if hasattr(self.Menu, 'pending_character_submission') and self.Menu.pending_character_submission is not None:
-                self.send_to_server(f"[PlayerReady]:{json.dumps(self.Menu.pending_character_submission)}")
+            if (
+                hasattr(self.Menu, "pending_character_submission")
+                and self.Menu.pending_character_submission is not None
+            ):
+                self.send_to_server(
+                    f"[PlayerReady]:{json.dumps(self.Menu.pending_character_submission)}"
+                )
                 self.Menu.pending_character_submission = None
 
             if self.Menu.pending_leave_session is not None:
                 self.send_to_server(f"[LeaveSession]:{self.Menu.pending_leave_session}")
                 self.Menu.pending_leave_session = None
 
-            
             if self.Menu.pending_unready:
                 self.send_to_server(f"[PlayerUnready]:{self.Menu.my_player_id}")
                 self.Menu.pending_unready = False
 
             # GAME STATE - Actual gameplay
             if self.etat == "game":
+                dt = self.clock.tick(60) / 1000
+
                 # Event handling
                 for event in pyg.event.get():
                     if event.type == pyg.QUIT:
@@ -451,7 +479,7 @@ class Game:
                     or keys_pressed[pyg.K_UP]
                     or keys_pressed[pyg.K_DOWN]
                 )
-
+                self._broadcast_hud_state()
                 if keys_pressed[pyg.K_q] and not self.player.is_attacking_skill1:
                     self.player.is_attacking_skill1 = True
                     self.player.frame_character_skill1 = 0
@@ -494,6 +522,11 @@ class Game:
                 self.send_to_server(
                     message=f"Position du joueur : x={player_pos[0]}, y={player_pos[1]}"
                 )
+
+                if self.hud:
+                    self.hud.update(dt)
+                    x, y = HUD_POSITIONS.get(self.Menu.my_player_id, (10, 10))
+                    self.hud.draw(self.screen, x, y)
 
             if self.dev_display_:
                 try:

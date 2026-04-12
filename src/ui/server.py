@@ -159,11 +159,11 @@ class Serveur:
                                 s["nb_players"] = s.get("nb_players", 0) + 1
                                 break
                         taken_ids = {
-                            pid for (sname, pid) in self.socket_player_ids.values()
+                            pid
+                            for (sname, pid) in self.socket_player_ids.values()
                             if sname == session_name
                         }
                         player_id = next(i for i in range(1, 5) if i not in taken_ids)
-
 
                         self.socket_player_ids[client_socket] = (
                             session_name,
@@ -193,6 +193,9 @@ class Serveur:
                         )
 
             self.broadcast_sessions()
+
+        elif data.startswith("[HUDUpdate]:"):
+            self.broadcast_raw(data, exclude_socket=client_socket)
 
         elif data.startswith("[CharacterUpdate]:"):
             try:
