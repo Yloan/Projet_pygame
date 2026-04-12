@@ -114,6 +114,10 @@ class HUD:
         self.ass = {"OK": [], "WAIT": []}
         self.resist = []
 
+        self.id_player = id_player
+        self.scaled_w = int(144 * SCALE)
+        self.scaled_h = int(96 * SCALE)
+
         for frame_idx in [6, 3, 0]:
             for j in range(6):
                 chunk = _s(
@@ -246,13 +250,18 @@ class HUD:
 
     def draw(self, surface, x, y):
         try:
-            surface.blit(self.interface, (x, y))
+            temp = pyg.Surface((self.scaled_w, self.scaled_h), pyg.SRCALPHA)
 
-            self._drawHealth(surface, x, y)
-            self._drawCooldowns(surface, x, y)
-            self._drawAss(surface, x, y)
-            self._drawResist(surface, x, y)
+            temp.blit(self.interface, (0, 0))
+            self._drawHealth(temp, 0, 0)
+            self._drawCooldowns(temp, 0, 0)
+            self._drawAss(temp, 0, 0)
+            self._drawResist(temp, 0, 0)
 
+            flip_x = self.id_player in (2, 4)
+            flip_y = self.id_player in (3, 4)
+            final = pyg.transform.flip(temp, flip_x, flip_y)
+            surface.blit(final, (x, y))
             return 0
         except Exception as e:
             print_error(f"Error while draw HUD {e}")

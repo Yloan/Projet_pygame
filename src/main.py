@@ -21,7 +21,7 @@ from ui.console import (
 from ui.HUD import HUD
 
 MESSAGE_DELIMITER = "\n"
-HUD_POSITIONS = {1: (10, 10), 2: (1130, 10), 3: (10, 580), 4: (1130, 580)}
+HUD_POSITIONS = {1: (10, 10), 2: (993, 10), 3: (10, 530), 4: (993, 530)}
 
 
 class Game:
