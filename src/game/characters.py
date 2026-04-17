@@ -32,8 +32,8 @@ class Furnace:
         self.speed = 2
         self.position = (400, 400)
 
-        sprite_path_IDLE = get_asset_path("sprites", "Furnace", "FIRE-IDLE-Sheet.png")
-        sprite_path_WALK = get_asset_path("sprites", "Furnace", "FIRE-WALK-Sheet.png")
+        sprite_path_IDLE = get_asset_path("sprites", "Character-1", "FIRE-IDLE-Sheet.png")
+        sprite_path_WALK = get_asset_path("sprites", "Character-1", "FIRE-WALK-Sheet.png")
 
         self.player_spritesheet_IDLE = pyg.image.load(sprite_path_IDLE)
         self.player_spritesheet_WALK = pyg.image.load(sprite_path_WALK)
@@ -152,7 +152,6 @@ class Furnace:
     def update(self):
         pass
 
-
 class Water:
     def __init__(self):
         # CHARACTER STATS
@@ -162,30 +161,30 @@ class Water:
         self.direction = "right"
 
         # LOAD SPRITE ASSET PATHS
-        self.sprite_IDLE = get_asset_path("sprites", "Water", "2-IDLE-Sheet.png")
-        self.sprite_MOVE = get_asset_path("sprites", "Water", "2-MOVE-Sheet.png")
-        self.sprite_HURT = get_asset_path("sprites", "Water", "2-HURT-Sheet.png")
-        self.sprite_DEATH = get_asset_path("sprites", "Water", "2-DEAD-Sheet.png")
+        self.sprite_IDLE = get_asset_path("sprites", "Character-2", "2-IDLE-Sheet.png")
+        self.sprite_MOVE = get_asset_path("sprites", "Character-2", "2-MOVE-Sheet.png")
+        self.sprite_HURT = get_asset_path("sprites", "Character-2", "2-HURT-Sheet.png")
+        self.sprite_DEATH = get_asset_path("sprites", "Character-2", "2-DEAD-Sheet.png")
 
         self.sprite_character_skill1 = get_asset_path(
-            "sprites", "Water", "2-S1-Sheet.png"
+            "sprites", "Character-2", "2-S1-Sheet.png"
         )
         self.sprite_skill1 = get_asset_path(
-            "sprites", "Water", "effect-2-Bash-Sheet.png"
+            "sprites", "Character-2", "effect-2-Bash-Sheet.png"
         )
 
         self.sprite_character_skill2 = get_asset_path(
-            "sprites", "Water", "2-S2-Sheet.png"
+            "sprites", "Character-2", "2-S2-Sheet.png"
         )
         self.sprite_skill2 = get_asset_path(
-            "sprites", "Water", "effect-2-Bash-Sheet.png"
+            "sprites", "Character-2", "effect-2-Bash-Sheet.png"
         )
 
         self.sprite_character_skill3 = get_asset_path(
-            "sprites", "Water", "2-S3-1-Sheet.png"
+            "sprites", "Character-2", "2-S3-1-Sheet.png"
         )
         self.sprite_skill3 = get_asset_path(
-            "sprites", "Water", "effect-2-Bash-Sheet.png"
+            "sprites", "Character-2", "effect-2-Bash-Sheet.png"
         )
 
         # INITIALIZE ANIMATION FRAME LISTS
@@ -546,7 +545,7 @@ class Character:
 def load_all_characters():
     characters = {}
     base_path = get_asset_path("sprites")
-    for i in range(1, 19):  # 1 to 18
+    for i in range(1, 10):  # 1 to 9
         char_name = f"Character-{i}"
         char_path = os.path.join(base_path, char_name)
         if os.path.exists(char_path):
