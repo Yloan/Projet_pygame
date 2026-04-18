@@ -39,6 +39,98 @@ OFFSET_COOLDOWN = {
     "S2": (70, 74),
     "S3": (83, 74),
 }
+"""
+Decalage assist pos 2: 122px
+"""
+
+
+# The dict of the death
+OFFSETS_PAR_PLAYER = {
+    1: {
+        "health": (int(OFFSET_HEALTH[0] * 2) + 56, int(OFFSET_HEALTH[1] * 2) + 7),
+        "resist": (int(OFFSET_RESIST[0] * 2) + 21, int(OFFSET_RESIST[1] * 2) - 59),
+        "ass": (int(OFFSET_ASS[0] * 2) + 2, int(OFFSET_ASS[1] * 2) - 14),
+        "ass2_dx": -48,
+        "cooldown": {
+            "S1": (
+                int(OFFSET_COOLDOWN["S1"][0] * 2),
+                int(OFFSET_COOLDOWN["S1"][1] * 2),
+            ),
+            "S2": (
+                int(OFFSET_COOLDOWN["S2"][0] * 2),
+                int(OFFSET_COOLDOWN["S2"][1] * 2),
+            ),
+            "S3": (
+                int(OFFSET_COOLDOWN["S3"][0] * 2),
+                int(OFFSET_COOLDOWN["S3"][1] * 2),
+            ),
+        },
+        "health_step_dir": 1,
+    },
+    2: {
+        "health": (int(OFFSET_HEALTH[0] * 2) + 40, int(OFFSET_HEALTH[1] * 2) + 7),
+        "resist": (int(OFFSET_RESIST[0] * 2) + 112, int(OFFSET_RESIST[1] * 2) - 59),
+        "ass": (int(OFFSET_ASS[0] * 2) + 172, int(OFFSET_ASS[1] * 2) - 14),
+        "ass2_dx": -48,
+        "cooldown": {
+            "S1": (
+                int(OFFSET_COOLDOWN["S1"][0] * 2) - 15,
+                int(OFFSET_COOLDOWN["S1"][1] * 2),
+            ),
+            "S2": (
+                int(OFFSET_COOLDOWN["S2"][0] * 2) - 15,
+                int(OFFSET_COOLDOWN["S2"][1] * 2),
+            ),
+            "S3": (
+                int(OFFSET_COOLDOWN["S3"][0] * 2) - 15,
+                int(OFFSET_COOLDOWN["S3"][1] * 2),
+            ),
+        },
+        "health_step_dir": 1,
+    },
+    3: {
+        "health": (int(OFFSET_HEALTH[0] * 2) + 56, int(OFFSET_HEALTH[1] * 2) + 7 + 135),
+        "resist": (int(OFFSET_RESIST[0] * 2) + 21, int(OFFSET_RESIST[1] * 2) - 46),
+        "ass": (int(OFFSET_ASS[0] * 2) + 2, int(OFFSET_ASS[1] * 2) - 14 - 146),
+        "ass2_dx": -48,
+        "cooldown": {
+            "S1": (
+                int(OFFSET_COOLDOWN["S1"][0] * 2),
+                int(OFFSET_COOLDOWN["S1"][1] * 2) - 127,
+            ),
+            "S2": (
+                int(OFFSET_COOLDOWN["S2"][0] * 2),
+                int(OFFSET_COOLDOWN["S2"][1] * 2) - 127,
+            ),
+            "S3": (
+                int(OFFSET_COOLDOWN["S3"][0] * 2),
+                int(OFFSET_COOLDOWN["S3"][1] * 2) - 127,
+            ),
+        },
+        "health_step_dir": 1,
+    },
+    4: {
+        "health": (int(OFFSET_HEALTH[0] * 2) + 40, int(OFFSET_HEALTH[1] * 2) + 7 + 135),
+        "resist": (int(OFFSET_RESIST[0] * 2) + 112, int(OFFSET_RESIST[1] * 2) - 46),
+        "ass": (int(OFFSET_ASS[0] * 2) + 172 - 48, int(OFFSET_ASS[1] * 2) - 14 - 146),
+        "ass2_dx": +48,
+        "cooldown": {
+            "S1": (
+                int(OFFSET_COOLDOWN["S1"][0] * 2) - 15,
+                int(OFFSET_COOLDOWN["S1"][1] * 2) - 127,
+            ),
+            "S2": (
+                int(OFFSET_COOLDOWN["S2"][0] * 2) - 15,
+                int(OFFSET_COOLDOWN["S2"][1] * 2) - 127,
+            ),
+            "S3": (
+                int(OFFSET_COOLDOWN["S3"][0] * 2) - 15,
+                int(OFFSET_COOLDOWN["S3"][1] * 2) - 127,
+            ),
+        },
+        "health_step_dir": 1,
+    },
+}
 
 
 class HUD:
@@ -133,6 +225,7 @@ class HUD:
                     i * SIZE_FRAMES_ASS_WAIT, 0, SIZE_FRAMES_ASS_WAIT, 7
                 )
             )
+            # nice ass
             self.ass["WAIT"].append(chunk)
 
         for i in range(TOTAL_CHUNK_ASS_OK):
@@ -191,8 +284,6 @@ class HUD:
 
         self.scale = SCALE
         self.currentResist = 0
-
-        self.id_player = 3
 
     def update(self, dt):
         try:
@@ -259,25 +350,6 @@ class HUD:
             print_error(f"Error while set resist {e}")
             return 1
 
-    def draw(self, surface, x, y):
-        try:
-            temp = pyg.Surface((self.scaled_w, self.scaled_h), pyg.SRCALPHA)
-
-            temp.blit(self.interface, (0, 0))
-            self._drawHealth(temp, 0, 0)
-            self._drawCooldowns(temp, 0, 0)
-            self._drawAss(temp, 0, 0)
-            self._drawResist(temp, 0, 0)
-
-            flip_x = self.id_player in (2, 4)
-            flip_y = self.id_player in (3, 4)
-            final = pyg.transform.flip(temp, flip_x, flip_y)
-            surface.blit(final, (x, y))
-            return 0
-        except Exception as e:
-            print_error(f"Error while draw HUD {e}")
-            return 1
-
     def _getPartialHealthSprite(self):
         if self.currentBarColor == "red":
             return (
@@ -299,13 +371,24 @@ class HUD:
             )
         return None
 
+    def draw(self, surface, x, y):
+        try:
+            surface.blit(self.interface, (x, y))
+            self._drawHealth(surface, x, y)
+            self._drawCooldowns(surface, x, y)
+            self._drawAss(surface, x, y)
+            self._drawResist(surface, x, y)
+            return 0
+        except Exception as e:
+            print_error(f"Error while draw HUD {e}")
+            return 1
+
     def _drawHealth(self, surface, x, y):
+        cfg = OFFSETS_PAR_PLAYER[self.id_player]
+        ox, oy = cfg["health"]
+        step = self.health[0].get_width() - round(self.scale)
         barStart = self.currentHealth - (self.currentHealth % 6)
         chunksInBar = (self.currentHealth % 6) + 1
-        ox = int(OFFSET_HEALTH[0] * self.scale) + 56
-        oy = int(OFFSET_HEALTH[1] * self.scale) + 7
-        step = int(SIZE_FRAMES_HP_CORE * self.scale) - round(self.scale)
-
         for i in range(chunksInBar):
             idx = barStart + i
             if i == chunksInBar - 1 and self.healthPartial > 0:
@@ -316,30 +399,33 @@ class HUD:
             surface.blit(self.health[idx], (x + ox + i * step, y + oy))
 
     def _drawCooldowns(self, surface, x, y):
+        cfg = OFFSETS_PAR_PLAYER[self.id_player]["cooldown"]
         for skill in ["S1", "S2", "S3"]:
-            ox = int(OFFSET_COOLDOWN[skill][0] * self.scale)
-            oy = int(OFFSET_COOLDOWN[skill][1] * self.scale)
-            if self.skillState[skill] == "WAIT":
-                frame = self.cooldown[skill][self.skillAnimFrame[skill]]
-            else:
-                frame = self.cooldownOK[skill][self.skillAnimFrame[skill]]
+            ox, oy = cfg[skill]
+            frame = (
+                self.cooldown[skill][self.skillAnimFrame[skill]]
+                if self.skillState[skill] == "WAIT"
+                else self.cooldownOK[skill][self.skillAnimFrame[skill]]
+            )
             surface.blit(frame, (x + ox, y + oy))
 
     def _drawAss(self, surface, x, y):
-        if self.assState == "WAIT":
-            frame = self.ass["WAIT"][self.assFrame]
-        else:
-            frame = self.ass["OK"][self.assFrame]
-        ox = int(OFFSET_ASS[0] * self.scale) + 2
-        oy = int(OFFSET_ASS[1] * self.scale) - 14
+        cfg = OFFSETS_PAR_PLAYER[self.id_player]
+        ox, oy = cfg["ass"]
+        dx2 = cfg["ass2_dx"]
+        frame = (
+            self.ass["WAIT"][self.assFrame]
+            if self.assState == "WAIT"
+            else self.ass["OK"][self.assFrame]
+        )
         surface.blit(frame, (x + ox, y + oy))
-        surface.blit(frame, (x + ox - 48, y + oy))
+        surface.blit(frame, (x + ox + dx2, y + oy))
 
     def _drawResist(self, surface, x, y):
+        cfg = OFFSETS_PAR_PLAYER[self.id_player]
+        ox, oy = cfg["resist"]
         gap = 0
         for frame in self.resist:
-            ox = int(OFFSET_RESIST[0] * self.scale) + 21
-            oy = int(OFFSET_RESIST[1] * self.scale) - 59
             surface.blit(frame, (x + ox + gap, y + oy))
             gap += 56
 

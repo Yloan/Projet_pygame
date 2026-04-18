@@ -104,6 +104,7 @@ class Game:
         # Variables HUD
         self.other_huds = {}
         self.hud = None
+        self.player_id_test = 4
 
     def switch_music(self, i=None):
         if i is not None:
@@ -139,7 +140,8 @@ class Game:
                 try:
                     player_id = int(message.split(":", 1)[1])
                     self.Menu.my_player_id = player_id
-                    self.hud = HUD(player_id)
+                    # self.hud = HUD(player_id)
+                    self.hud = HUD(self.player_id_test)
                     print_success(f"Je suis le joueur {player_id}")
                     if self.Menu.menu_state == "waiting_player_id":
                         self.Menu.menu_state = "character_selection_final"
@@ -525,7 +527,8 @@ class Game:
 
                 if self.hud:
                     self.hud.update(dt)
-                    x, y = HUD_POSITIONS.get(self.Menu.my_player_id, (10, 10))
+                    # x, y = HUD_POSITIONS.get(self.Menu.my_player_id, (10, 10))
+                    x, y = HUD_POSITIONS.get(self.player_id_test, (10, 10))
                     self.hud.draw(self.screen, x, y)
 
             if self.dev_display_:
