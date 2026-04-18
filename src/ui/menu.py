@@ -275,7 +275,7 @@ class Menu:
             3: (1036, 125),
             4: (1036, 442),
         }
-        
+
         # Variables for final character selection (multiplayer)
         self.current_session_name = None  # Nom de la session rejointe
         self.players_characters = {  # Dict pour stocker les 3 persos de chaque joueur: {player_id: [char1, char2, char3]}
@@ -291,7 +291,7 @@ class Menu:
             4: False,
         }
         self.pending_character_submission = None  # {player_id, character_1, character_2, character_3} à envoyer au serveur
-        self.pending_character_update = False # MAJ UI characters selection
+        self.pending_character_update = False  # MAJ UI characters selection
         self.pending_unready = False
         self.pending_leave_session = None
         self.pending_join_session = None
@@ -362,7 +362,10 @@ class Menu:
         if 1 <= player_id <= 4:
             self.players_characters[player_id] = [character_1, character_2, character_3]
             from ui.console import print_network
-            print_network(f"Joueur {player_id} a sélectionné les personnages {character_1}, {character_2}, {character_3}")
+
+            print_network(
+                f"Joueur {player_id} a sélectionné les personnages {character_1}, {character_2}, {character_3}"
+            )
 
     def update_player_ready(self, player_id):
         """
@@ -375,6 +378,7 @@ class Menu:
         if 1 <= player_id <= 4:
             self.players_ready[player_id] = True
             from ui.console import print_network
+
             print_network(f"Joueur {player_id} est READY !")
 
     def center_x(self, image, scale=1):
@@ -689,8 +693,7 @@ class Menu:
     def handle_character_selection_final(self):
         # Draw background
         self.screen.blit(self.choice_chracters, (0, 0))
-        self.draw_text_center("Choose three characters", 
-                             self.font, self.TEXT_COL, 20)
+        self.draw_text_center("Choose three characters", self.font, self.TEXT_COL, 20)
 
         # Display character selection buttons
         character_buttons = [
@@ -760,105 +763,145 @@ class Menu:
         for player_id in range(1, 5):
             if player_id > max_human_slot:
                 px, py = self.slot_positions[player_id]
-                self.draw_text("BOT", self.middle_font, (150, 150, 255), px + 20, py + 50)
+                self.draw_text(
+                    "BOT", self.middle_font, (150, 150, 255), px + 20, py + 50
+                )
                 continue
             pos_x, pos_y = self.slot_positions[player_id]
 
-
-
             characters = self.players_characters[player_id]
             char_1, char_2, char_3 = characters
-            
+
             # Display the main character (the latest selected) in large
             if char_3 and 1 <= char_3 <= len(self.image_ch):
                 # character_3 in large at slot position
                 char_image = self.image_ch[char_3 - 1]
                 scaled_image = pyg.transform.scale(
                     char_image,
-                    (int(char_image.get_width() * 10), 
-                     int(char_image.get_height() * 10))
+                    (
+                        int(char_image.get_width() * 10),
+                        int(char_image.get_height() * 10),
+                    ),
                 )
                 self.screen.blit(scaled_image, (pos_x, pos_y))
-                
+
                 # character_2 in small preview below
                 if char_2 and 1 <= char_2 <= len(self.image_ch):
                     small_img = self.image_ch[char_2 - 1]
                     small_x = pos_x - 40
                     small_y = pos_y + 214
                     self.screen.blit(small_img, (small_x, small_y))
-                
+
                 # character_1 also in small preview (offset more to the right)
                 if char_1 and 1 <= char_1 <= len(self.image_ch):
                     small_img = self.image_ch[char_1 - 1]
                     small_x = pos_x + 196
                     small_y = pos_y + 214
                     self.screen.blit(small_img, (small_x, small_y))
-                    
+
             elif char_2 and 1 <= char_2 <= len(self.image_ch):
                 # character_2 in large at slot position
                 char_image = self.image_ch[char_2 - 1]
                 scaled_image = pyg.transform.scale(
                     char_image,
-                    (int(char_image.get_width() * 10), 
-                     int(char_image.get_height() * 10))
+                    (
+                        int(char_image.get_width() * 10),
+                        int(char_image.get_height() * 10),
+                    ),
                 )
                 self.screen.blit(scaled_image, (pos_x, pos_y))
-                
+
                 # character_1 in small preview
                 if char_1 and 1 <= char_1 <= len(self.image_ch):
                     small_img = self.image_ch[char_1 - 1]
                     small_x = pos_x - 40
                     small_y = pos_y + 214
                     self.screen.blit(small_img, (small_x, small_y))
-                    
+
             elif char_1 and 1 <= char_1 <= len(self.image_ch):
                 # character_1 in large at slot position
                 char_image = self.image_ch[char_1 - 1]
                 scaled_image = pyg.transform.scale(
                     char_image,
-                    (int(char_image.get_width() * 10), 
-                     int(char_image.get_height() * 10))
+                    (
+                        int(char_image.get_width() * 10),
+                        int(char_image.get_height() * 10),
+                    ),
                 )
                 self.screen.blit(scaled_image, (pos_x, pos_y))
-            
-            if just_clicked and player_id == self.my_player_id and not self.players_ready[self.my_player_id]:
+
+            if (
+                just_clicked
+                and player_id == self.my_player_id
+                and not self.players_ready[self.my_player_id]
+            ):
                 rect_char2 = pyg.Rect(pos_x - 40, pos_y + 214, 64, 64)
                 rect_char1 = pyg.Rect(pos_x + 196, pos_y + 214, 64, 64)
                 if char_2 and rect_char2.collidepoint(mouse_pos):
-                    self.character_2, self.character_3 = self.character_3, self.character_2
+                    self.character_2, self.character_3 = (
+                        self.character_3,
+                        self.character_2,
+                    )
                     self.pending_character_update = True
                 elif char_1 and rect_char1.collidepoint(mouse_pos):
-                    self.character_1, self.character_3 = self.character_3, self.character_1
+                    self.character_1, self.character_3 = (
+                        self.character_3,
+                        self.character_1,
+                    )
                     self.pending_character_update = True
 
-            if just_clicked and player_id == self.my_player_id and self.players_ready[self.my_player_id]:
+            if (
+                just_clicked
+                and player_id == self.my_player_id
+                and self.players_ready[self.my_player_id]
+            ):
                 rect_ready = pyg.Rect(pos_x, pos_y - 25, 120, 20)
                 if rect_ready.collidepoint(mouse_pos):
                     self.players_ready[self.my_player_id] = False
                     self.pending_unready = True
 
             if char_1 or char_2 or char_3:
-                player_label = "YOU" if player_id == self.my_player_id else f"Player {player_id}"
-                self.draw_text(player_label, self.middle_font, 
-                              self.TEXT_COL, pos_x, pos_y - 40)
-                
+                player_label = (
+                    "YOU" if player_id == self.my_player_id else f"Player {player_id}"
+                )
+                self.draw_text(
+                    player_label, self.middle_font, self.TEXT_COL, pos_x, pos_y - 40
+                )
+
                 status_text = "READY" if self.players_ready[player_id] else "WAITING"
-                status_color = (0, 255, 0) if self.players_ready[player_id] else (255, 255, 0)
-                self.draw_text(status_text, self.little_font, 
-                              status_color, pos_x, pos_y - 20)
-                
+                status_color = (
+                    (0, 255, 0) if self.players_ready[player_id] else (255, 255, 0)
+                )
+                self.draw_text(
+                    status_text, self.little_font, status_color, pos_x, pos_y - 20
+                )
 
             else:
                 if player_id != self.my_player_id and player_id < self.number_bot:
-                    self.draw_text(f"Player {player_id}", self.middle_font, 
-                                  self.TEXT_COL2, pos_x + 20, pos_y + 50)
-                    self.draw_text("Waiting...", self.little_font, 
-                                  (255, 255, 0), pos_x + 20, pos_y + 100)
+                    self.draw_text(
+                        f"Player {player_id}",
+                        self.middle_font,
+                        self.TEXT_COL2,
+                        pos_x + 20,
+                        pos_y + 50,
+                    )
+                    self.draw_text(
+                        "Waiting...",
+                        self.little_font,
+                        (255, 255, 0),
+                        pos_x + 20,
+                        pos_y + 100,
+                    )
 
         my_slot_x, my_slot_y = self.slot_positions[self.my_player_id]
 
         # Show PLAY button if current player has selected all 3 characters and not already ready
-        if self.character_1 and self.character_2 and self.character_3 and not self.players_ready[self.my_player_id]:
+        if (
+            self.character_1
+            and self.character_2
+            and self.character_3
+            and not self.players_ready[self.my_player_id]
+        ):
             if self.start_button.draw(self.screen):
                 # Mark current player as ready
                 self.players_ready[self.my_player_id] = True
@@ -868,16 +911,21 @@ class Menu:
                     "character_1": self.character_1,
                     "character_2": self.character_2,
                     "character_3": self.character_3,
-                    "session_name": self.current_session_name
+                    "session_name": self.current_session_name,
                 }
                 from ui.console import print_network
-                print_network(f"Joueur {self.my_player_id} a cliqué PLAY avec {self.character_1}, {self.character_2}, {self.character_3}")
-        
+
+                print_network(
+                    f"Joueur {self.my_player_id} a cliqué PLAY avec {self.character_1}, {self.character_2}, {self.character_3}"
+                )
+
         # Check if all players are ready
         total_players_in_session = self.number_players + 1  # Include the current player
-        
+
         # Count how many players are ready
-        ready_count = sum(1 for p_id in range(1, max_human_slot + 1) if self.players_ready[p_id])
+        ready_count = sum(
+            1 for p_id in range(1, max_human_slot + 1) if self.players_ready[p_id]
+        )
         if ready_count == max_human_slot and max_human_slot > 0:
             self.menu_state = "start game"
             self.etat = "game"
@@ -889,33 +937,11 @@ class Menu:
         elif self.menu_state == "settings":
             self.handle_settings_menu()
         elif self.menu_state == "creation_parameters_session_menu":
+            button.Button.blocked_rect = self.input_box.modal_rect
             self.handle_session_menu()
-
-            # Fond du modal
-            pyg.draw.rect(self.screen, (30, 30, 30), (350, 150, 600, 450))
-
-            self.draw_text_center("Configuration", self.font, self.TEXT_COL, 170)
-
-            self.input_box.rect.x = 500
-            self.input_box.rect.y = 245
             self.input_box.draw(self.screen)
 
-            self.draw_text(
-                f"IA: {self.input_box.temp_nb_ia}",
-                self.middle_font,
-                self.TEXT_COL,
-                380,
-                320,
-            )
-            if self.input_box.btn_plus_ia.draw(self.screen):
-                self.input_box.temp_nb_ia += 1
-            if (
-                self.input_box.btn_moins_ia.draw(self.screen)
-                and self.input_box.temp_nb_ia > 0
-            ):
-                self.input_box.temp_nb_ia -= 1
-
-            if self.input_box.validate_button.draw(self.screen):
+            if self.input_box.wants_validate:
                 session_data = {
                     "titre": self.input_box.text
                     if self.input_box.text != ""
@@ -925,12 +951,16 @@ class Menu:
                     "y": 79,
                     "gap": 125,
                 }
-
                 self.pending_session = session_data
+                button.Button.blocked_rect = None
+                self.menu_state = "play"
 
+            if self.input_box.wants_cancel:
+                button.Button.blocked_rect = None
                 self.menu_state = "play"
 
         elif self.menu_state == "play":
+            button.Button.blocked_rect = None
             self.input_box.clean()
             self.handle_session_menu()
         elif self.menu_state == "play_menu":
@@ -948,7 +978,12 @@ class Menu:
         elif self.menu_state == "choice_characters_3":
             self.handle_choice_characters_3()
         elif self.menu_state == "waiting_player_id":
-            self.draw_text_center("Connexion à la session...", self.middle_font, self.TEXT_COL, self.height // 2)
+            self.draw_text_center(
+                "Connexion à la session...",
+                self.middle_font,
+                self.TEXT_COL,
+                self.height // 2,
+            )
         elif self.menu_state == "character_selection_final":
             self.handle_character_selection_final()
         elif self.menu_state == "start game":
@@ -989,7 +1024,6 @@ class Session:
             x=691, y=231, image=self.button_img, scale=0.25
         )
 
-
         self.gap = 125
         self.y = 79
 
@@ -1029,7 +1063,7 @@ class Session:
 
         # Check if session is full
         is_session_full = self.nb_players + self.nb_bots >= 4
-        
+
         # Bouton Rejoindre ou FULL et son texte
         if not is_session_full:
             if self.join_button.draw(self.screen):
@@ -1041,24 +1075,25 @@ class Session:
                 self.menu.current_session_name = self.titre
                 self.menu.number_players = self.nb_players
                 self.menu.number_bot = self.nb_bots
-                
+
                 # Réinitialiser les sélections de tous les joueurs
                 for p_id in range(1, 5):
                     self.menu.players_characters[p_id] = [None, None, None]
                     self.menu.players_ready[p_id] = False
 
-                
                 self.menu.pending_join_session = self.titre
                 self.menu.menu_state = "waiting_player_id"
-            
+
             button_text = "Join"
         else:
             # Session is full - display FULL button (disabled)
-            self.join_button.draw(self.screen)  # Still draw button for visual consistency
+            self.join_button.draw(
+                self.screen
+            )  # Still draw button for visual consistency
             button_text = "FULL"
 
         self.menu.draw_text(
-            button_text, self.menu.middle_font, "Black", 745, y_scrollé + 186
+            button_text, self.menu.middle_font, "Black", 745, y_scrollé + 165
         )
 
         # Décorations (Splash et Star Bar)
@@ -1084,29 +1119,133 @@ class InputBox:
         self.rect = pyg.Rect(x, y, w, h)
         self.color = pyg.Color("lightskyblue3")
         self.text = text
-        self.font = pyg.font.SysFont("Arial", 24)
-        self.txt_surface = self.font.render(text, True, self.color)
+        self.font = pyg.font.SysFont("Arial", 22)
         self.active = False
         self.screen = menu.screen
+        self.menu = menu
 
-        # Variables parameters
         self.temp_nb_ia = 0
         self.temp_nb_players = 1
+        self.wants_validate = False
+        self.wants_cancel = False
 
-        self.draw_text(text="-", font=self.font, text_col="Black", x=600, y=320)
-        self.btn_plus_ia = button.Button(600, 320, button_session, 0.5)
-        self.draw_text(text="+", font=self.font, text_col="Black", x=530, y=320)
-        self.btn_moins_ia = button.Button(530, 320, button_session, 0.5)
+        self._cursor_visible = True
+        self._cursor_timer = 0
+        self._CURSOR_INTERVAL = 500
 
-        self.draw_text(text="Confirm", font=self.font, text_col="Black", x=550, y=520)
-        self.validate_button = button.Button(550, 520, button_session, 0.5)
+        self.assets = [
+            "assets/Menus_assets/Parameters_session/+_-_Sessions_parameters.png",
+            "assets/Menus_assets/Parameters_session/bg_parameters_interface.png",
+            "assets/Menus_assets/Parameters_session/Input_parameters_sessions.png",
+            "assets/Menus_assets/Parameters_session/Title_name_of_the_Session_parameters.png",
+            "assets/Menus_assets/Parameters_session/Title_numbers_of_bots_sessions_parameters.png",
+        ]
+
+        raw_pm = pyg.image.load(self.assets[0]).convert_alpha()
+        raw_bg = pyg.image.load(self.assets[1]).convert_alpha()
+        raw_input = pyg.image.load(self.assets[2]).convert_alpha()
+        raw_title_name = pyg.image.load(self.assets[3]).convert_alpha()
+        raw_title_bots = pyg.image.load(self.assets[4]).convert_alpha()
+
+        SCALE_TITLE = 0.45
+        SIZE = (612, 408)
+        raw_title_name = pyg.transform.scale(
+            raw_title_name, (int(SIZE[0] * SCALE_TITLE), int(SIZE[1] * SCALE_TITLE))
+        )
+        raw_title_bots = pyg.transform.scale(
+            raw_title_bots, (int(SIZE[0] * SCALE_TITLE), int(SIZE[1] * SCALE_TITLE))
+        )
+        raw_input = pyg.transform.scale(
+            raw_input, (int(SIZE[0] * SCALE_TITLE), int(SIZE[1] * SCALE_TITLE))
+        )
+
+        BG_SCALE = 1.7
+        self.img_bg = pyg.transform.scale(
+            raw_bg,
+            (int(raw_bg.get_width() * BG_SCALE), int(raw_bg.get_height() * BG_SCALE)),
+        )
+        self.bg_pos = (
+            menu.width // 2 - self.img_bg.get_width() // 2,
+            menu.height // 2 - self.img_bg.get_height() // 2,
+        )
+
+        MODAL_X = self.bg_pos[0]
+        MODAL_Y = self.bg_pos[1]
+        MODAL_W = self.img_bg.get_width()
+        MODAL_H = self.img_bg.get_height()
+
+        self.img_title_name = raw_title_name
+        self.img_title_bots = raw_title_bots
+        self.img_input_name = raw_input
+        self.img_input_bots = raw_input
+
+        pm_w, pm_h = raw_pm.get_size()
+        half = pm_w // 2
+        BTN_SZ = 52
+        plus_surf = pyg.transform.scale(
+            raw_pm.subsurface(pyg.Rect(0, 0, half - 24, pm_h)).copy(), (BTN_SZ, BTN_SZ)
+        )
+        minus_surf = pyg.transform.scale(
+            raw_pm.subsurface(pyg.Rect(half - 24, 0, pm_w - half, pm_h)).copy(),
+            (BTN_SZ, BTN_SZ),
+        )
+
+        LABEL_W = raw_title_name.get_width()
+        INPUT_W = raw_input.get_width()
+        INPUT_H = raw_input.get_height()
+        LABEL_H = raw_title_name.get_height()
+
+        PAD_X = (MODAL_W - LABEL_W - 30 - INPUT_W) // 2
+        COL1_X = MODAL_X + PAD_X + 35
+        COL2_X = COL1_X + LABEL_W - 10
+        ROW1_Y = MODAL_Y + int(MODAL_H * 0.22) + 30
+        ROW2_Y = MODAL_Y + int(MODAL_H * 0.47) - 60
+
+        self.pos_title_name = (COL1_X, ROW1_Y + (INPUT_H - LABEL_H) // 2)
+        self.pos_title_bots = (COL1_X, ROW2_Y + (INPUT_H - LABEL_H) // 2)
+        self.pos_input_name = (COL2_X, ROW1_Y - 8)
+        self.pos_input_bots = (COL2_X, ROW2_Y - 8)
+
+        self.rect = pyg.Rect(COL2_X + 10, ROW1_Y + 8, INPUT_W - 20, INPUT_H - 16)
+
+        PM_X = COL2_X + INPUT_W - 120
+        PM_Y = ROW2_Y + (INPUT_H - BTN_SZ) // 2 - 8
+        self.btn_plus_ia = button.Button(PM_X, PM_Y, plus_surf, 1.0, bypass_block=True)
+        self.btn_moins_ia = button.Button(
+            PM_X + BTN_SZ + 4, PM_Y, minus_surf, 1.0, bypass_block=True
+        )
+
+        BTN_Y = MODAL_Y + int(MODAL_H * 0.78) - 200
+        ofx = 100
+        self.validate_button = button.Button(
+            MODAL_X + MODAL_W // 2 + 20 + ofx,
+            BTN_Y,
+            button_session,
+            0.3,
+            bypass_block=True,
+        )
+        self.cancel_button = button.Button(
+            MODAL_X + MODAL_W // 2 - 130 + ofx,
+            BTN_Y,
+            button_session,
+            0.3,
+            bypass_block=True,
+        )
+
+        self.count_font = pyg.font.SysFont("arialblack", 20)
+        self.label_font = pyg.font.SysFont("arialblack", 16)
+        self.txt_surface = self.count_font.render(self.text, True, (180, 60, 0))
+
+        self.modal_rect = pyg.Rect(
+            self.bg_pos[0],
+            self.bg_pos[1],
+            self.img_bg.get_width(),
+            self.img_bg.get_height(),
+        )
 
     def handle_event(self, event):
         if event.type == pyg.MOUSEBUTTONDOWN:
-            if self.rect.collidepoint(event.pos):
-                self.active = not self.active
-            else:
-                self.active = False
+            self.active = self.rect.collidepoint(event.pos)
             self.color = (
                 pyg.Color("dodgerblue2") if self.active else pyg.Color("lightskyblue3")
             )
@@ -1116,24 +1255,75 @@ class InputBox:
                 self.text = self.text[:-1]
             elif len(self.text) < 15:
                 self.text += event.unicode
-            self.txt_surface = self.font.render(self.text, True, (255, 255, 255))
+            self.txt_surface = self.count_font.render(self.text, True, (180, 60, 0))
 
     def draw(self, screen):
-        # Dessin du texte de l'InputBox et son contour
-        screen.blit(self.txt_surface, (self.rect.x + 5, self.rect.y + 5))
-        pyg.draw.rect(screen, self.color, self.rect, 2)
+        self.wants_validate = False
+        self.wants_cancel = False
 
-        # Rectangle derrière le '-' (Bouton Plus IA)
-        pyg.draw.rect(screen, (255, 0, 0), (600, 320, 30, 30))
-        self.draw_text(text="+", font=self.font, text_col="Black", x=607, y=320)
+        screen.blit(self.img_bg, self.bg_pos)
 
-        # Rectangle derrière le '+' (Bouton Moins IA)
-        pyg.draw.rect(screen, (255, 0, 0), (530, 320, 30, 30))
-        self.draw_text(text="-", font=self.font, text_col="Black", x=535, y=320)
+        screen.blit(self.img_title_name, self.pos_title_name)
+        screen.blit(self.img_input_name, self.pos_input_name)
 
-        # Rectangle derrière le 'Confirm' (Bouton Valider)
-        pyg.draw.rect(screen, (255, 0, 0), (545, 515, 110, 40))
-        self.draw_text(text="Confirm", font=self.font, text_col="Black", x=550, y=520)
+        text_x = self.rect.x + 20
+        text_y = (
+            self.rect.y + (self.rect.height - self.txt_surface.get_height()) // 2 - 5
+        )
+        screen.blit(self.txt_surface, (text_x, text_y))
+
+        if self.active:
+            now = pyg.time.get_ticks()
+            if now - self._cursor_timer >= self._CURSOR_INTERVAL:
+                self._cursor_visible = not self._cursor_visible
+                self._cursor_timer = now
+            if self._cursor_visible:
+                cursor_x = text_x + self.txt_surface.get_width() + 2
+                cursor_top = text_y + 2
+                cursor_bottom = text_y + self.txt_surface.get_height() - 2
+                pyg.draw.line(
+                    screen,
+                    (180, 60, 0),
+                    (cursor_x, cursor_top),
+                    (cursor_x, cursor_bottom),
+                    2,
+                )
+
+        screen.blit(self.img_title_bots, self.pos_title_bots)
+        screen.blit(self.img_input_bots, self.pos_input_bots)
+
+        count_surf = self.count_font.render(str(self.temp_nb_ia), True, (180, 60, 0))
+        bx, by = self.pos_input_bots
+        bw = self.img_input_bots.get_width()
+        bh = self.img_input_bots.get_height()
+        screen.blit(
+            count_surf,
+            (
+                bx + (bw - count_surf.get_width()) // 2,
+                by + (bh - count_surf.get_height()) // 2,
+            ),
+        )
+
+        if self.btn_plus_ia.draw(screen):
+            self.temp_nb_ia += 1
+        if self.btn_moins_ia.draw(screen) and self.temp_nb_ia > 0:
+            self.temp_nb_ia -= 1
+
+        if self.validate_button.draw(screen):
+            self.wants_validate = True
+        if self.cancel_button.draw(screen):
+            self.wants_cancel = True
+
+        for btn, label in [
+            (self.validate_button, "Confirm"),
+            (self.cancel_button, "Cancel"),
+        ]:
+            surf = self.label_font.render(label, True, (0, 0, 0))
+            draw_x = btn.rect.x - btn._inset_x
+            draw_y = btn.rect.y - btn._inset_y
+            cx = draw_x + btn.image.get_width() // 2 - surf.get_width() // 2
+            cy = draw_y + btn.image.get_height() // 2 - surf.get_height() // 2 - 7
+            screen.blit(surf, (cx, cy))
 
     def draw_text(self, text, font, text_col, x, y):
         img = font.render(text, True, text_col)
@@ -1141,7 +1331,7 @@ class InputBox:
 
     def clean(self):
         self.text = ""
-        self.txt_surface = self.font.render(self.text, True, self.color)
+        self.txt_surface = self.count_font.render(self.text, True, (180, 60, 0))
         self.active = False
         self.color = pyg.Color("lightskyblue3")
         self.temp_nb_ia = 0
