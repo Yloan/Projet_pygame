@@ -104,7 +104,7 @@ class Game:
         # Variables HUD
         self.other_huds = {}
         self.hud = None
-        self.player_id_test = 4
+        self.player_id_test = 1
 
     def switch_music(self, i=None):
         if i is not None:
@@ -357,7 +357,7 @@ class Game:
         self.etat = "menu"  # Start directly in menu
         # self.etat = "game"  # Start directly in game
         pyg.mixer.init()
-        self.musics[self.current_music].play()
+        # self.musics[self.current_music].play()
         while self.running:
             # Launch music
 
