@@ -547,7 +547,7 @@ class Game:
                     # x, y = HUD_POSITIONS.get(self.player_id_test, (10, 10))
                     self.hud.draw(self.screen, x, y)
 
-                    self.hud.DealsDamage(4)
+                    # self.hud.DealsDamage(4)
 
                 for pid, other_hud in self.other_huds.items():
                     other_hud.update(dt)
