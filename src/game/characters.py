@@ -30,8 +30,8 @@ class Furnace:
         self.speed = 2
         self.position = (400, 400)
 
-        sprite_path_IDLE = get_asset_path("sprites", "Character-1", "FIRE-IDLE-Sheet.png")
-        sprite_path_WALK = get_asset_path("sprites", "Character-1", "FIRE-WALK-Sheet.png")
+        sprite_path_IDLE = get_asset_path("sprites", "Character-1", "IDLE-Sheet.png")
+        sprite_path_WALK = get_asset_path("sprites", "Character-1", "MOVE-Sheet.png")
 
         self.player_spritesheet_IDLE = pyg.image.load(sprite_path_IDLE)
         self.player_spritesheet_WALK = pyg.image.load(sprite_path_WALK)

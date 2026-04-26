@@ -74,8 +74,8 @@ class Game:
         # self.port = 12345
 
         # connexion online server
-        self.host = "51.75.118.75"
-        self.port = 20140
+        self.host = "147.135.213.72"
+        self.port = 20057
 
         self._client_socket = None
         self._client_lock = threading.Lock()
