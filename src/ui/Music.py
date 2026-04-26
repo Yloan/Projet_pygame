@@ -1,5 +1,6 @@
 import pygame
 
+
 class MusicPlayer:
     def __init__(self, file):
         pygame.mixer.init()
@@ -8,6 +9,9 @@ class MusicPlayer:
 
     def play(self, loop=-1):
         pygame.mixer.music.play(loop)
+
+    def volume(self, volume):
+        pygame.mixer.music.set_volume(volume)
 
     def stop(self):
         pygame.mixer.music.stop()

@@ -6,8 +6,8 @@ FURNACE_FRAME_WIDTH = 40
 FURNACE_FRAME_HEIGHT = 40
 FURNACE_IDLE_FRAMES = 12
 FURNACE_WALK_FRAMES = 4
-FURNACE_ANIMATION_IDLE_SPEED = 100  # milliseconds between frames
-FURNACE_ANIMATION_WALK_SPEED = 200  # milliseconds between frames
+FURNACE_ANIMATION_IDLE_SPEED = 50  # milliseconds between frames
+FURNACE_ANIMATION_WALK_SPEED = 50  # milliseconds between frames
 
 WATER_FRAME_SIZE = 40
 WATER_IDLE_FRAMES = 12
@@ -16,11 +16,11 @@ WATER_HURT_FRAMES = 5
 WATER_SKILL1_FRAMES = 10
 WATER_SKILL2_FRAMES = 11
 WATER_SKILL3_FRAMES = 19
-WATER_ANIMATION_IDLE_SPEED = 100  # milliseconds between frames
-WATER_ANIMATION_MOVE_SPEED = 200  # milliseconds between frames
-WATER_ANIMATION_SKILL1_SPEED = 100  # milliseconds between frames
-WATER_ANIMATION_SKILL2_SPEED = 100  # milliseconds between frames
-WATER_ANIMATION_SKILL3_SPEED = 100  # milliseconds between frames
+WATER_ANIMATION_IDLE_SPEED = 50  # milliseconds between frames
+WATER_ANIMATION_MOVE_SPEED = 50  # milliseconds between frames
+WATER_ANIMATION_SKILL1_SPEED = 50  # milliseconds between frames
+WATER_ANIMATION_SKILL2_SPEED = 50  # milliseconds between frames
+WATER_ANIMATION_SKILL3_SPEED = 50  # milliseconds between frames
 
 
 class Furnace:
@@ -267,7 +267,6 @@ class Water:
             self.frames_character_skill3_left.append(frame_flipped)
 
         # EXTRACT ATTACK ANIMATIONS OF THE PROJECTILE
-
 
         # ANIMATION STATE VARIABLES
         self.frame_MOVE = 0  # Current move animation frame index
