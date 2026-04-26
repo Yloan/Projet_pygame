@@ -75,8 +75,8 @@ class Game:
         # self.port = 12345
 
         # connexion online server
-        self.host = "147.135.213.72"
-        self.port = 20057
+        self.host = "51.75.118.18"
+        self.port = 20142
 
         self._client_socket = None
         self._client_lock = threading.Lock()
@@ -104,7 +104,7 @@ class Game:
         # Variables HUD
         self.other_huds = {}
         self.hud = None
-        self.player_id_test = 1
+        # self.player_id_test = 1
 
     def switch_music(self, i=None):
         if i is not None:
@@ -140,11 +140,25 @@ class Game:
                 try:
                     player_id = int(message.split(":", 1)[1])
                     self.Menu.my_player_id = player_id
-                    # self.hud = HUD(player_id)
-                    self.hud = HUD(self.player_id_test)
+                    self.hud = HUD(player_id)
+                    # self.hud = HUD(self.player_id_test)
                     print_success(f"Je suis le joueur {player_id}")
                     if self.Menu.menu_state == "waiting_player_id":
                         self.Menu.menu_state = "character_selection_final"
+
+                    session_info = next(
+                        (
+                            s
+                            for s in self.Menu.sessions
+                            if s["titre"] == self.current_joined_session
+                        ),
+                        None,
+                    )
+                    if session_info:
+                        nb_bots = session_info.get("nb_bots", 0)
+                        for i in range(nb_bots):
+                            bot_id = 4 - i
+                            self.other_huds[bot_id] = HUD(bot_id)
 
                 except Exception as e:
                     print_error(f"Erreur player ID: {e}")
@@ -187,8 +201,9 @@ class Game:
                 data = json.loads(message.split(":", 1)[1])
                 pid = data["player_id"]
                 if pid != self.Menu.my_player_id:
-                    if pid in self.other_huds:
-                        self.other_huds[pid].updateFromServer(data["hud"])
+                    if pid not in self.other_huds:  # ← instanciation lazy
+                        self.other_huds[pid] = HUD(pid)
+                    self.other_huds[pid].updateFromServer(data["hud"])
 
     def _connect_to_server(self):
         try:
@@ -357,7 +372,8 @@ class Game:
         self.etat = "menu"  # Start directly in menu
         # self.etat = "game"  # Start directly in game
         pyg.mixer.init()
-        # self.musics[self.current_music].play()
+        self.musics[self.current_music].play()
+        self.musics[self.current_music].volume(0.01)
         while self.running:
             # Launch music
 
@@ -527,9 +543,16 @@ class Game:
 
                 if self.hud:
                     self.hud.update(dt)
-                    # x, y = HUD_POSITIONS.get(self.Menu.my_player_id, (10, 10))
-                    x, y = HUD_POSITIONS.get(self.player_id_test, (10, 10))
+                    x, y = HUD_POSITIONS.get(self.Menu.my_player_id, (10, 10))
+                    # x, y = HUD_POSITIONS.get(self.player_id_test, (10, 10))
                     self.hud.draw(self.screen, x, y)
+
+                    self.hud.DealsDamage(4)
+
+                for pid, other_hud in self.other_huds.items():
+                    other_hud.update(dt)
+                    ox, oy = HUD_POSITIONS.get(pid, (10, 10))
+                    other_hud.draw(self.screen, ox, oy)
 
             if self.dev_display_:
                 try:
