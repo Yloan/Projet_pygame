@@ -119,6 +119,27 @@ class Menu:
 
         self.image_ch = image_ch
         self.char_preview_scale = 9.5
+
+        # Idle animation previews for characters 1-9 (loaded if IDLE-Sheet.png exists)
+        _IDLE_FRAME_SIZE = 40
+        self._idle_preview_frames = {}   # char_num -> [Surface, ...]
+        self._idle_anim_idx   = {}       # char_num -> int
+        self._idle_anim_accum = {}       # char_num -> float (ms)
+        self._idle_anim_last_tick = pyg.time.get_ticks()
+        for _i in range(1, 10):
+            try:
+                _path = get_asset_path("sprites", f"Character-{_i}", "IDLE-Sheet.png")
+                _sheet = pyg.image.load(_path)
+                _count = _sheet.get_width() // _IDLE_FRAME_SIZE
+                _frames = [
+                    _sheet.subsurface((_j * _IDLE_FRAME_SIZE, 0, _IDLE_FRAME_SIZE, _IDLE_FRAME_SIZE))
+                    for _j in range(_count)
+                ]
+                self._idle_preview_frames[_i] = _frames
+                self._idle_anim_idx[_i]   = 0
+                self._idle_anim_accum[_i] = 0.0
+            except Exception:
+                pass
         # CREATE BUTTON INSTANCES
         self.play_button = animated_button.AnimatedButton(
             self.center_x(self.play_button_frames[0], 1.5),
@@ -487,6 +508,44 @@ class Menu:
         if self.exit_button.draw(self.screen):
             self.menu_state = "play"
 
+    def _update_idle_previews(self):
+        """Advance idle animation timers for all loaded characters."""
+        now = pyg.time.get_ticks()
+        delta = now - self._idle_anim_last_tick
+        self._idle_anim_last_tick = now
+        for char_num, frames in self._idle_preview_frames.items():
+            self._idle_anim_accum[char_num] += delta
+            while self._idle_anim_accum[char_num] >= 100:
+                self._idle_anim_accum[char_num] -= 100
+                self._idle_anim_idx[char_num] = (self._idle_anim_idx[char_num] + 1) % len(frames)
+
+    def _get_idle_preview_frame(self, char_num, pixel_size):
+        """Return the current idle frame scaled to pixel_size×pixel_size, or None."""
+        frames = self._idle_preview_frames.get(char_num)
+        if not frames:
+            return None
+        frame = frames[self._idle_anim_idx.get(char_num, 0)]
+        size = max(pixel_size, 1)
+        return pyg.transform.scale(frame, (size, size))
+
+    def _blit_char_large(self, char_num, pos_x, pos_y, scale_factor=10):
+        """
+        Blit a large character preview at (pos_x, pos_y).
+        Uses animated idle for chars 1-9 when IDLE-Sheet.png is available,
+        otherwise falls back to the static selection icon.
+        """
+        if not (1 <= char_num <= len(self.image_ch)):
+            return
+        icon = self.image_ch[char_num - 1]
+        target_w = int(icon.get_width()  * scale_factor)
+        target_h = int(icon.get_height() * scale_factor)
+        if 1 <= char_num <= 9 and char_num in self._idle_preview_frames:
+            frame = self._get_idle_preview_frame(char_num, target_h)
+            if frame:
+                self.screen.blit(frame, (pos_x, pos_y))
+                return
+        self.screen.blit(pyg.transform.scale(icon, (target_w, target_h)), (pos_x, pos_y))
+
     def draw_character_preview(self, char_index):
         """Affiche l'aperçu du personnage à la position du joueur"""
         try:
@@ -495,21 +554,10 @@ class Menu:
             idx = 0
 
         if idx and 1 <= idx <= len(self.image_ch):
-            sel_img = self.image_ch[idx - 1]
-            s = max(1.0, float(self.char_preview_scale))
-            scaled = pyg.transform.scale(
-                sel_img,
-                (
-                    int(sel_img.get_width() * s),
-                    int(sel_img.get_height() * s),
-                ),
-            )
-
-            # On récupère les coordonnées en fonction du joueur (par défaut slot 1)
+            self._update_idle_previews()
             pos_x, pos_y = self.slot_positions.get(self.my_player_id, (64, 125))
-
-            # On dessine le personnage aux bonnes coordonnées
-            self.screen.blit(scaled, (pos_x, pos_y))
+            s = max(1.0, float(self.char_preview_scale))
+            self._blit_char_large(idx, pos_x, pos_y, scale_factor=s)
 
     def draw_small_character_preview(self, char_index, x_offset):
         """Affiche un petit aperçu d'un personnage"""
@@ -760,6 +808,8 @@ class Menu:
         self._prev_mouse = cur_mouse
         mouse_pos = pyg.mouse.get_pos()
 
+        self._update_idle_previews()
+
         for player_id in range(1, 5):
             if player_id > max_human_slot:
                 px, py = self.slot_positions[player_id]
@@ -775,15 +825,7 @@ class Menu:
             # Display the main character (the latest selected) in large
             if char_3 and 1 <= char_3 <= len(self.image_ch):
                 # character_3 in large at slot position
-                char_image = self.image_ch[char_3 - 1]
-                scaled_image = pyg.transform.scale(
-                    char_image,
-                    (
-                        int(char_image.get_width() * 10),
-                        int(char_image.get_height() * 10),
-                    ),
-                )
-                self.screen.blit(scaled_image, (pos_x, pos_y))
+                self._blit_char_large(char_3, pos_x, pos_y, scale_factor=10)
 
                 # character_2 in small preview below
                 if char_2 and 1 <= char_2 <= len(self.image_ch):
@@ -801,15 +843,7 @@ class Menu:
 
             elif char_2 and 1 <= char_2 <= len(self.image_ch):
                 # character_2 in large at slot position
-                char_image = self.image_ch[char_2 - 1]
-                scaled_image = pyg.transform.scale(
-                    char_image,
-                    (
-                        int(char_image.get_width() * 10),
-                        int(char_image.get_height() * 10),
-                    ),
-                )
-                self.screen.blit(scaled_image, (pos_x, pos_y))
+                self._blit_char_large(char_2, pos_x, pos_y, scale_factor=10)
 
                 # character_1 in small preview
                 if char_1 and 1 <= char_1 <= len(self.image_ch):
@@ -820,15 +854,7 @@ class Menu:
 
             elif char_1 and 1 <= char_1 <= len(self.image_ch):
                 # character_1 in large at slot position
-                char_image = self.image_ch[char_1 - 1]
-                scaled_image = pyg.transform.scale(
-                    char_image,
-                    (
-                        int(char_image.get_width() * 10),
-                        int(char_image.get_height() * 10),
-                    ),
-                )
-                self.screen.blit(scaled_image, (pos_x, pos_y))
+                self._blit_char_large(char_1, pos_x, pos_y, scale_factor=10)
 
             if (
                 just_clicked
