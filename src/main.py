@@ -84,8 +84,6 @@ class Game:
         self._recv_queue = queue.Queue()
         self.recv_buffer = ""
 
-        self.recv_buffer = ""
-
         # SESSION JOIN
         self.current_joined_session = None
         self.position = self.Menu.slot_positions[1]
