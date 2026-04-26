@@ -825,15 +825,7 @@ class Menu:
             # Display the main character (the latest selected) in large
             if char_3 and 1 <= char_3 <= len(self.image_ch):
                 # character_3 in large at slot position
-                char_image = self.image_ch[char_3 - 1]
-                scaled_image = pyg.transform.scale(
-                    char_image,
-                    (
-                        int(char_image.get_width() * 10),
-                        int(char_image.get_height() * 10),
-                    ),
-                )
-                self.screen.blit(scaled_image, (pos_x, pos_y))
+                self._blit_char_large(char_3, pos_x, pos_y, scale_factor=10)
 
                 # character_2 in small preview below
                 if char_2 and 1 <= char_2 <= len(self.image_ch):
@@ -851,15 +843,7 @@ class Menu:
 
             elif char_2 and 1 <= char_2 <= len(self.image_ch):
                 # character_2 in large at slot position
-                char_image = self.image_ch[char_2 - 1]
-                scaled_image = pyg.transform.scale(
-                    char_image,
-                    (
-                        int(char_image.get_width() * 10),
-                        int(char_image.get_height() * 10),
-                    ),
-                )
-                self.screen.blit(scaled_image, (pos_x, pos_y))
+                self._blit_char_large(char_2, pos_x, pos_y, scale_factor=10)
 
                 # character_1 in small preview
                 if char_1 and 1 <= char_1 <= len(self.image_ch):
@@ -870,15 +854,7 @@ class Menu:
 
             elif char_1 and 1 <= char_1 <= len(self.image_ch):
                 # character_1 in large at slot position
-                char_image = self.image_ch[char_1 - 1]
-                scaled_image = pyg.transform.scale(
-                    char_image,
-                    (
-                        int(char_image.get_width() * 10),
-                        int(char_image.get_height() * 10),
-                    ),
-                )
-                self.screen.blit(scaled_image, (pos_x, pos_y))
+                self._blit_char_large(char_1, pos_x, pos_y, scale_factor=10)
 
             if (
                 just_clicked
