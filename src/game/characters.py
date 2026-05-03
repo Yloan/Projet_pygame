@@ -150,6 +150,7 @@ class Furnace:
     def update(self):
         pass
 
+
 class Water:
     def __init__(self):
         # CHARACTER STATS
@@ -454,6 +455,7 @@ class Water:
     def update(self):
         pass
 
+
 class Character:
     """
     Generic character class for all 9 characters.
@@ -471,35 +473,35 @@ class Character:
 
     # Milliseconds per frame for each animation state
     ANIM_SPEED = {
-        'idle':    100,
-        'move':    200,
-        'hurt':    120,
-        'dead':    150,
-        'skill1':  100,
-        'skill2':  100,
-        'skill3':  100,
-        'effect1':  80,
-        'effect2':  80,
-        'effect3':  80,
+        "idle": 100,
+        "move": 200,
+        "hurt": 120,
+        "dead": 150,
+        "skill1": 100,
+        "skill2": 100,
+        "skill3": 100,
+        "effect1": 80,
+        "effect2": 80,
+        "effect3": 80,
     }
 
     # Standard filenames — same across all Character-N folders
     SPRITE_FILES = {
-        'idle':    'IDLE-Sheet.png',
-        'move':    'MOVE-Sheet.png',
-        'hurt':    'HURT-Sheet.png',
-        'dead':    'DEAD-Sheet.png',
-        'skill1':  'S1-Sheet.png',
-        'skill2':  'S2-Sheet.png',
-        'skill3':  'S3-Sheet.png',
-        'effect1': 'effect-S1-Sheet.png',
-        'effect2': 'effect-S2-Sheet.png',
-        'effect3': 'effect-S3-Sheet.png',
+        "idle": "IDLE-Sheet.png",
+        "move": "MOVE-Sheet.png",
+        "hurt": "HURT-Sheet.png",
+        "dead": "DEAD-Sheet.png",
+        "skill1": "S1-Sheet.png",
+        "skill2": "S2-Sheet.png",
+        "skill3": "S3-Sheet.png",
+        "effect1": "effect-S1-Sheet.png",
+        "effect2": "effect-S2-Sheet.png",
+        "effect3": "effect-S3-Sheet.png",
     }
 
     # Fallback filenames tried when primary name is missing
     SPRITE_FILES_FALLBACK = {
-        'skill3': 'S3-1-Sheet.png',
+        "skill3": "S3-1-Sheet.png",
     }
 
     def __init__(self, char_number, position=(400, 400), health=100, speed=2):
@@ -518,14 +520,12 @@ class Character:
 
         # frames[key] = {'right': [Surface, ...], 'left': [Surface, ...]}
         self.frames = {}
-        self.timers  = {k: 0 for k in self.ANIM_SPEED}
+        self.timers = {k: 0 for k in self.ANIM_SPEED}
         self.indices = {k: 0 for k in self.ANIM_SPEED}
 
         self._load_sprites()
 
-    # ------------------------------------------------------------------
     # SPRITE LOADING
-    # ------------------------------------------------------------------
 
     def _load_sheet(self, key, filename):
         try:
@@ -539,7 +539,7 @@ class Character:
                 )
                 right_frames.append(frame)
                 left_frames.append(pyg.transform.flip(frame, True, False))
-            self.frames[key] = {'right': right_frames, 'left': left_frames}
+            self.frames[key] = {"right": right_frames, "left": left_frames}
             return True
         except Exception:
             return False
@@ -551,16 +551,14 @@ class Character:
                 if fallback:
                     self._load_sheet(key, fallback)
 
-        if 'idle' not in self.frames:
+        if "idle" not in self.frames:
             raise FileNotFoundError(
                 f"Required IDLE-Sheet.png not found for {self.char_folder}"
             )
-        if 'move' not in self.frames:
-            self.frames['move'] = self.frames['idle']
+        if "move" not in self.frames:
+            self.frames["move"] = self.frames["idle"]
 
-    # ------------------------------------------------------------------
     # HITBOX
-    # ------------------------------------------------------------------
 
     def get_hitbox(self):
         """Returns a pygame.Rect slightly smaller than the sprite."""
@@ -569,9 +567,7 @@ class Character:
         size = self.FRAME_SIZE - 2 * inset
         return pyg.Rect(x + inset, y + inset, size, size)
 
-    # ------------------------------------------------------------------
     # MOVEMENT & STATS
-    # ------------------------------------------------------------------
 
     def move(self, direction):
         if direction == "up":
@@ -592,12 +588,12 @@ class Character:
         if self.health <= 0:
             self.health = 0
             self.is_dead = True
-            self.indices['dead'] = 0
-            self.timers['dead'] = 0
+            self.indices["dead"] = 0
+            self.timers["dead"] = 0
         else:
             self.is_hurt = True
-            self.indices['hurt'] = 0
-            self.timers['hurt'] = 0
+            self.indices["hurt"] = 0
+            self.timers["hurt"] = 0
 
     def heal(self, amount):
         if not self.is_dead:
@@ -606,16 +602,14 @@ class Character:
     def get_status(self):
         return {"health": self.health, "position": tuple(self.position)}
 
-    # ------------------------------------------------------------------
     # ANIMATION HELPERS
-    # ------------------------------------------------------------------
 
     def _advance(self, key, delta_time, loop=True):
         """
         Advance animation timer and index.
         Returns True when a non-looping animation has reached its last frame.
         """
-        frames = self.frames.get(key, {}).get('right', [])
+        frames = self.frames.get(key, {}).get("right", [])
         if not frames:
             return True
         # Stay frozen on last frame for non-looping animations that finished
@@ -641,9 +635,7 @@ class Character:
             return None
         return frames[min(self.indices.get(key, 0), len(frames) - 1)]
 
-    # ------------------------------------------------------------------
-    # ANIMATION UPDATE  (same signature as Water.update_animation)
-    # ------------------------------------------------------------------
+    # ANIMATION UPDATE
 
     def update_animation(
         self,
@@ -656,8 +648,8 @@ class Character:
         self.is_moving = is_moving
 
         if self.is_dead:
-            if 'dead' in self.frames:
-                self._advance('dead', delta_time, loop=False)
+            if "dead" in self.frames:
+                self._advance("dead", delta_time, loop=False)
             return
 
         skill_inputs = (is_attacking_skill1, is_attacking_skill2, is_attacking_skill3)
@@ -665,8 +657,8 @@ class Character:
         # Mirror Water's behaviour: set attack flag each frame from input,
         # then advance the animation and clear the flag when it finishes.
         for n, pressed in enumerate(skill_inputs, 1):
-            key     = f'skill{n}'
-            eff_key = f'effect{n}'
+            key = f"skill{n}"
+            eff_key = f"effect{n}"
             self.is_attacking[n] = pressed and key in self.frames
 
             if self.is_attacking[n]:
@@ -681,72 +673,68 @@ class Character:
 
         # Hurt plays once then clears
         if self.is_hurt:
-            if 'hurt' in self.frames:
-                if self._advance('hurt', delta_time, loop=False):
+            if "hurt" in self.frames:
+                if self._advance("hurt", delta_time, loop=False):
                     self.is_hurt = False
             else:
                 self.is_hurt = False
 
         # Base locomotion
         if is_moving:
-            self._advance('move', delta_time, loop=True)
+            self._advance("move", delta_time, loop=True)
         else:
-            self._advance('idle', delta_time, loop=True)
+            self._advance("idle", delta_time, loop=True)
 
-    # ------------------------------------------------------------------
     # SPRITE GETTERS
-    # ------------------------------------------------------------------
 
     def get_current_sprite(self):
         """Returns the character sprite for the current animation state."""
         if self.is_dead:
-            return self._get_frame('dead') or self._get_frame('idle')
+            return self._get_frame("dead") or self._get_frame("idle")
 
         for n in (1, 2, 3):
             if self.is_attacking[n]:
-                frame = self._get_frame(f'skill{n}')
+                frame = self._get_frame(f"skill{n}")
                 if frame:
                     return frame
 
         if self.is_hurt:
-            frame = self._get_frame('hurt')
+            frame = self._get_frame("hurt")
             if frame:
                 return frame
 
         if self.is_moving:
-            return self._get_frame('move') or self._get_frame('idle')
-        return self._get_frame('idle')
+            return self._get_frame("move") or self._get_frame("idle")
+        return self._get_frame("idle")
 
     def get_effect_sprite(self):
         """Returns the effect/projectile sprite for the active skill, or None."""
         for n in (1, 2, 3):
             if self.is_attacking[n]:
-                frame = self._get_frame(f'effect{n}')
+                frame = self._get_frame(f"effect{n}")
                 if frame:
                     return frame
         return None
 
-    # ------------------------------------------------------------------
-    # SKILL TRIGGERS (can also be called directly instead of via flags)
-    # ------------------------------------------------------------------
+    # SKILL TRIGGERS
 
     def skill1(self):
-        if not self.is_attacking[1] and 'skill1' in self.frames:
+        if not self.is_attacking[1] and "skill1" in self.frames:
             self.is_attacking[1] = True
-            self.indices['skill1'] = 0
-            self.timers['skill1'] = 0
+            self.indices["skill1"] = 0
+            self.timers["skill1"] = 0
 
     def skill2(self):
-        if not self.is_attacking[2] and 'skill2' in self.frames:
+        if not self.is_attacking[2] and "skill2" in self.frames:
             self.is_attacking[2] = True
-            self.indices['skill2'] = 0
-            self.timers['skill2'] = 0
+            self.indices["skill2"] = 0
+            self.timers["skill2"] = 0
 
     def skill3(self):
-        if not self.is_attacking[3] and 'skill3' in self.frames:
+        if not self.is_attacking[3] and "skill3" in self.frames:
             self.is_attacking[3] = True
-            self.indices['skill3'] = 0
-            self.timers['skill3'] = 0
+            self.indices["skill3"] = 0
+            self.timers["skill3"] = 0
 
     def update(self):
         pass

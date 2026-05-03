@@ -122,9 +122,9 @@ class Menu:
 
         # Idle animation previews for characters 1-9 (loaded if IDLE-Sheet.png exists)
         _IDLE_FRAME_SIZE = 40
-        self._idle_preview_frames = {}   # char_num -> [Surface, ...]
-        self._idle_anim_idx   = {}       # char_num -> int
-        self._idle_anim_accum = {}       # char_num -> float (ms)
+        self._idle_preview_frames = {}  # char_num -> [Surface, ...]
+        self._idle_anim_idx = {}  # char_num -> int
+        self._idle_anim_accum = {}  # char_num -> float (ms)
         self._idle_anim_last_tick = pyg.time.get_ticks()
         for _i in range(1, 10):
             try:
@@ -132,11 +132,13 @@ class Menu:
                 _sheet = pyg.image.load(_path)
                 _count = _sheet.get_width() // _IDLE_FRAME_SIZE
                 _frames = [
-                    _sheet.subsurface((_j * _IDLE_FRAME_SIZE, 0, _IDLE_FRAME_SIZE, _IDLE_FRAME_SIZE))
+                    _sheet.subsurface(
+                        (_j * _IDLE_FRAME_SIZE, 0, _IDLE_FRAME_SIZE, _IDLE_FRAME_SIZE)
+                    )
                     for _j in range(_count)
                 ]
                 self._idle_preview_frames[_i] = _frames
-                self._idle_anim_idx[_i]   = 0
+                self._idle_anim_idx[_i] = 0
                 self._idle_anim_accum[_i] = 0.0
             except Exception:
                 pass
@@ -517,7 +519,9 @@ class Menu:
             self._idle_anim_accum[char_num] += delta
             while self._idle_anim_accum[char_num] >= 100:
                 self._idle_anim_accum[char_num] -= 100
-                self._idle_anim_idx[char_num] = (self._idle_anim_idx[char_num] + 1) % len(frames)
+                self._idle_anim_idx[char_num] = (
+                    self._idle_anim_idx[char_num] + 1
+                ) % len(frames)
 
     def _get_idle_preview_frame(self, char_num, pixel_size):
         """Return the current idle frame scaled to pixel_size×pixel_size, or None."""
@@ -537,14 +541,16 @@ class Menu:
         if not (1 <= char_num <= len(self.image_ch)):
             return
         icon = self.image_ch[char_num - 1]
-        target_w = int(icon.get_width()  * scale_factor)
+        target_w = int(icon.get_width() * scale_factor)
         target_h = int(icon.get_height() * scale_factor)
         if 1 <= char_num <= 9 and char_num in self._idle_preview_frames:
             frame = self._get_idle_preview_frame(char_num, target_h)
             if frame:
                 self.screen.blit(frame, (pos_x, pos_y))
                 return
-        self.screen.blit(pyg.transform.scale(icon, (target_w, target_h)), (pos_x, pos_y))
+        self.screen.blit(
+            pyg.transform.scale(icon, (target_w, target_h)), (pos_x, pos_y)
+        )
 
     def draw_character_preview(self, char_index):
         """Affiche l'aperçu du personnage à la position du joueur"""
