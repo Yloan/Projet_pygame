@@ -2,7 +2,7 @@ import json
 import socket
 import threading
 
-from ui.console import (
+from console import (
     print_debug,
     print_error,
     print_event,
@@ -37,6 +37,10 @@ class Serveur:
         self.recv_buffers = {}
         self.sessions_characters = {}
         self.socket_player_ids = {}
+
+        # Game states
+        self.game_states = {}  # {session_name: {entity_id: state}}
+        self.game_states_lock = threading.Lock()
 
     def start_server(self):
         self.server_socket.listen(MAX_CLIENTS)
@@ -197,6 +201,25 @@ class Serveur:
         elif data.startswith("[HUDUpdate]:"):
             self.broadcast_raw(data, exclude_socket=client_socket)
 
+        elif data.startswith("[EntityState]:"):
+            try:
+                payload = json.loads(data.split(":", 1)[1])
+                session_name = payload.get("session")
+                player_id = payload.get("player_id")
+                state = payload.get("state", {})
+
+                if session_name and player_id is not None:
+                    with self.game_states_lock:
+                        if session_name not in self.game_states:
+                            self.game_states[session_name] = {}
+                        self.game_states[session_name][player_id] = state
+
+                    # Diffuse l'état complet de la session à tous les joueurs de la session
+                    self._broadcast_game_state(session_name)
+
+            except Exception as e:
+                print_error(f"Erreur EntityState: {e}")
+
         elif data.startswith("[CharacterUpdate]:"):
             try:
                 update = json.loads(data.split(":", 1)[1])
@@ -243,6 +266,30 @@ class Serveur:
         elif data.startswith("[PlayerReady]:"):
             self.broadcast_raw(data, exclude_socket=client_socket)
             print_network("PlayerReady diffusé")
+
+    # GAME STATE BROADCAST
+
+    def _broadcast_game_state(self, session_name):
+        """
+        Diffuse l'état complet de toutes les entités (joueurs + bots) de la session
+        à tous les clients qui ont rejoint cette session
+        """
+        with self.game_states_lock:
+            entities = dict(self.game_states.get(session_name, {}))
+
+        payload = {"session": session_name, "entities": entities}
+        message = f"[GameState]:{json.dumps(payload)}"
+
+        with self.sessions_lock:
+            clients_in_session = list(
+                self.sessions_clients_joined.get(session_name, [])
+            )
+
+        for client in clients_in_session:
+            try:
+                self._send(client, message)
+            except Exception as e:
+                print_error(f"Erreur broadcast GameState à client: {e}")
 
     # SESSION MANAGEMENT
 

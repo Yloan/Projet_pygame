@@ -10,6 +10,7 @@ import game.characters as player_module
 import ui.menu as menu
 import ui.Music as music_module
 import utils.paths as __path__
+from game.characters import Character
 from game.map_laoder import MapLoader
 from ui.console import (
     print_error,
@@ -102,7 +103,14 @@ class Game:
         # Variables HUD
         self.other_huds = {}
         self.hud = None
-        # self.player_id_test = 1
+
+        # Entités distantes (autres joueurs/bots) : {player_id: Character}
+        # Peuplé dynamiquement à la réception des [GameState]
+        self.remote_players = {}
+
+        # Intervalle d'envoi de l'état (en ticks à 60fps — envoie toutes les 2 frames)
+        self.delta_time_entity_send = 0
+        self.ENTITY_SEND_INTERVAL = 2
 
     def switch_music(self, i=None):
         if i is not None:
@@ -202,6 +210,32 @@ class Game:
                     if pid not in self.other_huds:  # ← instanciation lazy
                         self.other_huds[pid] = HUD(pid)
                     self.other_huds[pid].updateFromServer(data["hud"])
+
+            elif message.startswith("[GameState]:"):
+                try:
+                    payload = json.loads(message.split(":", 1)[1])
+                    entities = payload.get("entities", {})
+                    my_id = self.Menu.my_player_id
+
+                    for pid_str, state in entities.items():
+                        pid = int(pid_str)
+                        if pid == my_id:
+                            continue
+
+                        if pid not in self.remote_players:
+                            char_num = state.get("char_number", 1)
+                            try:
+                                self.remote_players[pid] = Character(char_num)
+                            except Exception as e:
+                                print_error(
+                                    f"Impossible de créer remote Character-{char_num}: {e}"
+                                )
+                                continue
+
+                        self.remote_players[pid].apply_network_state(state)
+
+                except Exception as e:
+                    print_error(f"Erreur GameState: {e}")
 
     def _connect_to_server(self):
         try:
@@ -531,13 +565,63 @@ class Game:
                 player_pos = self.player.position
                 self.screen.blit(current_sprite, player_pos)
 
+                # Draw the others entities
+                for pid, remote_char in self.remote_players.items():
+                    remote_sprite = remote_char.get_current_sprite()
+                    if remote_sprite:
+                        self.screen.blit(remote_sprite, remote_char.position)
+                    # Sprite d'effet / projectile si actif
+                    effect_sprite = remote_char.get_effect_sprite()
+                    if effect_sprite:
+                        ex = remote_char.position[0]
+                        ey = remote_char.position[1]
+                        if remote_char.direction == "right":
+                            ex += remote_char.FRAME_SIZE
+                        else:
+                            ex -= remote_char.FRAME_SIZE
+                        self.screen.blit(effect_sprite, (ex, ey))
+
                 # Draw foreground on top of player
                 self.screen.blit(self.map_front, (0, 0))
 
-                # Send player position to server
-                self.send_to_server(
-                    message=f"Position du joueur : x={player_pos[0]}, y={player_pos[1]}"
-                )
+                # Send the data of the game to the server
+                self.delta_time_entity_send += 1
+                if self.delta_time_entity_send >= self.ENTITY_SEND_INTERVAL:
+                    self.delta_time_entity_send = 0
+                    if self.current_joined_session and self.Menu.my_player_id:
+                        entity_state = {
+                            "char_number": 2,
+                            "pos": list(player_pos),
+                            "direction": self.player.direction,
+                            "health": self.player.health,
+                            "is_moving": bool(is_moving),
+                            "is_hurt": False,
+                            "is_dead": self.player.health <= 0,
+                            "is_attacking": {
+                                "1": self.player.is_attacking_skill1,
+                                "2": self.player.is_attacking_skill2,
+                                "3": self.player.is_attacking_skill3,
+                            },
+                            "anim_indices": {
+                                "idle": self.player.frame_IDLE,
+                                "move": self.player.frame_MOVE,
+                                "hurt": 0,
+                                "dead": 0,
+                                "skill1": self.player.frame_character_skill1,
+                                "skill2": self.player.frame_character_skill2,
+                                "skill3": self.player.frame_character_skill3,
+                                "effect1": self.player.frame_effect_skill1,
+                                "effect2": self.player.frame_effect_skill2,
+                                "effect3": self.player.frame_effect_skill3,
+                            },
+                            "attack_hitboxes": {},
+                        }
+                        payload = {
+                            "session": self.current_joined_session,
+                            "player_id": self.Menu.my_player_id,
+                            "state": entity_state,
+                        }
+                        self.send_to_server(f"[EntityState]:{json.dumps(payload)}")
 
                 if self.hud:
                     self.hud.update(dt)

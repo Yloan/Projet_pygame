@@ -13,7 +13,7 @@ from console import (
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from ui.server import Serveur
+from server import Serveur
 
 
 def run_offline_server():

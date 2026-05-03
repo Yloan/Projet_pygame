@@ -736,6 +736,106 @@ class Character:
             self.indices["skill3"] = 0
             self.timers["skill3"] = 0
 
+    # ATTACK HITBOX & COLLISION
+
+    # Reach (pixels devant le personnage) et taille pour chaque skill
+    ATTACK_HITBOX_PARAMS = {
+        1: {"reach": 24, "width": 28, "height": 20},
+        2: {"reach": 32, "width": 36, "height": 24},
+        3: {"reach": 48, "width": 44, "height": 28},
+    }
+
+    def get_attack_hitbox(self, skill_number):
+        """
+        Return a pygame.Rect that represent the hitbox of the current attack,
+        projected in the direction of the character
+        Return None if the skill is not during the execution
+        """
+        if not self.is_attacking.get(skill_number, False):
+            return None
+        params = self.ATTACK_HITBOX_PARAMS.get(skill_number)
+        if not params:
+            return None
+
+        reach = params["reach"]
+        w = params["width"]
+        h = params["height"]
+
+        cx = int(self.position[0]) + self.FRAME_SIZE // 2
+        cy = int(self.position[1]) + self.FRAME_SIZE // 2
+
+        if self.direction == "right":
+            x = cx + self.HITBOX_INSET
+            y = cy - h // 2
+        else:
+            x = cx - self.HITBOX_INSET - reach - w
+            y = cy - h // 2
+
+        return pyg.Rect(x, y, w + reach, h)
+
+    def check_hit(self, target, skill_number):
+        """
+        Vérifie si l'attaque du skill `skill_number` touche `target`
+        (tout objet ayant get_hitbox()).
+        Retourne True si collision, False sinon.
+        """
+        attack_box = self.get_attack_hitbox(skill_number)
+        if attack_box is None:
+            return False
+        target_box = target.get_hitbox()
+        return attack_box.colliderect(target_box)
+
+    # RÉSEAU — sérialisation / désérialisation de l'état complet
+
+    def get_network_state(self):
+        """
+        Retourne un dict JSON-serializable décrivant l'état complet du
+        personnage pour le broadcast réseau.
+        """
+        active_skills = [n for n in (1, 2, 3) if self.is_attacking.get(n, False)]
+        attack_hitboxes = {}
+        for n in active_skills:
+            hb = self.get_attack_hitbox(n)
+            if hb:
+                attack_hitboxes[str(n)] = [hb.x, hb.y, hb.width, hb.height]
+
+        return {
+            "char_number": self.char_number,
+            "pos": [round(self.position[0], 1), round(self.position[1], 1)],
+            "direction": self.direction,
+            "health": self.health,
+            "is_moving": self.is_moving,
+            "is_hurt": self.is_hurt,
+            "is_dead": self.is_dead,
+            "is_attacking": {str(k): v for k, v in self.is_attacking.items()},
+            "anim_indices": {k: self.indices.get(k, 0) for k in self.ANIM_SPEED},
+            "attack_hitboxes": attack_hitboxes,
+        }
+
+    def apply_network_state(self, state):
+        """
+        Applique un état reçu du serveur (dict provenant de get_network_state).
+        Utilisé pour mettre à jour les personnages distants.
+        """
+        if "pos" in state:
+            self.position = list(state["pos"])
+        if "direction" in state:
+            self.direction = state["direction"]
+        if "health" in state:
+            self.health = state["health"]
+        if "is_moving" in state:
+            self.is_moving = state["is_moving"]
+        if "is_hurt" in state:
+            self.is_hurt = state["is_hurt"]
+        if "is_dead" in state:
+            self.is_dead = state["is_dead"]
+        if "is_attacking" in state:
+            self.is_attacking = {int(k): v for k, v in state["is_attacking"].items()}
+        if "anim_indices" in state:
+            for k, v in state["anim_indices"].items():
+                if k in self.indices:
+                    self.indices[k] = v
+
     def update(self):
         pass
 
