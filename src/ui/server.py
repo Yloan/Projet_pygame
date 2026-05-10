@@ -12,9 +12,8 @@ from console import (
     print_warning,
 )
 
-DEFAULT_HOST = "127.0.0.1"
+DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 12345
-MAX_CLIENTS = 2
 
 MESSAGE_BUFFER_SIZE = 4096
 MSG_DELIMITER = "\n"
@@ -43,7 +42,7 @@ class Serveur:
         self.game_states_lock = threading.Lock()
 
     def start_server(self):
-        self.server_socket.listen(MAX_CLIENTS)
+        self.server_socket.listen()
         print_success(f"Serveur démarré sur {self.Host}:{self.Port}")
         accept_thread = threading.Thread(target=self.accept_clients, daemon=True)
         accept_thread.start()

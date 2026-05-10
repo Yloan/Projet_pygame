@@ -39,9 +39,6 @@ OFFSET_COOLDOWN = {
     "S2": (70, 74),
     "S3": (83, 74),
 }
-"""
-Decalage assist pos 2: 122px
-"""
 
 
 # The dict of the death

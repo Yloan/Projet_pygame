@@ -76,8 +76,8 @@ class Game:
         # self.port = 12345
 
         # connexion online server
-        self.host = "51.75.118.5"
-        self.port = 20089
+        self.host = "51.75.118.17"
+        self.port = 20041
 
         self._client_socket = None
         self._client_lock = threading.Lock()
@@ -570,7 +570,6 @@ class Game:
                     remote_sprite = remote_char.get_current_sprite()
                     if remote_sprite:
                         self.screen.blit(remote_sprite, remote_char.position)
-                    # Sprite d'effet / projectile si actif
                     effect_sprite = remote_char.get_effect_sprite()
                     if effect_sprite:
                         ex = remote_char.position[0]
