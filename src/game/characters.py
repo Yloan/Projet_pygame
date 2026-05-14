@@ -2,850 +2,409 @@ import pygame as pyg
 
 from utils.paths import get_asset_path
 
-FURNACE_FRAME_WIDTH = 40
-FURNACE_FRAME_HEIGHT = 40
-FURNACE_IDLE_FRAMES = 12
-FURNACE_WALK_FRAMES = 4
-FURNACE_ANIMATION_IDLE_SPEED = 50  # milliseconds between frames
-FURNACE_ANIMATION_WALK_SPEED = 50  # milliseconds between frames
-
-WATER_FRAME_SIZE = 40
-WATER_IDLE_FRAMES = 12
-WATER_MOVE_FRAMES = 5
-WATER_HURT_FRAMES = 5
-WATER_SKILL1_FRAMES = 10
-WATER_SKILL2_FRAMES = 11
-WATER_SKILL3_FRAMES = 19
-WATER_ANIMATION_IDLE_SPEED = 50  # milliseconds between frames
-WATER_ANIMATION_MOVE_SPEED = 50  # milliseconds between frames
-WATER_ANIMATION_SKILL1_SPEED = 50  # milliseconds between frames
-WATER_ANIMATION_SKILL2_SPEED = 50  # milliseconds between frames
-WATER_ANIMATION_SKILL3_SPEED = 50  # milliseconds between frames
-
-
-class Furnace:
-    def __init__(self):
-
-        self.health = 100
-        self.speed = 2
-        self.position = (400, 400)
-
-        sprite_path_IDLE = get_asset_path("sprites", "Character-1", "IDLE-Sheet.png")
-        sprite_path_WALK = get_asset_path("sprites", "Character-1", "MOVE-Sheet.png")
-
-        self.player_spritesheet_IDLE = pyg.image.load(sprite_path_IDLE)
-        self.player_spritesheet_WALK = pyg.image.load(sprite_path_WALK)
-
-        self.frames_IDLE = []
-        for i in range(FURNACE_IDLE_FRAMES):
-            frame = self.player_spritesheet_IDLE.subsurface(
-                (i * FURNACE_FRAME_WIDTH, 0, FURNACE_FRAME_WIDTH, FURNACE_FRAME_HEIGHT)
-            )
-            self.frames_IDLE.append(frame)
-
-        self.fram_WALK = []
-        for i in range(FURNACE_WALK_FRAMES):
-            frame = self.player_spritesheet_WALK.subsurface(
-                (i * FURNACE_FRAME_WIDTH, 0, FURNACE_FRAME_WIDTH, FURNACE_FRAME_HEIGHT)
-            )
-            self.fram_WALK.append(frame)
-
-        self.frame_WALK_left = []
-        for i in range(FURNACE_WALK_FRAMES):
-            frame = self.player_spritesheet_WALK.subsurface(
-                (i * FURNACE_FRAME_WIDTH, 0, FURNACE_FRAME_WIDTH, FURNACE_FRAME_HEIGHT)
-            )
-            frame_flipped = pyg.transform.flip(frame, True, False)
-            self.frame_WALK_left.append(frame_flipped)
-
-        self.frame_IDLE_left = []
-        for i in range(FURNACE_IDLE_FRAMES):
-            frame = self.player_spritesheet_IDLE.subsurface(
-                (i * FURNACE_FRAME_WIDTH, 0, FURNACE_FRAME_WIDTH, FURNACE_FRAME_HEIGHT)
-            )
-            frame_flipped = pyg.transform.flip(frame, True, False)
-            self.frame_IDLE_left.append(frame_flipped)
-        self.frame_IDLE = 0
-        self.frame_WALK = 0
-        self.tem_an_IDLE = 0
-        self.tem_an_WALK = 0
-        self.direction = "right"
-        self.is_moving = False
-
-    def move(self, direction):
-        if direction == "up":
-            self.position = (self.position[0], self.position[1] - self.speed)
-        elif direction == "down":
-            self.position = (self.position[0], self.position[1] + self.speed)
-        elif direction == "left":
-            self.position = (self.position[0] - self.speed, self.position[1])
-            self.direction = "left"
-        elif direction == "right":
-            self.position = (self.position[0] + self.speed, self.position[1])
-            self.direction = "right"
-
-    def take_damage(self, amount):
-        self.health -= amount
-        if self.health < 0:
-            self.health = 0
-
-    def heal(self, amount):
-        self.health += amount
-        if self.health > 100:
-            self.health = 100
-
-    def get_status(self):
-        return {"health": self.health, "position": self.position}
-
-    def update_animation(self, delta_time, is_moving):
-        self.is_moving = is_moving
-
-        if is_moving:
-            # Update walking animation
-            self.tem_an_WALK += delta_time
-            if self.tem_an_WALK >= FURNACE_ANIMATION_WALK_SPEED:
-                self.tem_an_WALK = 0
-                if self.frame_WALK >= len(self.fram_WALK) - 1:
-                    self.frame_WALK = 0
-                else:
-                    self.frame_WALK += 1
-        else:
-            # Update idle animation
-            self.tem_an_IDLE += delta_time
-            if self.tem_an_IDLE >= FURNACE_ANIMATION_IDLE_SPEED:
-                self.tem_an_IDLE = 0
-                if self.frame_IDLE >= len(self.frames_IDLE) - 1:
-                    self.frame_IDLE = 0
-                else:
-                    self.frame_IDLE += 1
-
-    def get_current_sprite(self):
-        if self.is_moving:
-            if self.direction == "left":
-                return self.frame_WALK_left[self.frame_WALK]
-            else:
-                return self.fram_WALK[self.frame_WALK]
-        else:
-            if self.direction == "left":
-                return self.frame_IDLE_left[self.frame_IDLE]
-            else:
-                return self.frames_IDLE[self.frame_IDLE]
-
-    # SKILL SYSTEM
-
-    def skill1(self):
-        """First special skill - To be implemented."""
-        pass
-
-    def skill2(self):
-        """Second special skill - To be implemented."""
-        pass
-
-    def skill3(self):
-        """Third special skill - To be implemented."""
-        pass
-
-    # GAME LOOP UPDATE
-
-    def update(self):
-        pass
-
-
-class Water:
-    def __init__(self):
-        # CHARACTER STATS
-        self.health = 100
-        self.speed = 2
-        self.position = (400, 400)
-        self.direction = "right"
-
-        # LOAD SPRITE ASSET PATHS
-        self.sprite_IDLE = get_asset_path("sprites", "Character-2", "IDLE-Sheet.png")
-        self.sprite_MOVE = get_asset_path("sprites", "Character-2", "MOVE-Sheet.png")
-        self.sprite_HURT = get_asset_path("sprites", "Character-2", "HURT-Sheet.png")
-        self.sprite_DEATH = get_asset_path("sprites", "Character-2", "DEAD-Sheet.png")
-
-        self.sprite_character_skill1 = get_asset_path(
-            "sprites", "Character-2", "S1-Sheet.png"
-        )
-        self.sprite_skill1 = get_asset_path(
-            "sprites", "Character-2", "effect-Bash-Sheet.png"
-        )
-
-        self.sprite_character_skill2 = get_asset_path(
-            "sprites", "Character-2", "S2-Sheet.png"
-        )
-        self.sprite_skill2 = get_asset_path(
-            "sprites", "Character-2", "effect-Bash-Sheet.png"
-        )
-
-        self.sprite_character_skill3 = get_asset_path(
-            "sprites", "Character-2", "S3-1-Sheet.png"
-        )
-        self.sprite_skill3 = get_asset_path(
-            "sprites", "Character-2", "effect-Bash-Sheet.png"
-        )
-
-        # INITIALIZE ANIMATION FRAME LISTS
-        self.frames_IDLE = []
-        self.frames_IDLE_left = []
-        self.frames_MOVE_right = []
-        self.frames_MOVE_left = []
-        self.frames_HURT = []
-        self.frames_DEATH = [pyg.image.load(self.sprite_DEATH)]
-
-        self.frames_character_skill1 = []
-        self.frames_character_skill2 = []
-        self.frames_character_skill3 = []
-
-        self.frames_character_skill1_left = []
-        self.frames_character_skill2_left = []
-        self.frames_character_skill3_left = []
-
-        self.frames_effect_character_skill1 = []
-        self.frames_effect_character_skill2 = []
-        self.frames_effect_character_skill3_1 = []
-        self.frames_effect_character_skill3_2 = []
-
-        self.frames_effect_character_skill1_left = []
-        self.frames_effect_character_skill2_left = []
-        self.frames_effect_character_skill3_1_left = []
-        self.frames_effect_character_skill3_2_left = []
-
-        # EXTRACT IDLE ANIMATION FRAMES
-        for i in range(WATER_IDLE_FRAMES):
-            frame = pyg.image.load(self.sprite_IDLE).subsurface(
-                (i * WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
-            )
-            self.frames_IDLE.append(frame)
-            frame_flipped = pyg.transform.flip(frame, True, False)
-            self.frames_IDLE_left.append(frame_flipped)
-
-        # EXTRACT MOVE ANIMATION FRAMES (BOTH DIRECTIONS)
-        for i in range(WATER_MOVE_FRAMES):
-            frame = pyg.image.load(self.sprite_MOVE).subsurface(
-                (i * WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
-            )
-            self.frames_MOVE_right.append(frame)
-            # Create flipped version for left direction
-            frame_flipped = pyg.transform.flip(frame, True, False)
-            self.frames_MOVE_left.append(frame_flipped)
-
-        # EXTRACT HURT ANIMATION FRAMES
-        for i in range(WATER_HURT_FRAMES):
-            frame = pyg.image.load(self.sprite_HURT).subsurface(
-                (i * WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE)
-            )
-            self.frames_HURT.append(frame)
-
-        # EXTRACT ATTACK ANIMATION FRAMES
-
-        for i in range(WATER_SKILL1_FRAMES):
-            frame = pyg.image.load(self.sprite_character_skill1).subsurface(
-                i * WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE
-            )
-            self.frames_character_skill1.append(frame)
-
-            frame_flipped = pyg.transform.flip(frame, True, False)
-            self.frames_character_skill1_left.append(frame_flipped)
-
-        for i in range(WATER_SKILL2_FRAMES):
-            frame = pyg.image.load(self.sprite_character_skill2).subsurface(
-                i * WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE
-            )
-            self.frames_character_skill2.append(frame)
-
-            frame_flipped = pyg.transform.flip(frame, True, False)
-            self.frames_character_skill2_left.append(frame_flipped)
-
-        for i in range(WATER_SKILL3_FRAMES):
-            frame = pyg.image.load(self.sprite_character_skill3).subsurface(
-                i * WATER_FRAME_SIZE, 0, WATER_FRAME_SIZE, WATER_FRAME_SIZE
-            )
-            self.frames_character_skill3.append(frame)
-
-            frame_flipped = pyg.transform.flip(frame, True, False)
-            self.frames_character_skill3_left.append(frame_flipped)
-
-        # EXTRACT ATTACK ANIMATIONS OF THE PROJECTILE
-
-        # ANIMATION STATE VARIABLES
-        self.frame_MOVE = 0  # Current move animation frame index
-        self.frame_IDLE = 0  # Current idle animation frame index
-        self.tem_an_IDLE = 0  # Elapsed time for idle animation
-        self.tem_an_MOVE = 0  # Elapsed time for move animation
-        self.is_moving = False  # Movement state flag
-        self.direction = "right"  # Current direction (left or right)
-
-        # This is the time for the animations of the three skills
-        self.frame_character_skill1 = 0
-        self.frame_character_skill2 = 0
-        self.frame_character_skill3 = 0
-        self.tem_an_skill1 = 0
-        self.tem_an_skill2 = 0
-        self.tem_an_skill3 = 0
-        self.is_attacking_skill1 = False
-        self.is_attacking_skill2 = False
-        self.is_attacking_skill3 = False
-
-        self.frame_effect_skill1 = 0
-        self.frame_effect_skill2 = 0
-        self.frame_effect_skill3 = 0
-
-        self.loop_animation_skill1 = 0
-        self.loop_animation_skill2 = 0
-        self.loop_animation_skill3 = 0
-
-    # MOVEMENT METHODS
-
-    def move(self, direction):
-        if direction == "up":
-            self.position = (self.position[0], self.position[1] - self.speed)
-        elif direction == "down":
-            self.position = (self.position[0], self.position[1] + self.speed)
-        elif direction == "left":
-            self.position = (self.position[0] - self.speed, self.position[1])
-            self.direction = "left"
-        elif direction == "right":
-            self.position = (self.position[0] + self.speed, self.position[1])
-            self.direction = "right"
-
-    # STATUS AND INFORMATION METHODS
-
-    def get_status(self):
-        return {"health": self.health, "position": self.position}
-
-    # HEALTH AND COMBAT METHODS
-
-    def take_damage(self, amount):
-        self.health -= amount
-        if self.health < 0:
-            self.health = 0
-            self.death()
-
-    def death(self):
-        return pyg.image.load(self.sprite_DEATH)
-
-    def heal(self, amount):
-        self.health += amount
-        if self.health > 100:
-            self.health = 100
-
-    # ========================================================================
-    # ANIMATION METHODS
-    # ========================================================================
-
-    def update_animation(
-        self,
-        delta_time,
-        is_moving,
-        is_attacking_skill1,
-        is_attacking_skill2,
-        is_attacking_skill3,
-    ):
-
-        self.is_attacking_skill1 = is_attacking_skill1
-        self.is_attacking_skill2 = is_attacking_skill2
-        self.is_attacking_skill3 = is_attacking_skill3
-        self.is_moving = is_moving
-
-        # SKILL 1
-        if self.is_attacking_skill1:
-            self.tem_an_skill1 += delta_time
-            if self.tem_an_skill1 >= WATER_ANIMATION_SKILL1_SPEED:
-                self.tem_an_skill1 = 0
-                self.frame_character_skill1 += 1
-
-                if self.frame_character_skill1 >= len(self.frames_character_skill1):
-                    self.frame_character_skill1 = 0
-                    self.frame_effect_character_skill1 = 0
-                    self.is_attacking_skill1 = False
-
-        # SKILL 2
-        if self.is_attacking_skill2:
-            self.tem_an_skill2 += delta_time
-            if self.tem_an_skill2 >= WATER_ANIMATION_SKILL2_SPEED:
-                self.tem_an_skill2 = 0
-                self.frame_character_skill2 += 1
-
-                if self.frame_character_skill2 >= len(self.frames_character_skill2):
-                    self.frame_character_skill2 = 0
-                    self.is_attacking_skill2 = False
-
-        # SKILL 3
-        if self.is_attacking_skill3:
-            self.tem_an_skill3 += delta_time
-            if self.tem_an_skill3 >= WATER_ANIMATION_SKILL3_SPEED:
-                self.tem_an_skill3 = 0
-                # On incrémente l'INDEX
-                self.frame_character_skill3 += 1
-
-                # On compare l'index avec la longueur de la LISTE d'images
-                if self.frame_character_skill3 >= len(self.frames_character_skill3):
-                    self.frame_character_skill3 = 0
-                    self.is_attacking_skill3 = False
-
-        if is_moving:
-            # Update move animation
-            self.tem_an_MOVE += delta_time
-            if self.tem_an_MOVE >= WATER_ANIMATION_MOVE_SPEED:
-                self.tem_an_MOVE = 0
-                if self.frame_MOVE >= len(self.frames_MOVE_right) - 1:
-                    self.frame_MOVE = 0
-                else:
-                    self.frame_MOVE += 1
-        else:
-            # Update idle animation
-            self.tem_an_IDLE += delta_time
-            if self.tem_an_IDLE >= WATER_ANIMATION_IDLE_SPEED:
-                self.tem_an_IDLE = 0
-                if self.frame_IDLE >= len(self.frames_IDLE) - 1:
-                    self.frame_IDLE = 0
-                else:
-                    self.frame_IDLE += 1
-
-    def get_current_sprite(self):
-
-        if self.is_attacking_skill1:
-            if self.direction == "left":
-                return self.frames_character_skill1_left[self.frame_character_skill1]
-            else:
-                return self.frames_character_skill1[self.frame_character_skill1]
-
-        if self.is_attacking_skill2:
-            if self.direction == "left":
-                return self.frames_character_skill2_left[self.frame_character_skill2]
-            else:
-                return self.frames_character_skill2[self.frame_character_skill2]
-
-        if self.is_attacking_skill3:
-            if self.direction == "left":
-                return self.frames_character_skill3_left[self.frame_character_skill3]
-            else:
-                return self.frames_character_skill3[self.frame_character_skill3]
-
-        if self.is_moving:
-            if self.direction == "left":
-                return self.frames_MOVE_left[self.frame_MOVE]
-            else:
-                return self.frames_MOVE_right[self.frame_MOVE]
-        else:
-            if self.direction == "left":
-                return self.frames_IDLE_left[self.frame_IDLE]
-            else:
-                return self.frames_IDLE[self.frame_IDLE]
-
-    # SKILL SYSTEM
-
-    def skill1(self, delta_time, is_attacking_skill1):
-        """First special skill - To be implemented."""
-
-        pass
-
-    def skill2(self):
-        """Second special skill - To be implemented."""
-        pass
-
-    def skill3(self):
-        """Third special skill - To be implemented."""
-        pass
-
-    # GAME LOOP UPDATE
-
-    def update(self):
-        pass
+# =============================================================================
+# CONSTANTS
+# =============================================================================
+
+FRAME_SIZE = 40          # All character sprites use 40×40 px frames
+
+# Animation playback speeds (milliseconds per frame)
+ANIM_SPEED_IDLE  = 100
+ANIM_SPEED_MOVE  = 150
+ANIM_SPEED_HURT  = 80
+ANIM_SPEED_SKILL = 100
+
+# Per-character base stats and placeholder rectangle color.
+# Add / update entries as more characters are implemented by the art team.
+CHAR_STATS = {
+    1: {"speed": 3, "health": 100, "color": (220,  80,  20)},  # Fire
+    2: {"speed": 2, "health": 100, "color": ( 20, 120, 220)},  # Water
+    3: {"speed": 2, "health": 100, "color": (200, 200,  50)},
+    4: {"speed": 4, "health":  80, "color": (255, 230,   0)},  # Electric
+    5: {"speed": 2, "health": 100, "color": (100, 200, 100)},
+    6: {"speed": 2, "health": 100, "color": (200, 130,  50)},  # Food
+    7: {"speed": 2, "health": 100, "color": (150, 150, 150)},
+    8: {"speed": 3, "health":  80, "color": (180, 100, 255)},  # Ghost
+    9: {"speed": 2, "health": 100, "color": (100, 200,  50)},
+}
+_DEFAULT_STATS = {"speed": 2, "health": 100, "color": (128, 128, 128)}
 
 
 class Character:
     """
-    Generic character class for all 9 characters.
-    Each Character-N folder must contain IDLE-Sheet.png and MOVE-Sheet.png.
-    Optional sprites (loaded if present):
-      HURT-Sheet.png, DEAD-Sheet.png
-      S1-Sheet.png, S2-Sheet.png, S3-Sheet.png  (fallback: S3-1-Sheet.png)
-      effect-S1-Sheet.png, effect-S2-Sheet.png, effect-S3-Sheet.png
-    Frame counts are auto-detected from spritesheet width.
-    Hitbox is inset by HITBOX_INSET pixels on each side (28x28 inside a 40x40 sprite).
+    Unified character class for all 9 playable characters in Blitzkrieg.
+
+    Sprites are loaded from  assets/sprites/Character-<num>/  following the
+    naming convention defined by Aegon:
+
+        IDLE-Sheet.png    MOVE-Sheet.png    HURT-Sheet.png    DEAD-Sheet.png
+        S1-Sheet.png      S2-Sheet.png      S3-1-Sheet.png
+
+    Every file is optional. If a sheet is missing the animation falls back to:
+        - the IDLE frames  (for MOVE, HURT, S1, S2, S3)
+        - a solid-color 40×40 rectangle  (for IDLE itself and DEAD)
+
+    This means the game always runs, even for characters whose art is not
+    yet available (they will display a colored rectangle).
+
+    Args:
+        char_num (int): Character identifier 1–9.
     """
 
-    FRAME_SIZE = 40
-    HITBOX_INSET = 6
+    def __init__(self, char_num: int):
+        stats = CHAR_STATS.get(char_num, _DEFAULT_STATS)
 
-    # Milliseconds per frame for each animation state
-    ANIM_SPEED = {
-        "idle": 100,
-        "move": 200,
-        "hurt": 120,
-        "dead": 150,
-        "skill1": 100,
-        "skill2": 100,
-        "skill3": 100,
-        "effect1": 80,
-        "effect2": 80,
-        "effect3": 80,
-    }
+        # ── Core attributes ────────────────────────────────────────────────
+        self.char_num   = char_num
+        self.health     = stats["health"]
+        self.max_health = stats["health"]
+        self.speed      = stats["speed"]
+        self._ph_color  = stats["color"]    # placeholder rectangle color
 
-    # Standard filenames — same across all Character-N folders
-    SPRITE_FILES = {
-        "idle": "IDLE-Sheet.png",
-        "move": "MOVE-Sheet.png",
-        "hurt": "HURT-Sheet.png",
-        "dead": "DEAD-Sheet.png",
-        "skill1": "S1-Sheet.png",
-        "skill2": "S2-Sheet.png",
-        "skill3": "S3-Sheet.png",
-        "effect1": "effect-S1-Sheet.png",
-        "effect2": "effect-S2-Sheet.png",
-        "effect3": "effect-S3-Sheet.png",
-    }
+        # ── Spatial state ──────────────────────────────────────────────────
+        self.position  = (400, 400)
+        self.direction = "right"            # "left" | "right"
 
-    # Fallback filenames tried when primary name is missing
-    SPRITE_FILES_FALLBACK = {
-        "skill3": "S3-1-Sheet.png",
-    }
+        # ── Sprite loading ─────────────────────────────────────────────────
+        self._load_animations()
 
-    def __init__(self, char_number, position=(400, 400), health=100, speed=2):
-        self.char_number = char_number
-        self.char_folder = f"Character-{char_number}"
-        self.health = health
-        self.max_health = health
-        self.speed = speed
-        self.position = list(position)
-        self.direction = "right"
+        # ── Animation frame counters ───────────────────────────────────────
+        self.frame_IDLE = 0
+        self.frame_MOVE = 0
+        self.frame_HURT = 0
+        self.frame_S1   = 0
+        self.frame_S2   = 0
+        self.frame_S3   = 0
 
-        self.is_moving = False
-        self.is_hurt = False
-        self.is_dead = False
-        self.is_attacking = {1: False, 2: False, 3: False}
+        # ── Animation accumulators (ms) ────────────────────────────────────
+        self.tem_IDLE = 0
+        self.tem_MOVE = 0
+        self.tem_HURT = 0
+        self.tem_S1   = 0
+        self.tem_S2   = 0
+        self.tem_S3   = 0
 
-        # frames[key] = {'right': [Surface, ...], 'left': [Surface, ...]}
-        self.frames = {}
-        self.timers = {k: 0 for k in self.ANIM_SPEED}
-        self.indices = {k: 0 for k in self.ANIM_SPEED}
+        # ── State flags ────────────────────────────────────────────────────
+        self.is_moving       = False
+        self.is_attacking_s1 = False
+        self.is_attacking_s2 = False
+        self.is_attacking_s3 = False
+        self.is_hurt         = False
+        self.is_dead         = False
 
-        self._load_sprites()
+    # =========================================================================
+    # Private helpers
+    # =========================================================================
 
-    # SPRITE LOADING
+    def _placeholder(self, color: tuple = None) -> list:
+        """Return a single-element list with a solid-color 40×40 surface."""
+        surf = pyg.Surface((FRAME_SIZE, FRAME_SIZE))
+        surf.fill(color if color is not None else self._ph_color)
+        return [surf]
 
-    def _load_sheet(self, key, filename):
+    def _load_sheet(self, filename: str):
+        """
+        Try to load a sprite sheet and split it into 40-px frames.
+
+        Returns:
+            list[pygame.Surface] if the file exists, None otherwise.
+        """
         try:
-            path = get_asset_path("sprites", self.char_folder, filename)
-            sheet = pyg.image.load(path)
-            frame_count = sheet.get_width() // self.FRAME_SIZE
-            right_frames, left_frames = [], []
-            for i in range(frame_count):
-                frame = sheet.subsurface(
-                    (i * self.FRAME_SIZE, 0, self.FRAME_SIZE, self.FRAME_SIZE)
-                )
-                right_frames.append(frame)
-                left_frames.append(pyg.transform.flip(frame, True, False))
-            self.frames[key] = {"right": right_frames, "left": left_frames}
-            return True
+            path = get_asset_path("sprites", f"Character-{self.char_num}", filename)
+            sheet = pyg.image.load(path).convert_alpha()
+            count = max(1, sheet.get_width() // FRAME_SIZE)
+            return [
+                sheet.subsurface((i * FRAME_SIZE, 0, FRAME_SIZE, FRAME_SIZE))
+                for i in range(count)
+            ]
         except Exception:
-            return False
+            return None
 
-    def _load_sprites(self):
-        for key, filename in self.SPRITE_FILES.items():
-            if not self._load_sheet(key, filename):
-                fallback = self.SPRITE_FILES_FALLBACK.get(key)
-                if fallback:
-                    self._load_sheet(key, fallback)
+    @staticmethod
+    def _flip(frames: list) -> list:
+        """Return horizontally mirrored copies of a frames list."""
+        return [pyg.transform.flip(f, True, False) for f in frames]
 
-        if "idle" not in self.frames:
-            raise FileNotFoundError(
-                f"Required IDLE-Sheet.png not found for {self.char_folder}"
-            )
-        if "move" not in self.frames:
-            self.frames["move"] = self.frames["idle"]
+    def _load_animations(self):
+        """
+        Load all animation sheets. Substitute a placeholder for each missing
+        file so every character is always renderable.
+        """
+        # IDLE is the primary fallback — check availability once.
+        _idle_raw     = self._load_sheet("IDLE-Sheet.png")
+        self.has_sprites = _idle_raw is not None   # True only when real art exists
 
-    # HITBOX
+        idle = _idle_raw                            or self._placeholder()
+        move = self._load_sheet("MOVE-Sheet.png")  or idle
+        hurt = self._load_sheet("HURT-Sheet.png")  or idle
+        dead = self._load_sheet("DEAD-Sheet.png")  or self._placeholder((80, 0, 0))
+        s1   = self._load_sheet("S1-Sheet.png")    or idle
+        s2   = self._load_sheet("S2-Sheet.png")    or idle
+        s3   = self._load_sheet("S3-1-Sheet.png")  or idle
 
-    def get_hitbox(self):
-        """Returns a pygame.Rect slightly smaller than the sprite."""
-        x, y = int(self.position[0]), int(self.position[1])
-        inset = self.HITBOX_INSET
-        size = self.FRAME_SIZE - 2 * inset
-        return pyg.Rect(x + inset, y + inset, size, size)
+        # Right-facing originals
+        self.frames_IDLE = idle
+        self.frames_MOVE = move
+        self.frames_HURT = hurt
+        self.frames_DEAD = dead
+        self.frames_S1   = s1
+        self.frames_S2   = s2
+        self.frames_S3   = s3
 
-    # MOVEMENT & STATS
+        # Left-facing mirrors (horizontally flipped)
+        self.frames_IDLE_left = self._flip(idle)
+        self.frames_MOVE_left = self._flip(move)
+        self.frames_HURT_left = self._flip(hurt)
+        self.frames_S1_left   = self._flip(s1)
+        self.frames_S2_left   = self._flip(s2)
+        self.frames_S3_left   = self._flip(s3)
 
-    def move(self, direction):
+    # =========================================================================
+    # Movement
+    # =========================================================================
+
+    def move(self, direction: str):
+        """Move one step in the given direction and update facing."""
+        x, y = self.position
         if direction == "up":
-            self.position[1] -= self.speed
+            self.position = (x, y - self.speed)
         elif direction == "down":
-            self.position[1] += self.speed
+            self.position = (x, y + self.speed)
         elif direction == "left":
-            self.position[0] -= self.speed
+            self.position = (x - self.speed, y)
             self.direction = "left"
         elif direction == "right":
-            self.position[0] += self.speed
+            self.position = (x + self.speed, y)
             self.direction = "right"
 
-    def take_damage(self, amount):
-        if self.is_dead:
-            return
-        self.health -= amount
-        if self.health <= 0:
-            self.health = 0
+    # =========================================================================
+    # Health / combat
+    # =========================================================================
+
+    def take_damage(self, amount: int):
+        """
+        Inflict *amount* damage.
+        Sets is_dead when health reaches 0; otherwise triggers hurt animation.
+        """
+        self.health = max(0, self.health - amount)
+        if self.health == 0:
             self.is_dead = True
-            self.indices["dead"] = 0
-            self.timers["dead"] = 0
         else:
-            self.is_hurt = True
-            self.indices["hurt"] = 0
-            self.timers["hurt"] = 0
+            self.is_hurt    = True
+            self.frame_HURT = 0
+            self.tem_HURT   = 0
 
-    def heal(self, amount):
-        if not self.is_dead:
-            self.health = min(self.health + amount, self.max_health)
+    def heal(self, amount: int):
+        """Restore *amount* health, capped at max_health."""
+        self.health = min(self.max_health, self.health + amount)
 
-    def get_status(self):
-        return {"health": self.health, "position": tuple(self.position)}
-
-    # ANIMATION HELPERS
-
-    def _advance(self, key, delta_time, loop=True):
-        """
-        Advance animation timer and index.
-        Returns True when a non-looping animation has reached its last frame.
-        """
-        frames = self.frames.get(key, {}).get("right", [])
-        if not frames:
-            return True
-        # Stay frozen on last frame for non-looping animations that finished
-        if not loop and self.indices.get(key, 0) >= len(frames) - 1:
-            return True
-        self.timers[key] += delta_time
-        if self.timers[key] < self.ANIM_SPEED[key]:
-            return False
-        self.timers[key] = 0
-        self.indices[key] += 1
-        if self.indices[key] >= len(frames):
-            if loop:
-                self.indices[key] = 0
-            else:
-                self.indices[key] = len(frames) - 1
-                return True
-        return False
-
-    def _get_frame(self, key):
-        """Current frame Surface for *key* in the current facing direction."""
-        frames = self.frames.get(key, {}).get(self.direction, [])
-        if not frames:
-            return None
-        return frames[min(self.indices.get(key, 0), len(frames) - 1)]
-
-    # ANIMATION UPDATE
-
-    def update_animation(
-        self,
-        delta_time,
-        is_moving,
-        is_attacking_skill1=False,
-        is_attacking_skill2=False,
-        is_attacking_skill3=False,
-    ):
-        self.is_moving = is_moving
-
-        if self.is_dead:
-            if "dead" in self.frames:
-                self._advance("dead", delta_time, loop=False)
-            return
-
-        skill_inputs = (is_attacking_skill1, is_attacking_skill2, is_attacking_skill3)
-
-        # Mirror Water's behaviour: set attack flag each frame from input,
-        # then advance the animation and clear the flag when it finishes.
-        for n, pressed in enumerate(skill_inputs, 1):
-            key = f"skill{n}"
-            eff_key = f"effect{n}"
-            self.is_attacking[n] = pressed and key in self.frames
-
-            if self.is_attacking[n]:
-                done = self._advance(key, delta_time, loop=False)
-                if done:
-                    self.indices[key] = 0
-                    if eff_key in self.frames:
-                        self.indices[eff_key] = 0
-                    self.is_attacking[n] = False
-                elif eff_key in self.frames:
-                    self._advance(eff_key, delta_time, loop=True)
-
-        # Hurt plays once then clears
-        if self.is_hurt:
-            if "hurt" in self.frames:
-                if self._advance("hurt", delta_time, loop=False):
-                    self.is_hurt = False
-            else:
-                self.is_hurt = False
-
-        # Base locomotion
-        if is_moving:
-            self._advance("move", delta_time, loop=True)
-        else:
-            self._advance("idle", delta_time, loop=True)
-
-    # SPRITE GETTERS
-
-    def get_current_sprite(self):
-        """Returns the character sprite for the current animation state."""
-        if self.is_dead:
-            return self._get_frame("dead") or self._get_frame("idle")
-
-        for n in (1, 2, 3):
-            if self.is_attacking[n]:
-                frame = self._get_frame(f"skill{n}")
-                if frame:
-                    return frame
-
-        if self.is_hurt:
-            frame = self._get_frame("hurt")
-            if frame:
-                return frame
-
-        if self.is_moving:
-            return self._get_frame("move") or self._get_frame("idle")
-        return self._get_frame("idle")
-
-    def get_effect_sprite(self):
-        """Returns the effect/projectile sprite for the active skill, or None."""
-        for n in (1, 2, 3):
-            if self.is_attacking[n]:
-                frame = self._get_frame(f"effect{n}")
-                if frame:
-                    return frame
-        return None
-
-    # SKILL TRIGGERS
-
-    def skill1(self):
-        if not self.is_attacking[1] and "skill1" in self.frames:
-            self.is_attacking[1] = True
-            self.indices["skill1"] = 0
-            self.timers["skill1"] = 0
-
-    def skill2(self):
-        if not self.is_attacking[2] and "skill2" in self.frames:
-            self.is_attacking[2] = True
-            self.indices["skill2"] = 0
-            self.timers["skill2"] = 0
-
-    def skill3(self):
-        if not self.is_attacking[3] and "skill3" in self.frames:
-            self.is_attacking[3] = True
-            self.indices["skill3"] = 0
-            self.timers["skill3"] = 0
-
-    # ATTACK HITBOX & COLLISION
-
-    # Reach (pixels devant le personnage) et taille pour chaque skill
-    ATTACK_HITBOX_PARAMS = {
-        1: {"reach": 24, "width": 28, "height": 20},
-        2: {"reach": 32, "width": 36, "height": 24},
-        3: {"reach": 48, "width": 44, "height": 28},
-    }
-
-    def get_attack_hitbox(self, skill_number):
-        """
-        Return a pygame.Rect that represent the hitbox of the current attack,
-        projected in the direction of the character
-        Return None if the skill is not during the execution
-        """
-        if not self.is_attacking.get(skill_number, False):
-            return None
-        params = self.ATTACK_HITBOX_PARAMS.get(skill_number)
-        if not params:
-            return None
-
-        reach = params["reach"]
-        w = params["width"]
-        h = params["height"]
-
-        cx = int(self.position[0]) + self.FRAME_SIZE // 2
-        cy = int(self.position[1]) + self.FRAME_SIZE // 2
-
-        if self.direction == "right":
-            x = cx + self.HITBOX_INSET
-            y = cy - h // 2
-        else:
-            x = cx - self.HITBOX_INSET - reach - w
-            y = cy - h // 2
-
-        return pyg.Rect(x, y, w + reach, h)
-
-    def check_hit(self, target, skill_number):
-        """
-        Vérifie si l'attaque du skill `skill_number` touche `target`
-        (tout objet ayant get_hitbox()).
-        Retourne True si collision, False sinon.
-        """
-        attack_box = self.get_attack_hitbox(skill_number)
-        if attack_box is None:
-            return False
-        target_box = target.get_hitbox()
-        return attack_box.colliderect(target_box)
-
-    # RÉSEAU — sérialisation / désérialisation de l'état complet
-
-    def get_network_state(self):
-        """
-        Retourne un dict JSON-serializable décrivant l'état complet du
-        personnage pour le broadcast réseau.
-        """
-        active_skills = [n for n in (1, 2, 3) if self.is_attacking.get(n, False)]
-        attack_hitboxes = {}
-        for n in active_skills:
-            hb = self.get_attack_hitbox(n)
-            if hb:
-                attack_hitboxes[str(n)] = [hb.x, hb.y, hb.width, hb.height]
-
+    def get_status(self) -> dict:
+        """Return a snapshot of this character's current state."""
         return {
-            "char_number": self.char_number,
-            "pos": [round(self.position[0], 1), round(self.position[1], 1)],
-            "direction": self.direction,
-            "health": self.health,
-            "is_moving": self.is_moving,
-            "is_hurt": self.is_hurt,
-            "is_dead": self.is_dead,
-            "is_attacking": {str(k): v for k, v in self.is_attacking.items()},
-            "anim_indices": {k: self.indices.get(k, 0) for k in self.ANIM_SPEED},
-            "attack_hitboxes": attack_hitboxes,
+            "char_num": self.char_num,
+            "health":   self.health,
+            "position": self.position,
         }
 
-    def apply_network_state(self, state):
+    # =========================================================================
+    # Skills
+    # =========================================================================
+
+    def use_skill(self, skill_num: int) -> bool:
         """
-        Applique un état reçu du serveur (dict provenant de get_network_state).
-        Utilisé pour mettre à jour les personnages distants.
+        Trigger skill *skill_num* (1, 2 or 3) if it is not already active.
+
+        Returns:
+            True  – skill was triggered (caller should notify the server).
+            False – skill already in progress, nothing happened.
+        """
+        if skill_num == 1 and not self.is_attacking_s1:
+            self.is_attacking_s1 = True
+            self.frame_S1 = 0
+            self.tem_S1   = 0
+            return True
+        if skill_num == 2 and not self.is_attacking_s2:
+            self.is_attacking_s2 = True
+            self.frame_S2 = 0
+            self.tem_S2   = 0
+            return True
+        if skill_num == 3 and not self.is_attacking_s3:
+            self.is_attacking_s3 = True
+            self.frame_S3 = 0
+            self.tem_S3   = 0
+            return True
+        return False
+
+    # =========================================================================
+    # Animation update
+    # =========================================================================
+
+    def update_animation(self, delta_time: int, is_moving: bool):
+        """
+        Advance all active animation timers by *delta_time* milliseconds.
+        Call once per game frame, before get_current_sprite().
+
+        Args:
+            delta_time: ms elapsed since the previous frame (clock.tick value).
+            is_moving:  True when movement arrow keys are currently held.
+        """
+        self.is_moving = is_moving
+
+        # ── Skill 1 (plays once then auto-clears) ─────────────────────────
+        if self.is_attacking_s1:
+            self.tem_S1 += delta_time
+            if self.tem_S1 >= ANIM_SPEED_SKILL:
+                self.tem_S1 = 0
+                self.frame_S1 += 1
+                if self.frame_S1 >= len(self.frames_S1):
+                    self.frame_S1 = 0
+                    self.is_attacking_s1 = False
+
+        # ── Skill 2 ────────────────────────────────────────────────────────
+        if self.is_attacking_s2:
+            self.tem_S2 += delta_time
+            if self.tem_S2 >= ANIM_SPEED_SKILL:
+                self.tem_S2 = 0
+                self.frame_S2 += 1
+                if self.frame_S2 >= len(self.frames_S2):
+                    self.frame_S2 = 0
+                    self.is_attacking_s2 = False
+
+        # ── Skill 3 ────────────────────────────────────────────────────────
+        if self.is_attacking_s3:
+            self.tem_S3 += delta_time
+            if self.tem_S3 >= ANIM_SPEED_SKILL:
+                self.tem_S3 = 0
+                self.frame_S3 += 1
+                if self.frame_S3 >= len(self.frames_S3):
+                    self.frame_S3 = 0
+                    self.is_attacking_s3 = False
+
+        # ── Hurt (plays once then clears) ─────────────────────────────────
+        if self.is_hurt:
+            self.tem_HURT += delta_time
+            if self.tem_HURT >= ANIM_SPEED_HURT:
+                self.tem_HURT = 0
+                self.frame_HURT += 1
+                if self.frame_HURT >= len(self.frames_HURT):
+                    self.frame_HURT = 0
+                    self.is_hurt = False
+
+        # ── Movement / Idle (looping) ──────────────────────────────────────
+        if is_moving:
+            self.tem_MOVE += delta_time
+            if self.tem_MOVE >= ANIM_SPEED_MOVE:
+                self.tem_MOVE = 0
+                self.frame_MOVE = (self.frame_MOVE + 1) % len(self.frames_MOVE)
+        else:
+            self.tem_IDLE += delta_time
+            if self.tem_IDLE >= ANIM_SPEED_IDLE:
+                self.tem_IDLE = 0
+                self.frame_IDLE = (self.frame_IDLE + 1) % len(self.frames_IDLE)
+
+    # =========================================================================
+    # Rendering
+    # =========================================================================
+
+    def get_current_sprite(self) -> "pyg.Surface":
+        """
+        Return the surface that should be blitted this frame.
+
+        Priority (highest first):
+            dead > hurt > skill3 > skill2 > skill1 > move > idle
+        """
+        left = self.direction == "left"
+
+        if self.is_dead:
+            return self.frames_DEAD[-1]         # hold last death frame
+
+        if self.is_hurt:
+            frames = self.frames_HURT_left if left else self.frames_HURT
+            return frames[min(self.frame_HURT, len(frames) - 1)]
+
+        if self.is_attacking_s1:
+            frames = self.frames_S1_left if left else self.frames_S1
+            return frames[min(self.frame_S1, len(frames) - 1)]
+
+        if self.is_attacking_s2:
+            frames = self.frames_S2_left if left else self.frames_S2
+            return frames[min(self.frame_S2, len(frames) - 1)]
+
+        if self.is_attacking_s3:
+            frames = self.frames_S3_left if left else self.frames_S3
+            return frames[min(self.frame_S3, len(frames) - 1)]
+
+        if self.is_moving:
+            frames = self.frames_MOVE_left if left else self.frames_MOVE
+            return frames[self.frame_MOVE]
+
+        frames = self.frames_IDLE_left if left else self.frames_IDLE
+        return frames[self.frame_IDLE]
+
+    # =========================================================================
+    # Network helpers
+    # =========================================================================
+
+    def apply_network_state(self, state: dict):
+        """
+        Apply a state snapshot received from the server to synchronise a
+        remote player's character.
+
+        Args:
+            state: dict produced by the [EntityState] / [GameState] message.
         """
         if "pos" in state:
-            self.position = list(state["pos"])
+            self.position = tuple(state["pos"])
         if "direction" in state:
             self.direction = state["direction"]
         if "health" in state:
-            self.health = state["health"]
+            self.health = int(state["health"])
+            self.is_dead = self.health <= 0
         if "is_moving" in state:
-            self.is_moving = state["is_moving"]
+            self.is_moving = bool(state["is_moving"])
         if "is_hurt" in state:
-            self.is_hurt = state["is_hurt"]
-        if "is_dead" in state:
-            self.is_dead = state["is_dead"]
-        if "is_attacking" in state:
-            self.is_attacking = {int(k): v for k, v in state["is_attacking"].items()}
-        if "anim_indices" in state:
-            for k, v in state["anim_indices"].items():
-                if k in self.indices:
-                    self.indices[k] = v
+            self.is_hurt = bool(state["is_hurt"])
+
+        atk = state.get("is_attacking", {})
+        self.is_attacking_s1 = bool(atk.get("1", False))
+        self.is_attacking_s2 = bool(atk.get("2", False))
+        self.is_attacking_s3 = bool(atk.get("3", False))
+
+        idx = state.get("anim_indices", {})
+        self.frame_IDLE = int(idx.get("idle",   self.frame_IDLE))
+        self.frame_MOVE = int(idx.get("move",   self.frame_MOVE))
+        self.frame_HURT = int(idx.get("hurt",   self.frame_HURT))
+        self.frame_S1   = int(idx.get("skill1", self.frame_S1))
+        self.frame_S2   = int(idx.get("skill2", self.frame_S2))
+        self.frame_S3   = int(idx.get("skill3", self.frame_S3))
+
+    def get_effect_sprite(self):
+        """
+        Return the current skill-effect sprite (projectile / VFX) if any.
+        Stub — will be implemented when effect sheets are available.
+        """
+        return None
+
+    # =========================================================================
+    # Game-loop hook
+    # =========================================================================
 
     def update(self):
+        """Reserved for future per-frame logic (AI, physics, status ticks…)."""
         pass
 
 
-def load_all_characters():
-    """Load every Character-N folder that contains at least IDLE-Sheet.png."""
-    characters = {}
-    for i in range(1, 10):
-        try:
-            characters[f"Character-{i}"] = Character(i)
-        except FileNotFoundError:
-            pass
-    return characters
+# =============================================================================
+# LEGACY ALIASES — kept so existing imports don't break
+# =============================================================================
+
+class Furnace(Character):
+    """Fire character — thin alias for Character(1)."""
+    def __init__(self):
+        super().__init__(1)
+
+
+class Water(Character):
+    """Water character — thin alias for Character(2)."""
+    def __init__(self):
+        super().__init__(2)

@@ -954,11 +954,15 @@ class Menu:
         # Check if all players are ready
         total_players_in_session = self.number_players + 1  # Include the current player
 
-        # Count how many players are ready
-        ready_count = sum(
-            1 for p_id in range(1, max_human_slot + 1) if self.players_ready[p_id]
-        )
-        if ready_count == max_human_slot and max_human_slot > 0:
+        # Joueurs réellement présents = moi + ceux dont on a reçu la sélection
+        # Cela permet de lancer la partie même si on est seul dans la session.
+        human_present = {self.my_player_id}
+        for p_id in range(1, max_human_slot + 1):
+            if any(c is not None for c in self.players_characters[p_id]):
+                human_present.add(p_id)
+
+        ready_count = sum(1 for p_id in human_present if self.players_ready[p_id])
+        if ready_count == len(human_present) and ready_count > 0:
             self.menu_state = "start game"
             self.etat = "game"
 
