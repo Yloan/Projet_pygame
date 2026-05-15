@@ -269,10 +269,6 @@ class Serveur:
     # GAME STATE BROADCAST
 
     def _broadcast_game_state(self, session_name):
-        """
-        Diffuse l'état complet de toutes les entités (joueurs + bots) de la session
-        à tous les clients qui ont rejoint cette session
-        """
         with self.game_states_lock:
             entities = dict(self.game_states.get(session_name, {}))
 
@@ -293,7 +289,7 @@ class Serveur:
     # SESSION MANAGEMENT
 
     def broadcast_sessions(self):
-        """Envoie la liste des sessions à jour à TOUS les clients connectés."""
+        """Send the session's list to all clients"""
         try:
             with self.sessions_lock:
                 message = f"[SessionsList]:{json.dumps(self.sessions)}"

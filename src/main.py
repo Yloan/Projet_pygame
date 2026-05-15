@@ -10,7 +10,7 @@ import game.characters as player_module
 import ui.menu as menu
 import ui.Music as music_module
 import utils.paths as __path__
-from game.characters import Character, FRAME_SIZE
+from game.characters import FRAME_SIZE, Character
 from game.map_laoder import MapLoader
 from ui.console import (
     print_error,
@@ -21,6 +21,7 @@ from ui.console import (
 )
 from ui.HUD import HUD
 
+# Gloabl variables
 MESSAGE_DELIMITER = "\n"
 HUD_POSITIONS = {1: (10, 10), 2: (993, 10), 3: (10, 530), 4: (993, 530)}
 
@@ -41,7 +42,7 @@ class Game:
         )
 
         try:
-            # Reuse menu's pygame resources (screen, clock, font, colors)
+            # Reuse menu's pygame resources
             self.screen = self.Menu.screen
             self.wallpaper = self.Menu.wallpaper
             self.clock = self.Menu.clock
@@ -50,12 +51,12 @@ class Game:
                 self.TEXT_COL = self.Menu.TEXT_COL
                 self.TEXT_COL2 = self.Menu.TEXT_COL2
             except Exception:
-                # Fallback to default values if menu doesn't expose them
+                # Default values if menu doesn't expose them
                 self.font = pyg.font.SysFont("arialblack", 40)
                 self.TEXT_COL = (255, 255, 255)
                 self.TEXT_COL2 = (255, 0, 0)
         except Exception:
-            # Minimal fallback if Menu initialization fails
+            # Minimal if Menu initialization fails
             flags = pyg.FULLSCREEN if self.fullscreen else 0
             self.screen = pyg.display.set_mode((self.width, self.height), flags)
             self.wallpaper = pyg.Surface((self.width, self.height))
@@ -67,15 +68,12 @@ class Game:
         self.map_back = pyg.transform.scale(background, (self.width, self.height))
         self.map_front = pyg.transform.scale(foreground, (self.width, self.height))
 
-        # [ADDED] Characters are created at game-start from the menu selection.
-        # Three slots: one active on field + two supports.
-        # See _init_game_characters() for details.
-        self.active_char        = None   # character currently on the field
-        self.support_1          = None   # support slot 1 — activated with Q
-        self.support_2          = None   # support slot 2 — activated with W
-        self.player             = None   # alias for active_char (legacy draw code)
-        self._game_initialized  = False  # True once _init_game_characters ran
-        self._retreat_cooldown  = 0      # frames remaining before next retreat
+        self.active_char = None
+        self.support_1 = None
+        self.support_2 = None
+        self.player = None
+        self._game_initialized = False
+        self._retreat_cooldown = 0
         self.running = False
 
         # NETWORK CONFIGURATION
@@ -111,13 +109,10 @@ class Game:
         self.other_huds = {}
         self.hud = None
 
-        # Entités distantes (autres joueurs/bots) : {player_id: Character}
-        # Peuplé dynamiquement à la réception des [GameState]
         self.remote_players = {}
 
-        # Intervalle d'envoi de l'état (en ticks à 60fps — envoie toutes les 2 frames)
         self.delta_time_entity_send = 0
-        self.ENTITY_SEND_INTERVAL = 2
+        self.SENT_INTERVAL = 2
 
     def switch_music(self, i=None):
         if i is not None:
@@ -214,7 +209,7 @@ class Game:
                 data = json.loads(message.split(":", 1)[1])
                 pid = data["player_id"]
                 if pid != self.Menu.my_player_id:
-                    if pid not in self.other_huds:  # ← instanciation lazy
+                    if pid not in self.other_huds:
                         self.other_huds[pid] = HUD(pid)
                     self.other_huds[pid].updateFromServer(data["hud"])
 
@@ -246,14 +241,14 @@ class Game:
 
     def _connect_to_server(self):
         try:
-            # Close existing socket if any
+            # Close existing socket
             if self._client_socket:
                 try:
                     self._client_socket.close()
                 except Exception:
                     pass
 
-            # Create new socket connection
+            # Create new socket
             self._client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._client_socket.settimeout(2.0)
             self._client_socket.connect((self.host, self.port))
@@ -378,36 +373,22 @@ class Game:
         except Exception:
             pass
 
-    # =========================================================================
-    # [ADDED] Character initialisation at game start
-    # =========================================================================
-
     def _init_game_characters(self):
-        """
-        Create Character objects from the menu's selection and assign them:
-            active_char = character_1  (enters the field immediately)
-            support_1   = character_2  (Q key)
-            support_2   = character_3  (W key)
-
-        Called once when the menu transitions to the game state.
-        """
         c1 = self.Menu.character_1 or 1
         c2 = self.Menu.character_2 or 1
         c3 = self.Menu.character_3 or 1
 
         self.active_char = player_module.Character(c1)
-        self.support_1   = player_module.Character(c2)
-        self.support_2   = player_module.Character(c3)
-        self.player      = self.active_char   # alias kept for legacy code
+        self.support_1 = player_module.Character(c2)
+        self.support_2 = player_module.Character(c3)
+        self.player = self.active_char
 
         print_success(
             f"Jeu lancé | actif: perso {c1} | "
             f"support 1: perso {c2} | support 2: perso {c3}"
         )
 
-    # =========================================================================
     # GAME UPDATE AND RENDERING
-    # =========================================================================
 
     def update(self):
         if self.active_char:
@@ -436,13 +417,10 @@ class Game:
 
         screen = self.screen
 
-        # ── Starting state ────────────────────────────────────────────────────
-        # Switch the two lines below to jump straight into the game for testing.
-        self.etat = "menu"   # normal flow (multiplayer session)
-        # self.etat = "game"  # dev shortcut: skip menu entirely
+        self.etat = "menu"
+        # self.etat = "game"
 
-        # When starting directly in game, initialise characters with defaults
-        # so the loop never runs with active_char = None.
+        # When starting directly in game initialise characters with defaults
         if self.etat == "game" and not self._game_initialized:
             self.Menu.character_1 = self.Menu.character_1 or 2  # Water
             self.Menu.character_2 = self.Menu.character_2 or 1  # Fire
@@ -462,7 +440,6 @@ class Game:
                 screen.blit(self.wallpaper, (0, 0))
 
                 self.Menu.method_menu()
-                # [CHANGED] Init characters once at the game transition
                 if self.Menu.etat == "game" and not self._game_initialized:
                     self._init_game_characters()
                     self._game_initialized = True
@@ -552,11 +529,9 @@ class Game:
 
             # GAME STATE - Actual gameplay
             if self.etat == "game":
-                # ── Frame timing (single tick per frame) ──────────────────
-                dt         = self.clock.tick(60) / 1000   # seconds (for HUD)
-                delta_time = int(dt * 1000)               # ms (for animations)
+                dt = self.clock.tick(60) / 1000  # seconds (for HUD)
+                delta_time = int(dt * 1000)  # ms (for animations)
 
-                # ── Event handling ────────────────────────────────────────
                 for event in pyg.event.get():
                     if event.type == pyg.QUIT:
                         self.running = False
@@ -567,7 +542,7 @@ class Game:
                         if event.key == pyg.K_F2:
                             self.dev_display_ = not self.dev_display_
 
-                        # [ADDED] Active character skills — A / S / D
+                        # active character skills — A / S / D
                         if event.key == pyg.K_a:
                             if self.active_char.use_skill(1):
                                 self.send_to_server(
@@ -584,56 +559,68 @@ class Game:
                                     f"[SkillUsed]:{json.dumps({'player_id': self.Menu.my_player_id, 'char_num': self.active_char.char_num, 'skill': 3})}"
                                 )
 
-                        # [ADDED] Support skills (Q / W) and retreat (E+Q / E+W)
-                        # Q alone  = support-1 uses skill 1 from backup
-                        # E+Q      = retreat: swap active ↔ support 1
-                        # W alone  = support-2 uses skill 1 from backup
-                        # E+W      = retreat: swap active ↔ support 2
                         keys_now = pyg.key.get_pressed()
                         if event.key == pyg.K_q:
                             if keys_now[pyg.K_e]:
-                                if self._retreat_cooldown == 0 and not self.support_1.is_dead:
+                                if (
+                                    self._retreat_cooldown == 0
+                                    and not self.support_1.is_dead
+                                ):
                                     self.active_char, self.support_1 = (
-                                        self.support_1, self.active_char
+                                        self.support_1,
+                                        self.active_char,
                                     )
                                     self.player = self.active_char
                                     self._retreat_cooldown = 60
                                     self.send_to_server(
                                         f"[Retreat]:{json.dumps({'player_id': self.Menu.my_player_id, 'slot': 1, 'active_char': self.active_char.char_num})}"
                                     )
-                                    print_info(f"Retraite → perso {self.active_char.char_num} en jeu")
+                                    print_info(
+                                        f"Retraite → perso {self.active_char.char_num} en jeu"
+                                    )
                             else:
-                                if not self.support_1.is_dead and self.support_1.use_skill(1):
+                                if (
+                                    not self.support_1.is_dead
+                                    and self.support_1.use_skill(1)
+                                ):
                                     self.send_to_server(
                                         f"[SupportSkill]:{json.dumps({'player_id': self.Menu.my_player_id, 'slot': 1, 'char_num': self.support_1.char_num, 'skill': 1})}"
                                     )
 
                         if event.key == pyg.K_w:
                             if keys_now[pyg.K_e]:
-                                if self._retreat_cooldown == 0 and not self.support_2.is_dead:
+                                if (
+                                    self._retreat_cooldown == 0
+                                    and not self.support_2.is_dead
+                                ):
                                     self.active_char, self.support_2 = (
-                                        self.support_2, self.active_char
+                                        self.support_2,
+                                        self.active_char,
                                     )
                                     self.player = self.active_char
                                     self._retreat_cooldown = 60
                                     self.send_to_server(
                                         f"[Retreat]:{json.dumps({'player_id': self.Menu.my_player_id, 'slot': 2, 'active_char': self.active_char.char_num})}"
                                     )
-                                    print_info(f"Retraite → perso {self.active_char.char_num} en jeu")
+                                    print_info(
+                                        f"Retraite → perso {self.active_char.char_num} en jeu"
+                                    )
                             else:
-                                if not self.support_2.is_dead and self.support_2.use_skill(1):
+                                if (
+                                    not self.support_2.is_dead
+                                    and self.support_2.use_skill(1)
+                                ):
                                     self.send_to_server(
                                         f"[SupportSkill]:{json.dumps({'player_id': self.Menu.my_player_id, 'slot': 2, 'char_num': self.support_2.char_num, 'skill': 1})}"
                                     )
 
-                # [ADDED] Tick retreat cooldown (~1 s at 60 fps)
                 if self._retreat_cooldown > 0:
                     self._retreat_cooldown -= 1
 
-                # ── Draw background ───────────────────────────────────────
+                # draw background
                 self.screen.blit(self.map_back, (0, 0))
 
-                # ── Movement ──────────────────────────────────────────────
+                # movement
                 keys_pressed = pyg.key.get_pressed()
                 is_moving = (
                     keys_pressed[pyg.K_RIGHT]
@@ -651,15 +638,14 @@ class Game:
                 if keys_pressed[pyg.K_RIGHT]:
                     self.active_char.move("right")
 
-                # [CHANGED] unified update_animation — skill flags are internal
                 self.active_char.update_animation(delta_time, is_moving)
 
-                # ── Draw active character ─────────────────────────────────
+                # Draw active character
                 current_sprite = self.active_char.get_current_sprite()
-                player_pos     = self.active_char.position
+                player_pos = self.active_char.position
                 self.screen.blit(current_sprite, player_pos)
 
-                # ── Draw remote players ───────────────────────────────────
+                # DRaw remote players
                 for pid, remote_char in self.remote_players.items():
                     remote_sprite = remote_char.get_current_sprite()
                     if remote_sprite:
@@ -674,39 +660,38 @@ class Game:
                             ex -= FRAME_SIZE
                         self.screen.blit(effect_sprite, (ex, ey))
 
-                # ── Foreground ────────────────────────────────────────────
+                # Foreground
                 self.screen.blit(self.map_front, (0, 0))
 
-                # ── Broadcast HUD ─────────────────────────────────────────
+                # Broadcast HUD
                 self._broadcast_hud_state()
 
-                # ── Send entity state to server ───────────────────────────
-                # [CHANGED] char_num and attribute names updated for new Character class
+                # send entity state to server
                 self.delta_time_entity_send += 1
-                if self.delta_time_entity_send >= self.ENTITY_SEND_INTERVAL:
+                if self.delta_time_entity_send >= self.SENT_INTERVAL:
                     self.delta_time_entity_send = 0
                     if self.current_joined_session and self.Menu.my_player_id:
                         entity_state = {
                             "char_number": self.active_char.char_num,
-                            "pos":         list(player_pos),
-                            "direction":   self.active_char.direction,
-                            "health":      self.active_char.health,
-                            "is_moving":   bool(is_moving),
-                            "is_hurt":     self.active_char.is_hurt,
-                            "is_dead":     self.active_char.is_dead,
+                            "pos": list(player_pos),
+                            "direction": self.active_char.direction,
+                            "health": self.active_char.health,
+                            "is_moving": bool(is_moving),
+                            "is_hurt": self.active_char.is_hurt,
+                            "is_dead": self.active_char.is_dead,
                             "is_attacking": {
                                 "1": self.active_char.is_attacking_s1,
                                 "2": self.active_char.is_attacking_s2,
                                 "3": self.active_char.is_attacking_s3,
                             },
                             "anim_indices": {
-                                "idle":    self.active_char.frame_IDLE,
-                                "move":    self.active_char.frame_MOVE,
-                                "hurt":    self.active_char.frame_HURT,
-                                "dead":    0,
-                                "skill1":  self.active_char.frame_S1,
-                                "skill2":  self.active_char.frame_S2,
-                                "skill3":  self.active_char.frame_S3,
+                                "idle": self.active_char.frame_IDLE,
+                                "move": self.active_char.frame_MOVE,
+                                "hurt": self.active_char.frame_HURT,
+                                "dead": 0,
+                                "skill1": self.active_char.frame_S1,
+                                "skill2": self.active_char.frame_S2,
+                                "skill3": self.active_char.frame_S3,
                                 "effect1": 0,
                                 "effect2": 0,
                                 "effect3": 0,
@@ -714,13 +699,13 @@ class Game:
                             "attack_hitboxes": {},
                         }
                         payload = {
-                            "session":   self.current_joined_session,
+                            "session": self.current_joined_session,
                             "player_id": self.Menu.my_player_id,
-                            "state":     entity_state,
+                            "state": entity_state,
                         }
                         self.send_to_server(f"[EntityState]:{json.dumps(payload)}")
 
-                # ── Draw HUDs ─────────────────────────────────────────────
+                # draw HUD
                 if self.hud:
                     self.hud.update(dt)
                     x, y = HUD_POSITIONS.get(self.Menu.my_player_id, (10, 10))
