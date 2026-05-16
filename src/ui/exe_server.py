@@ -17,19 +17,17 @@ from server import Serveur
 
 
 def run_offline_server():
-    # Initialize the server on localhost
+    # Initialize the server on localhost with the port given by katabump
     server = Serveur(host="0.0.0.0", port=20142)
 
-    # Start the server (this starts the accept_clients thread automatically)
+    # Start the server
     server.start_server()
 
-    print_success(">>> Server is now listening for Katabump connections.")
+    print_success(">> Server is now listening for Katabump connections.")
     print_info("Press Ctrl+C to shut down the server.")
 
     try:
-        # Keep the main thread alive
-        while True:
-            # Periodically check client count
+        while 1:
             count = len(server.clients)
             if count > 0:
                 print_info(f"Status: {count} client(s) connected.")
@@ -37,7 +35,7 @@ def run_offline_server():
                 for session in server.sessions_clients_joined.items():
                     if session[1] != []:
                         print_info(f"{session[0]}:{session[1]}")
-            time.sleep(10)  # Check every 10 seconds
+            time.sleep(5)
 
     except KeyboardInterrupt:
         server.stop_server()

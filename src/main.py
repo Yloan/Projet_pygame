@@ -45,7 +45,7 @@ class Game:
             # Reuse menu's pygame resources
             self.screen = self.Menu.screen
             self.wallpaper = self.Menu.wallpaper
-            self.clock = self.Menu.clock
+            self.clock = self.Menu.c
             try:
                 self.font = self.Menu.font
                 self.TEXT_COL = self.Menu.TEXT_COL
@@ -87,8 +87,8 @@ class Game:
         self._client_socket = None
         self._client_lock = threading.Lock()
         self._send_queue = queue.Queue()
-        self._recv_queue = queue.Queue()
-        self.recv_buffer = ""
+        self._r_queue = queue.Queue()
+        self.r_buffer = ""
 
         # SESSION JOIN
         self.current_joined_session = None
@@ -135,8 +135,8 @@ class Game:
         return (self.width - w) // 2
 
     def _process_network_messages(self):
-        while not self._recv_queue.empty():
-            message = self._recv_queue.get_nowait()
+        while not self._r_queue.empty():
+            message = self._r_queue.get_nowait()
 
             if message.startswith("[SessionsList]:"):
                 try:
@@ -147,7 +147,7 @@ class Game:
             elif message.startswith("[YourPlayerID]:"):
                 try:
                     player_id = int(message.split(":", 1)[1])
-                    self.Menu.my_player_id = player_id
+                    self.Menu.CurrentPlayer_id = player_id
                     self.hud = HUD(player_id)
                     # self.hud = HUD(self.player_id_test)
                     print_success(f"Je suis le joueur {player_id}")
@@ -208,7 +208,7 @@ class Game:
             elif message.startswith("[HUDUpdate]:"):
                 data = json.loads(message.split(":", 1)[1])
                 pid = data["player_id"]
-                if pid != self.Menu.my_player_id:
+                if pid != self.Menu.CurrentPlayer_id:
                     if pid not in self.other_huds:
                         self.other_huds[pid] = HUD(pid)
                     self.other_huds[pid].updateFromServer(data["hud"])
@@ -217,7 +217,7 @@ class Game:
                 try:
                     payload = json.loads(message.split(":", 1)[1])
                     entities = payload.get("entities", {})
-                    my_id = self.Menu.my_player_id
+                    my_id = self.Menu.CurrentPlayer_id
 
                     for pid_str, state in entities.items():
                         pid = int(pid_str)
@@ -269,15 +269,15 @@ class Game:
                 continue
             try:
                 chunk = self._client_socket.recv(4096).decode("utf-8")
-                self.recv_buffer += chunk
-                messages = self.recv_buffer.split("\n")
-                self.recv_buffer = messages[-1]
+                self.r_buffer += chunk
+                messages = self.r_buffer.split("\n")
+                self.r_buffer = messages[-1]
 
                 for message in messages[:-1]:
                     if not message:
                         continue
                     print_network(f"Message reçu: {message}")
-                    self._recv_queue.put(message)
+                    self._r_queue.put(message)
 
             except socket.timeout:
                 continue
@@ -340,38 +340,26 @@ class Game:
         print_info("Arrêt du jeu : fermeture connexion et threads")
 
         if self.current_joined_session and self._client_socket:
-            try:
-                self._client_socket.send(
-                    f"[LeaveSession]:{self.current_joined_session}\n".encode("utf-8")
-                )
-            except Exception:
-                pass
+            self._client_socket.send(
+                f"[LeaveSession]:{self.current_joined_session}\n".encode("utf-8")
+            )
             self.current_joined_session = None
 
         self.running = False
 
         # Close client socket safely
         with self._client_lock:
-            try:
-                if self._client_socket:
-                    self._client_socket.shutdown(socket.SHUT_RDWR)
-                    self._client_socket.close()
-            except Exception:
-                pass
+            if self._client_socket:
+                self._client_socket.shutdown(socket.SHUT_RDWR)
+                self._client_socket.close()
             self._client_socket = None
 
         # Clear message queue
-        try:
-            while not self._send_queue.empty():
-                self._send_queue.get_nowait()
-        except Exception:
-            pass
+        while not self._send_queue.empty():
+            self._send_queue.get_nowait()
 
         # Quit pygame
-        try:
-            pyg.quit()
-        except Exception:
-            pass
+        pyg.quit()
 
     def _init_game_characters(self):
         c1 = self.Menu.character_1 or 1
@@ -404,7 +392,10 @@ class Game:
     def _broadcast_hud_state(self):
         if not hasattr(self, "hud") or self.hud is None:
             return
-        payload = {"player_id": self.Menu.my_player_id, "hud": self.hud.toNetworkData()}
+        payload = {
+            "player_id": self.Menu.CurrentPlayer_id,
+            "hud": self.hud.toNetworkData(),
+        }
         self.send_to_server(f"[HUDUpdate]:{json.dumps(payload)}")
 
     # MAIN GAME LOOP
@@ -481,51 +472,48 @@ class Game:
             self.delta_time_sessions_send += 1
             # Send sessions to server
 
-            if self.Menu.pending_session is not None:
+            if self.Menu.sessionPending is not None:
                 self.send_to_server(
-                    f"[CreateSession]:{json.dumps(self.Menu.pending_session)}"
+                    f"[CreateSession]:{json.dumps(self.Menu.sessionPending)}"
                 )
-                self.current_joined_session = self.Menu.pending_session["titre"]
+                self.current_joined_session = self.Menu.sessionPending["titre"]
                 # self.send_to_server(f"[JoinedSession]:{self.current_joined_session}")
-                self.Menu.pending_session = None
+                self.Menu.sessionPending = None
 
                 # self.Menu.menu_state = "waiting_player_id"
 
-            if (
-                hasattr(self.Menu, "pending_join_session")
-                and self.Menu.pending_join_session is not None
-            ):
-                self.current_joined_session = self.Menu.pending_join_session
+            if self.Menu.p_join_session is not None:
+                self.current_joined_session = self.Menu.p_join_session
                 self.send_to_server(f"[JoinedSession]:{self.current_joined_session}")
-                self.Menu.pending_join_session = None
+                self.Menu.p_join_session = None
 
-            if self.Menu.pending_character_update:
+            if self.Menu.p_character_update:
                 update_data = {
-                    "player_id": self.Menu.my_player_id,
+                    "player_id": self.Menu.CurrentPlayer_id,
                     "character_1": self.Menu.character_1,
                     "character_2": self.Menu.character_2,
                     "character_3": self.Menu.character_3,
                     "session_name": self.Menu.current_session_name,
                 }
                 self.send_to_server(f"[CharacterUpdate]:{json.dumps(update_data)}")
-                self.Menu.pending_character_update = False
+                self.Menu.p_character_update = False
 
             if (
                 hasattr(self.Menu, "pending_character_submission")
-                and self.Menu.pending_character_submission is not None
+                and self.Menu.p_character_submission is not None
             ):
                 self.send_to_server(
-                    f"[PlayerReady]:{json.dumps(self.Menu.pending_character_submission)}"
+                    f"[PlayerReady]:{json.dumps(self.Menu.p_character_submission)}"
                 )
-                self.Menu.pending_character_submission = None
+                self.Menu.p_character_submission = None
 
-            if self.Menu.pending_leave_session is not None:
-                self.send_to_server(f"[LeaveSession]:{self.Menu.pending_leave_session}")
-                self.Menu.pending_leave_session = None
+            if self.Menu.p_leave_session is not None:
+                self.send_to_server(f"[LeaveSession]:{self.Menu.p_leave_session}")
+                self.Menu.p_leave_session = None
 
-            if self.Menu.pending_unready:
-                self.send_to_server(f"[PlayerUnready]:{self.Menu.my_player_id}")
-                self.Menu.pending_unready = False
+            if self.Menu.p_unready:
+                self.send_to_server(f"[PlayerUnready]:{self.Menu.CurrentPlayer_id}")
+                self.Menu.p_unready = False
 
             # GAME STATE - Actual gameplay
             if self.etat == "game":
@@ -546,17 +534,17 @@ class Game:
                         if event.key == pyg.K_a:
                             if self.active_char.use_skill(1):
                                 self.send_to_server(
-                                    f"[SkillUsed]:{json.dumps({'player_id': self.Menu.my_player_id, 'char_num': self.active_char.char_num, 'skill': 1})}"
+                                    f"[SkillUsed]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'char_num': self.active_char.char_num, 'skill': 1})}"
                                 )
                         if event.key == pyg.K_s:
                             if self.active_char.use_skill(2):
                                 self.send_to_server(
-                                    f"[SkillUsed]:{json.dumps({'player_id': self.Menu.my_player_id, 'char_num': self.active_char.char_num, 'skill': 2})}"
+                                    f"[SkillUsed]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'char_num': self.active_char.char_num, 'skill': 2})}"
                                 )
                         if event.key == pyg.K_d:
                             if self.active_char.use_skill(3):
                                 self.send_to_server(
-                                    f"[SkillUsed]:{json.dumps({'player_id': self.Menu.my_player_id, 'char_num': self.active_char.char_num, 'skill': 3})}"
+                                    f"[SkillUsed]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'char_num': self.active_char.char_num, 'skill': 3})}"
                                 )
 
                         keys_now = pyg.key.get_pressed()
@@ -573,7 +561,7 @@ class Game:
                                     self.player = self.active_char
                                     self._retreat_cooldown = 60
                                     self.send_to_server(
-                                        f"[Retreat]:{json.dumps({'player_id': self.Menu.my_player_id, 'slot': 1, 'active_char': self.active_char.char_num})}"
+                                        f"[Retreat]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'slot': 1, 'active_char': self.active_char.char_num})}"
                                     )
                                     print_info(
                                         f"Retraite → perso {self.active_char.char_num} en jeu"
@@ -584,7 +572,7 @@ class Game:
                                     and self.support_1.use_skill(1)
                                 ):
                                     self.send_to_server(
-                                        f"[SupportSkill]:{json.dumps({'player_id': self.Menu.my_player_id, 'slot': 1, 'char_num': self.support_1.char_num, 'skill': 1})}"
+                                        f"[SupportSkill]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'slot': 1, 'char_num': self.support_1.char_num, 'skill': 1})}"
                                     )
 
                         if event.key == pyg.K_w:
@@ -600,7 +588,7 @@ class Game:
                                     self.player = self.active_char
                                     self._retreat_cooldown = 60
                                     self.send_to_server(
-                                        f"[Retreat]:{json.dumps({'player_id': self.Menu.my_player_id, 'slot': 2, 'active_char': self.active_char.char_num})}"
+                                        f"[Retreat]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'slot': 2, 'active_char': self.active_char.char_num})}"
                                     )
                                     print_info(
                                         f"Retraite → perso {self.active_char.char_num} en jeu"
@@ -611,7 +599,7 @@ class Game:
                                     and self.support_2.use_skill(1)
                                 ):
                                     self.send_to_server(
-                                        f"[SupportSkill]:{json.dumps({'player_id': self.Menu.my_player_id, 'slot': 2, 'char_num': self.support_2.char_num, 'skill': 1})}"
+                                        f"[SupportSkill]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'slot': 2, 'char_num': self.support_2.char_num, 'skill': 1})}"
                                     )
 
                 if self._retreat_cooldown > 0:
@@ -670,7 +658,7 @@ class Game:
                 self.delta_time_entity_send += 1
                 if self.delta_time_entity_send >= self.SENT_INTERVAL:
                     self.delta_time_entity_send = 0
-                    if self.current_joined_session and self.Menu.my_player_id:
+                    if self.current_joined_session and self.Menu.CurrentPlayer_id:
                         entity_state = {
                             "char_number": self.active_char.char_num,
                             "pos": list(player_pos),
@@ -700,7 +688,7 @@ class Game:
                         }
                         payload = {
                             "session": self.current_joined_session,
-                            "player_id": self.Menu.my_player_id,
+                            "player_id": self.Menu.CurrentPlayer_id,
                             "state": entity_state,
                         }
                         self.send_to_server(f"[EntityState]:{json.dumps(payload)}")
@@ -708,7 +696,7 @@ class Game:
                 # draw HUD
                 if self.hud:
                     self.hud.update(dt)
-                    x, y = HUD_POSITIONS.get(self.Menu.my_player_id, (10, 10))
+                    x, y = HUD_POSITIONS.get(self.Menu.CurrentPlayer_id, (10, 10))
                     self.hud.draw(self.screen, x, y)
 
                 for pid, other_hud in self.other_huds.items():

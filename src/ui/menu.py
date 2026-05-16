@@ -5,6 +5,12 @@ import pygame as pyg
 
 import game.characters as player_module
 from ui import Buttons as ObjButton
+from ui.console import (
+    print_debug,
+    print_error,
+    print_warning,
+    # Le reste on s'en fout, ca sera probablement pas utilisé (au pire on import tout)
+)
 from utils.paths import get_asset_path
 
 from . import animated_button, button
@@ -12,6 +18,8 @@ from . import animated_button, button
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 BUTTON_SCALE = 2
+
+TMP_NUBER_OF_ASSETS_VARIABLES_HERE = 5
 
 
 class Menu:
@@ -31,6 +39,7 @@ class Menu:
         self.character_1 = 0
         self.character_2 = 0
         self.character_3 = 0
+
         # PYGAME INITIALIZATION
         pyg.init()
 
@@ -38,13 +47,16 @@ class Menu:
         flags = pyg.FULLSCREEN if self.fullscreen else 0
         self.screen = pyg.display.set_mode((self.width, self.height), flags)
         pyg.display.set_caption("Jeu Multijoueur")
-        self.clock = pyg.time.Clock()
+        self.c = pyg.time.Clock()
+
         # FONT AND COLOR SETUP
         self.font = pyg.font.SysFont("arialblack", 40)
         self.middle_font = pyg.font.SysFont("arialblack", 20)
-        self.little_font = pyg.font.SysFont("arialblack", 10)
+        self.mini_font = pyg.font.SysFont("arialblack", 10)
+
         self.TEXT_COL = (255, 255, 255)
         self.TEXT_COL2 = (255, 0, 0)
+
         # LOAD MENU BACKGROUNDS
         self.wallpaper = pyg.image.load(
             "assets/buttons/21-MENUS/MAIN MENU-Sheet.png"
@@ -56,12 +68,15 @@ class Menu:
         self.choice_chracters = pyg.transform.scale(
             self.choice_chracters, (self.width, self.height)
         )
+
         # PLAY BUTTON FRAMES
         play_button = ObjButton.PlayButton()
         self.play_button_frames = play_button.play_button_frames
+
         # SETTINGS BUTTON FRAMES
         settings_button = ObjButton.OptionsButton()
         self.settings_button_frames = settings_button.settings_button_frames
+
         # EXIT BUTTON FRAMES
         exit_button = ObjButton.ExitButton()
         self.exit_button_frames = exit_button.exit_button_frames
@@ -109,6 +124,7 @@ class Menu:
         # self.player_session = pyg.image.load("assets/Menus_assets/sessions_section/player.png").convert_alpha()
         # self.splash_session = pyg.image.load("assets/Menus_assets/sessions_section/splash.png").convert_alpha()
         # self.star_bar_session = pyg.image.load("assets/Menus_assets/sessions_section/Star_Bar.png").convert_alpha()
+
         # LOAD CHARACTER SELECTION IMAGES
         image_ch = []
         for i in range(1, 19):
@@ -118,30 +134,33 @@ class Menu:
             image_ch.append(Img)
 
         self.image_ch = image_ch
-        self.char_preview_scale = 9.5
+        self.char_p_scale = 9.5
 
-        # Idle animation previews for characters 1-9 (loaded if IDLE-Sheet.png exists)
-        _IDLE_FRAME_SIZE = 40
-        self._idle_preview_frames = {}  # char_num -> [Surface, ...]
-        self._idle_anim_idx = {}  # char_num -> int
-        self._idle_anim_accum = {}  # char_num -> float (ms)
+        ___size_frame_idle_ = 40
+        self._idle_preview_frames = {}
+        self._idle_anim_i = {}
+        self._idle_anim_accum = {}
         self._idle_anim_last_tick = pyg.time.get_ticks()
-        for _i in range(1, 10):
-            try:
-                _path = get_asset_path("sprites", f"Character-{_i}", "IDLE-Sheet.png")
-                _sheet = pyg.image.load(_path)
-                _count = _sheet.get_width() // _IDLE_FRAME_SIZE
-                _frames = [
-                    _sheet.subsurface(
-                        (_j * _IDLE_FRAME_SIZE, 0, _IDLE_FRAME_SIZE, _IDLE_FRAME_SIZE)
+
+        for __i___ in range(1, TMP_NUBER_OF_ASSETS_VARIABLES_HERE + 1):
+            _path = get_asset_path("sprites", f"Character-{__i___}", "IDLE-Sheet.png")
+            _sheet = pyg.image.load(_path)
+            _count = _sheet.get_width() // ___size_frame_idle_
+            _frames = [
+                _sheet.subsurface(
+                    (
+                        _j * ___size_frame_idle_,
+                        0,
+                        ___size_frame_idle_,
+                        ___size_frame_idle_,
                     )
-                    for _j in range(_count)
-                ]
-                self._idle_preview_frames[_i] = _frames
-                self._idle_anim_idx[_i] = 0
-                self._idle_anim_accum[_i] = 0.0
-            except Exception:
-                pass
+                )
+                for _j in range(_count)
+            ]
+            self._idle_preview_frames[__i___] = _frames
+            self._idle_anim_i[__i___] = 0
+            self._idle_anim_accum[__i___] = 0
+
         # CREATE BUTTON INSTANCES
         self.play_button = animated_button.AnimatedButton(
             self.center_x(self.play_button_frames[0], 1.5),
@@ -284,14 +303,15 @@ class Menu:
         # VARIABLES SESSIONS
         self.sessions = []
         self.scroll_y = 0
-        self.pending_session = None
+        self.sessionPending = None
         self.input_box = InputBox(
             100, 100, 140, 32, button_session=self.button_session, menu=self
         )
+
         # VARIABLES CHARACTERS SELECTIONS
         self.number_players = 0
         self.number_bot = 0
-        self.my_player_id = 1  # Position 1 par défaut si on joue offline
+        self.CurrentPlayer_id = 1  # 1 by default
         self.slot_positions = {
             1: (64, 125),
             2: (64, 442),
@@ -299,30 +319,30 @@ class Menu:
             4: (1036, 442),
         }
 
-        # Variables for final character selection (multiplayer)
-        self.current_session_name = None  # Nom de la session rejointe
-        self.players_characters = {  # Dict pour stocker les 3 persos de chaque joueur: {player_id: [char1, char2, char3]}
+        self.current_session_name = None
+        self.players_characters = {
             1: [None, None, None],
             2: [None, None, None],
             3: [None, None, None],
             4: [None, None, None],
         }
-        self.players_ready = {  # Dict pour tracker qui a cliqué play: {player_id: True/False}
+
+        self.players_ready = {  # Dict pour voir c qui qui a cliqué
             1: False,
             2: False,
             3: False,
             4: False,
         }
-        self.pending_character_submission = None  # {player_id, character_1, character_2, character_3} à envoyer au serveur
-        self.pending_character_update = False  # MAJ UI characters selection
-        self.pending_unready = False
-        self.pending_leave_session = None
-        self.pending_join_session = None
+        self.p_character_submission = None
+        self.p_character_update = False
+        self.p_unready = False
+        self.p_leave_session = None
+        self.p_join_session = None
 
-        self._prev_mouse = False
+        self.__mouse_prev = False
 
     def handle_session_menu(self):
-        """Gère l'état du menu des sessions"""
+        # Gère l'état du menu des sessions
         self.bg_session = pyg.transform.scale(
             self.bg_session, (self.width, self.height)
         )
@@ -372,16 +392,6 @@ class Menu:
             print(f"Erreur lors de la mise à jour des sessions: {e}")
 
     def update_player_character(self, player_id, character_1, character_2, character_3):
-        """
-        Update character selection for a specific player (3 characters).
-        Called when receiving player selection from server.
-
-        Args:
-            player_id (int): ID of the player (1-4)
-            character_1 (int): Index of first selected character
-            character_2 (int): Index of second selected character
-            character_3 (int): Index of third selected character
-        """
         if 1 <= player_id <= 4:
             self.players_characters[player_id] = [character_1, character_2, character_3]
             from ui.console import print_network
@@ -391,13 +401,6 @@ class Menu:
             )
 
     def update_player_ready(self, player_id):
-        """
-        Mark a player as ready for game start.
-        Called when receiving ready signal from server.
-
-        Args:
-            player_id (int): ID of the player (1-4)
-        """
         if 1 <= player_id <= 4:
             self.players_ready[player_id] = True
             from ui.console import print_network
@@ -418,8 +421,8 @@ class Menu:
         self.screen.blit(img, (x, y))
 
     def handle_main_menu(self):
-        """Gère l'état du menu principal"""
-        # Draw background first to clear previous frame
+        # Gère l'état du menu principal
+
         self.screen.blit(self.wallpaper, (0, 0))
         # Then draw animated buttons
         if self.play_button.draw(self.screen):
@@ -431,7 +434,7 @@ class Menu:
             sys.exit(0)
 
     def handle_settings_menu(self):
-        """Gère l'état du menu paramètres"""
+        # Gère l'état du menu paramètres
         if self.video_button.draw(self.screen):
             print("Video Settings")
         if self.audio_button.draw(self.screen):
@@ -442,7 +445,6 @@ class Menu:
             self.menu_state = "main"
 
     def handle_play_menu(self):
-        """Gère la sélection du nombre de joueurs"""
         self.draw_text_center(
             "Select the number",
             self.font,
@@ -458,12 +460,12 @@ class Menu:
 
         # tmp = ["three", "two", "one"]
         # self.menu_state = f"{tmp[self.number_bot - 1]}{'_player' if self.number_bot == 3 else '_players'}"
+        # print_debug(self.menu_state)
         self.menu_state = "choice_characters_1"
         if self.exit_button.draw(self.screen):
             self.menu_state = "play"
 
     def handle_one_player_menu(self):
-        """Gère la sélection du nombre de bots pour 1 joueur"""
         self.draw_text_center(
             "Select the number of bots", self.font, self.TEXT_COL2, 50
         )
@@ -480,7 +482,6 @@ class Menu:
             self.menu_state = "play"
 
     def handle_two_players_menu(self):
-        """Gère la sélection du nombre de bots pour 2 joueurs"""
         self.draw_text_center(
             "Select the number of bots", self.font, self.TEXT_COL2, 50
         )
@@ -497,7 +498,6 @@ class Menu:
             self.menu_state = "play"
 
     def handle_three_players_menu(self):
-        """Gère la sélection du nombre de bots pour 3 joueurs"""
         self.draw_text_center(
             "Select the number of bots", self.font, self.TEXT_COL2, 50
         )
@@ -510,8 +510,7 @@ class Menu:
         if self.exit_button.draw(self.screen):
             self.menu_state = "play"
 
-    def _update_idle_previews(self):
-        """Advance idle animation timers for all loaded characters."""
+    def _update_IDLE_p(self):
         now = pyg.time.get_ticks()
         delta = now - self._idle_anim_last_tick
         self._idle_anim_last_tick = now
@@ -519,32 +518,27 @@ class Menu:
             self._idle_anim_accum[char_num] += delta
             while self._idle_anim_accum[char_num] >= 100:
                 self._idle_anim_accum[char_num] -= 100
-                self._idle_anim_idx[char_num] = (
-                    self._idle_anim_idx[char_num] + 1
-                ) % len(frames)
+                self._idle_anim_i[char_num] = (self._idle_anim_i[char_num] + 1) % len(
+                    frames
+                )
 
-    def _get_idle_preview_frame(self, char_num, pixel_size):
-        """Return the current idle frame scaled to pixel_size×pixel_size, or None."""
+    def _get_IDLe_p__frame(self, char_num, pixel_size):
+
         frames = self._idle_preview_frames.get(char_num)
         if not frames:
             return None
-        frame = frames[self._idle_anim_idx.get(char_num, 0)]
+        frame = frames[self._idle_anim_i.get(char_num, 0)]
         size = max(pixel_size, 1)
         return pyg.transform.scale(frame, (size, size))
 
-    def _blit_char_large(self, char_num, pos_x, pos_y, scale_factor=10):
-        """
-        Blit a large character preview at (pos_x, pos_y).
-        Uses animated idle for chars 1-9 when IDLE-Sheet.png is available,
-        otherwise falls back to the static selection icon.
-        """
+    def _blit_largeChar(self, char_num, pos_x, pos_y, scale_factor=10):
         if not (1 <= char_num <= len(self.image_ch)):
             return
         icon = self.image_ch[char_num - 1]
         target_w = int(icon.get_width() * scale_factor)
         target_h = int(icon.get_height() * scale_factor)
         if 1 <= char_num <= 9 and char_num in self._idle_preview_frames:
-            frame = self._get_idle_preview_frame(char_num, target_h)
+            frame = self._get_IDLe_p__frame(char_num, target_h)
             if frame:
                 self.screen.blit(frame, (pos_x, pos_y))
                 return
@@ -553,26 +547,24 @@ class Menu:
         )
 
     def draw_character_preview(self, char_index):
-        """Affiche l'aperçu du personnage à la position du joueur"""
         try:
-            idx = int(char_index)
+            i = int(char_index)
         except Exception:
-            idx = 0
+            i = 0
 
-        if idx and 1 <= idx <= len(self.image_ch):
-            self._update_idle_previews()
-            pos_x, pos_y = self.slot_positions.get(self.my_player_id, (64, 125))
-            s = max(1.0, float(self.char_preview_scale))
-            self._blit_char_large(idx, pos_x, pos_y, scale_factor=s)
+        if i and 1 <= i <= len(self.image_ch):
+            self._update_IDLE_p()
+            pos_x, pos_y = self.slot_positions.get(self.CurrentPlayer_id, (64, 125))
+            s = max(1.0, float(self.char_p_scale))
+            self._blit_largeChar(i, pos_x, pos_y, scale_factor=round(s))
 
     def draw_small_character_preview(self, char_index, x_offset):
-        """Affiche un petit aperçu d'un personnage"""
         if isinstance(char_index, int) and 1 <= char_index <= len(self.image_ch):
             prev_img = self.image_ch[char_index - 1]
             self.screen.blit(prev_img, (self.center_x(prev_img, x_offset), 345))
 
     def handle_character_selection(self, character_var, next_state, title):
-        """Gère la sélection d'un personnage avec aperçu"""
+        # Handle the character selection
         self.screen.blit(self.choice_chracters, (0, 0))
         self.draw_text(title, self.font, self.TEXT_COL, 70, 0)
 
@@ -617,11 +609,9 @@ class Menu:
                     self.character_3 = char_num
                 self.menu_state = next_state
 
-        # Afficher l'aperçu du personnage sélectionné
         self.draw_character_preview(character_var)
 
     def handle_choice_characters_1(self):
-        """Gère la sélection du premier personnage"""
         self.screen.blit(self.choice_chracters, (0, 0))
         self.draw_text("Choose three characters", self.font, self.TEXT_COL, 70, 0)
 
@@ -657,7 +647,6 @@ class Menu:
         self.draw_character_preview(self.character_1)
 
     def handle_choice_characters_2(self):
-        """Gère la sélection du deuxième personnage"""
         self.screen.blit(self.choice_chracters, (0, 0))
         self.draw_text("Choose two characters", self.font, self.TEXT_COL, 70, 0)
 
@@ -690,7 +679,6 @@ class Menu:
                 self.character_2 = char_num
                 self.menu_state = "choice_characters_3"
 
-        # Afficher l'aperçu du 2e personnage (ou 1er s'il n'est pas encore choisi)
         if self.character_2:
             self.draw_character_preview(self.character_2)
             self.draw_small_character_preview(self.character_1, 50)
@@ -698,7 +686,6 @@ class Menu:
             self.draw_character_preview(self.character_1)
 
     def handle_choice_characters_3(self):
-        """Gère la sélection du troisième personnage et affiche le bouton start"""
         self.screen.blit(self.choice_chracters, (0, 0))
         self.draw_text("Choose one character", self.font, self.TEXT_COL, 70, 0)
 
@@ -730,7 +717,6 @@ class Menu:
             if button_obj.draw(self.screen):
                 self.character_3 = char_num
 
-        # Afficher l'aperçu du 3e personnage (ou 2e s'il n'est pas encore choisi)
         if self.character_3:
             self.draw_character_preview(self.character_3)
             self.draw_small_character_preview(self.character_1, 50)
@@ -739,7 +725,6 @@ class Menu:
             self.draw_character_preview(self.character_2)
             self.draw_small_character_preview(self.character_1, 50)
 
-        # Afficher le bouton start si les 3 personnages sont choisis
         if self.character_3 and self.start_button.draw(self.screen):
             self.menu_state = "start game"
             self.etat = "game"
@@ -776,30 +761,28 @@ class Menu:
             self.character_1 = 0
             self.character_2 = 0
             self.character_3 = 0
-            # Signal pour que main.py envoie [LeaveSession] au serveur
+            # Signal for the [LeaveSession] message to the serveur
             if self.current_session_name:
-                self.pending_leave_session = self.current_session_name
+                self.p_leave_session = self.current_session_name
             self.current_session_name = None
 
         # Handle character button clicks for current player's selection
         for button_obj, char_num in character_buttons:
             if button_obj.draw(self.screen):
-                # Store order of selection
                 if not self.character_1:
                     self.character_1 = char_num
-                    self.pending_character_update = True
+                    self.p_character_update = True
                 elif not self.character_2:
                     self.character_2 = char_num
-                    self.pending_character_update = True
+                    self.p_character_update = True
                 elif not self.character_3:
                     self.character_3 = char_num
-                    self.pending_character_update = True
-                elif not self.players_ready[self.my_player_id]:
+                    self.p_character_update = True
+                elif not self.players_ready[self.CurrentPlayer_id]:
                     self.character_3 = char_num
-                    self.pending_character_update = True
+                    self.p_character_update = True
 
-        # Sync sélection locale dans le dict partagé
-        self.players_characters[self.my_player_id] = [
+        self.players_characters[self.CurrentPlayer_id] = [
             self.character_1 or None,
             self.character_2 or None,
             self.character_3 or None,
@@ -808,13 +791,12 @@ class Menu:
         # Les slots > max_human_slot sont des bots
         max_human_slot = 4 - self.number_bot
 
-        # Détection clic franc (mousedown ce frame, pas le frame d'avant)
         cur_mouse = pyg.mouse.get_pressed()[0]
-        just_clicked = cur_mouse and not self._prev_mouse
-        self._prev_mouse = cur_mouse
+        just_clicked = cur_mouse and not self.__mouse_prev
+        self.__mouse_prev = cur_mouse
         mouse_pos = pyg.mouse.get_pos()
 
-        self._update_idle_previews()
+        self._update_IDLE_p()
 
         for player_id in range(1, 5):
             if player_id > max_human_slot:
@@ -828,10 +810,9 @@ class Menu:
             characters = self.players_characters[player_id]
             char_1, char_2, char_3 = characters
 
-            # Display the main character (the latest selected) in large
             if char_3 and 1 <= char_3 <= len(self.image_ch):
                 # character_3 in large at slot position
-                self._blit_char_large(char_3, pos_x, pos_y, scale_factor=10)
+                self._blit_largeChar(char_3, pos_x, pos_y, scale_factor=10)
 
                 # character_2 in small preview below
                 if char_2 and 1 <= char_2 <= len(self.image_ch):
@@ -840,7 +821,6 @@ class Menu:
                     small_y = pos_y + 214
                     self.screen.blit(small_img, (small_x, small_y))
 
-                # character_1 also in small preview (offset more to the right)
                 if char_1 and 1 <= char_1 <= len(self.image_ch):
                     small_img = self.image_ch[char_1 - 1]
                     small_x = pos_x + 196
@@ -849,7 +829,7 @@ class Menu:
 
             elif char_2 and 1 <= char_2 <= len(self.image_ch):
                 # character_2 in large at slot position
-                self._blit_char_large(char_2, pos_x, pos_y, scale_factor=10)
+                self._blit_largeChar(char_2, pos_x, pos_y, scale_factor=10)
 
                 # character_1 in small preview
                 if char_1 and 1 <= char_1 <= len(self.image_ch):
@@ -860,12 +840,12 @@ class Menu:
 
             elif char_1 and 1 <= char_1 <= len(self.image_ch):
                 # character_1 in large at slot position
-                self._blit_char_large(char_1, pos_x, pos_y, scale_factor=10)
+                self._blit_largeChar(char_1, pos_x, pos_y, scale_factor=10)
 
             if (
                 just_clicked
-                and player_id == self.my_player_id
-                and not self.players_ready[self.my_player_id]
+                and player_id == self.CurrentPlayer_id
+                and not self.players_ready[self.CurrentPlayer_id]
             ):
                 rect_char2 = pyg.Rect(pos_x - 40, pos_y + 214, 64, 64)
                 rect_char1 = pyg.Rect(pos_x + 196, pos_y + 214, 64, 64)
@@ -874,27 +854,29 @@ class Menu:
                         self.character_3,
                         self.character_2,
                     )
-                    self.pending_character_update = True
+                    self.p_character_update = True
                 elif char_1 and rect_char1.collidepoint(mouse_pos):
                     self.character_1, self.character_3 = (
                         self.character_3,
                         self.character_1,
                     )
-                    self.pending_character_update = True
+                    self.p_character_update = True
 
             if (
                 just_clicked
-                and player_id == self.my_player_id
-                and self.players_ready[self.my_player_id]
+                and player_id == self.CurrentPlayer_id
+                and self.players_ready[self.CurrentPlayer_id]
             ):
                 rect_ready = pyg.Rect(pos_x, pos_y - 25, 120, 20)
                 if rect_ready.collidepoint(mouse_pos):
-                    self.players_ready[self.my_player_id] = False
-                    self.pending_unready = True
+                    self.players_ready[self.CurrentPlayer_id] = False
+                    self.p_unready = True
 
             if char_1 or char_2 or char_3:
                 player_label = (
-                    "YOU" if player_id == self.my_player_id else f"Player {player_id}"
+                    "YOU"
+                    if player_id == self.CurrentPlayer_id
+                    else f"Player {player_id}"
                 )
                 self.draw_text(
                     player_label, self.middle_font, self.TEXT_COL, pos_x, pos_y - 40
@@ -905,11 +887,11 @@ class Menu:
                     (0, 255, 0) if self.players_ready[player_id] else (255, 255, 0)
                 )
                 self.draw_text(
-                    status_text, self.little_font, status_color, pos_x, pos_y - 20
+                    status_text, self.mini_font, status_color, pos_x, pos_y - 20
                 )
 
             else:
-                if player_id != self.my_player_id and player_id < self.number_bot:
+                if player_id != self.CurrentPlayer_id and player_id < self.number_bot:
                     self.draw_text(
                         f"Player {player_id}",
                         self.middle_font,
@@ -919,27 +901,26 @@ class Menu:
                     )
                     self.draw_text(
                         "Waiting...",
-                        self.little_font,
+                        self.mini_font,
                         (255, 255, 0),
                         pos_x + 20,
                         pos_y + 100,
                     )
 
-        my_slot_x, my_slot_y = self.slot_positions[self.my_player_id]
+        my_slot_x, my_slot_y = self.slot_positions[self.CurrentPlayer_id]
 
-        # Show PLAY button if current player has selected all 3 characters and not already ready
         if (
             self.character_1
             and self.character_2
             and self.character_3
-            and not self.players_ready[self.my_player_id]
+            and not self.players_ready[self.CurrentPlayer_id]
         ):
             if self.start_button.draw(self.screen):
                 # Mark current player as ready
-                self.players_ready[self.my_player_id] = True
+                self.players_ready[self.CurrentPlayer_id] = True
                 # Prepare data to send to server with all 3 characters
-                self.pending_character_submission = {
-                    "player_id": self.my_player_id,
+                self.p_character_submission = {
+                    "player_id": self.CurrentPlayer_id,
                     "character_1": self.character_1,
                     "character_2": self.character_2,
                     "character_3": self.character_3,
@@ -948,15 +929,13 @@ class Menu:
                 from ui.console import print_network
 
                 print_network(
-                    f"Joueur {self.my_player_id} a cliqué PLAY avec {self.character_1}, {self.character_2}, {self.character_3}"
+                    f"Joueur {self.CurrentPlayer_id} a cliqué PLAY avec {self.character_1}, {self.character_2}, {self.character_3}"
                 )
 
         # Check if all players are ready
-        total_players_in_session = self.number_players + 1  # Include the current player
+        # total_players_in_session = self.number_players + 1  # Include the current player
 
-        # Joueurs réellement présents = moi + ceux dont on a reçu la sélection
-        # Cela permet de lancer la partie même si on est seul dans la session.
-        human_present = {self.my_player_id}
+        human_present = {self.CurrentPlayer_id}
         for p_id in range(1, max_human_slot + 1):
             if any(c is not None for c in self.players_characters[p_id]):
                 human_present.add(p_id)
@@ -967,7 +946,8 @@ class Menu:
             self.etat = "game"
 
     def method_menu(self):
-        """Méthode principale gérant tous les états du menu"""
+        # MAIN METHOD FOR THE MENU
+
         if self.menu_state == "main":
             self.handle_main_menu()
         elif self.menu_state == "settings":
@@ -981,13 +961,13 @@ class Menu:
                 session_data = {
                     "titre": self.input_box.text
                     if self.input_box.text != ""
-                    else "Sans titre",
+                    else "Without title",
                     "nb_bots": self.input_box.temp_nb_ia,
                     "nb_players": 0,
                     "y": 79,
                     "gap": 125,
                 }
-                self.pending_session = session_data
+                self.sessionPending = session_data
                 button.Button.blocked_rect = None
                 self.menu_state = "play"
 
@@ -1020,10 +1000,12 @@ class Menu:
                 self.TEXT_COL,
                 self.height // 2,
             )
+            print_debug("Enter, laoding for the session's connexion")
         elif self.menu_state == "character_selection_final":
             self.handle_character_selection_final()
         elif self.menu_state == "start game":
             self.etat = "game"
+            print_warning("start of the game!!!")
         else:
             self.draw_text_center("Press Space to start", self.font, self.TEXT_COL, 250)
 
@@ -1033,7 +1015,7 @@ class Session:
         self.menu = menu
         self.screen = menu.screen
 
-        # Chargement et redimensionnement des assets
+        # Laod & redimensionnement of assets
         self.bar_session = pyg.image.load(
             "assets/Menus_assets/sessions_section/BAR.png"
         ).convert_alpha()
@@ -1063,8 +1045,7 @@ class Session:
         self.gap = 125
         self.y = 79
 
-        # Paramètres qui seront remplis à la création
-        self.titre = "Sans titre"
+        self.titre = "Without title"
         self.nb_bots = 0
         self.nb_players = 0
 
@@ -1077,10 +1058,10 @@ class Session:
             "gap": self.gap,
         }
 
-    @staticmethod
+    @staticmethod  # Pour quentin: une static method c'est juste une method de la class qui n'utilise pas self
     def from_dict(data, menu):
         session = Session(menu)
-        session.titre = data.get("titre", "Sans titre")
+        session.titre = data.get("titre", "Without title")
         session.nb_bots = data.get("nb_bots", 0)
         session.nb_players = data.get("nb_players", 1)
         session.y = data.get("y", 79)
@@ -1088,7 +1069,6 @@ class Session:
         return session
 
     def draw_session(self, y_scrollé):
-        """Affiche la ligne de session avec ses paramètres"""
         self.join_button.rect.y = y_scrollé + 152
 
         # Barre de fond
@@ -1117,7 +1097,7 @@ class Session:
                     self.menu.players_characters[p_id] = [None, None, None]
                     self.menu.players_ready[p_id] = False
 
-                self.menu.pending_join_session = self.titre
+                self.menu.p_join_session = self.titre
                 self.menu.menu_state = "waiting_player_id"
 
             button_text = "Join"
@@ -1140,7 +1120,7 @@ class Session:
         self.screen.blit(self.bot_session, (450, y_scrollé + 188))
         self.screen.blit(self.player_session, (530, y_scrollé + 188))
 
-        # VALEURS des paramètres
+        # values des paramètres
         self.menu.draw_text(
             str(self.nb_bots), self.menu.middle_font, "Black", 490, y_scrollé + 188
         )
@@ -1177,28 +1157,28 @@ class InputBox:
             "assets/Menus_assets/Parameters_session/Title_numbers_of_bots_sessions_parameters.png",
         ]
 
-        raw_pm = pyg.image.load(self.assets[0]).convert_alpha()
-        raw_bg = pyg.image.load(self.assets[1]).convert_alpha()
-        raw_input = pyg.image.load(self.assets[2]).convert_alpha()
-        raw_title_name = pyg.image.load(self.assets[3]).convert_alpha()
-        raw_title_bots = pyg.image.load(self.assets[4]).convert_alpha()
+        _pm = pyg.image.load(self.assets[0]).convert_alpha()
+        _bg = pyg.image.load(self.assets[1]).convert_alpha()
+        _input = pyg.image.load(self.assets[2]).convert_alpha()
+        _title_name = pyg.image.load(self.assets[3]).convert_alpha()
+        _title_bots = pyg.image.load(self.assets[4]).convert_alpha()
 
         SCALE_TITLE = 0.45
         SIZE = (612, 408)
-        raw_title_name = pyg.transform.scale(
-            raw_title_name, (int(SIZE[0] * SCALE_TITLE), int(SIZE[1] * SCALE_TITLE))
+        _title_name = pyg.transform.scale(
+            _title_name, (int(SIZE[0] * SCALE_TITLE), int(SIZE[1] * SCALE_TITLE))
         )
-        raw_title_bots = pyg.transform.scale(
-            raw_title_bots, (int(SIZE[0] * SCALE_TITLE), int(SIZE[1] * SCALE_TITLE))
+        _title_bots = pyg.transform.scale(
+            _title_bots, (int(SIZE[0] * SCALE_TITLE), int(SIZE[1] * SCALE_TITLE))
         )
-        raw_input = pyg.transform.scale(
-            raw_input, (int(SIZE[0] * SCALE_TITLE), int(SIZE[1] * SCALE_TITLE))
+        _input = pyg.transform.scale(
+            _input, (int(SIZE[0] * SCALE_TITLE), int(SIZE[1] * SCALE_TITLE))
         )
 
         BG_SCALE = 1.7
         self.img_bg = pyg.transform.scale(
-            raw_bg,
-            (int(raw_bg.get_width() * BG_SCALE), int(raw_bg.get_height() * BG_SCALE)),
+            _bg,
+            (int(_bg.get_width() * BG_SCALE), int(_bg.get_height() * BG_SCALE)),
         )
         self.bg_pos = (
             menu.width // 2 - self.img_bg.get_width() // 2,
@@ -1210,26 +1190,26 @@ class InputBox:
         MODAL_W = self.img_bg.get_width()
         MODAL_H = self.img_bg.get_height()
 
-        self.img_title_name = raw_title_name
-        self.img_title_bots = raw_title_bots
-        self.img_input_name = raw_input
-        self.img_input_bots = raw_input
+        self.img_title_name = _title_name
+        self.img_title_bots = _title_bots
+        self.img_input_name = _input
+        self.img_input_bots = _input
 
-        pm_w, pm_h = raw_pm.get_size()
+        pm_w, pm_h = _pm.get_size()
         half = pm_w // 2
         BTN_SZ = 52
         plus_surf = pyg.transform.scale(
-            raw_pm.subsurface(pyg.Rect(0, 0, half - 24, pm_h)).copy(), (BTN_SZ, BTN_SZ)
+            _pm.subsurface(pyg.Rect(0, 0, half - 24, pm_h)).copy(), (BTN_SZ, BTN_SZ)
         )
         minus_surf = pyg.transform.scale(
-            raw_pm.subsurface(pyg.Rect(half - 24, 0, pm_w - half, pm_h)).copy(),
+            _pm.subsurface(pyg.Rect(half - 24, 0, pm_w - half, pm_h)).copy(),
             (BTN_SZ, BTN_SZ),
         )
 
-        LABEL_W = raw_title_name.get_width()
-        INPUT_W = raw_input.get_width()
-        INPUT_H = raw_input.get_height()
-        LABEL_H = raw_title_name.get_height()
+        LABEL_W = _title_name.get_width()
+        INPUT_W = _input.get_width()
+        INPUT_H = _input.get_height()
+        LABEL_H = _title_name.get_height()
 
         PAD_X = (MODAL_W - LABEL_W - 30 - INPUT_W) // 2
         COL1_X = MODAL_X + PAD_X + 35
