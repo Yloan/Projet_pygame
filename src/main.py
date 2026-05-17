@@ -13,6 +13,7 @@ import utils.paths as __path__
 from game.characters import FRAME_SIZE, Character
 from game.map_laoder import MapLoader
 from ui.console import (
+    print_debug,
     print_error,
     print_info,
     print_network,
@@ -138,16 +139,12 @@ class Game:
 
     def _all_players_ready(self):
         session_info = next(
-            (
-                s
-                for s in self.Menu.sessions
-                if s["titre"] == self.current_joined_session
-            ),
+            (s for s in self.Menu.sessions if s.titre == self.current_joined_session),
             None,
         )
         if not session_info:
             return False
-        nb_humans = session_info.get("nb_players", 1)
+        nb_humans = session_info.nb_players
         ready_count = sum(1 for v in self.Menu.players_ready.values() if v)
         return ready_count >= nb_humans
 
@@ -179,7 +176,7 @@ class Game:
                         None,
                     )
                     if session_info:
-                        nb_bots = session_info.get("nb_bots", 0)
+                        nb_bots = session_info.nb_bots
                         for i in range(nb_bots):
                             bot_id = 4 - i
                             self.other_huds[bot_id] = HUD(bot_id)
@@ -201,6 +198,7 @@ class Game:
 
             elif message.startswith("[PlayerReady]:"):
                 try:
+                    print_debug(f"Player ready recu: {message}")
                     data = json.loads(message.split(":", 1)[1])
                     self.Menu.update_player_ready(data["player_id"])
                     if self._all_players_ready():

@@ -198,11 +198,11 @@ class Character:
     def _load_sheet(self, filename, w=FRAME_SIZE, h=FRAME_SIZE):
         try:
             path = get_asset_path("sprites", f"Character-{self.char_num}", filename)
-            import os  # tmp
+            # import os  # tmp
 
-            print_debug(f"Chargement : {path} | existe : {os.path.exists(path)}")
-            sheet = pyg.image.load(path).convert_alpha()
-            print(f"[DEBUG] sheet size: {sheet.get_size()} | frame size: {w}x{h}")
+            # print_debug(f"Chargement : {path} | existe : {os.path.exists(path)}")
+            # sheet = pyg.image.load(path).convert_alpha()
+            # print(f"[DEBUG] sheet size: {sheet.get_size()} | frame size: {w}x{h}")
             sheet = pyg.image.load(path).convert_alpha()
             n = max(1, sheet.get_width() // w)
             frames = []
