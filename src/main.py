@@ -25,6 +25,8 @@ from ui.HUD import HUD
 MESSAGE_DELIMITER = "\n"
 HUD_POSITIONS = {1: (10, 10), 2: (993, 10), 3: (10, 530), 4: (993, 530)}
 
+TIME_BEFORE_PROJECTILE = {1: {"s1": 4, "s2": 4}, 5: {"s1": 4}}
+
 
 class Game:
     def __init__(self, width=1280, height=720, fullscreen=False):
@@ -149,8 +151,7 @@ class Game:
                     player_id = int(message.split(":", 1)[1])
                     self.Menu.CurrentPlayer_id = player_id
                     self.hud = HUD(player_id)
-                    # self.hud = HUD(self.player_id_test)
-                    print_success(f"Je suis le joueur {player_id}")
+                    # print_success(f"Je suis le joueur {player_id}")
                     if self.Menu.menu_state == "waiting_player_id":
                         self.Menu.menu_state = "character_selection_final"
 
@@ -252,7 +253,7 @@ class Game:
             self._client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._client_socket.settimeout(2.0)
             self._client_socket.connect((self.host, self.port))
-            print_success(f"Connecté au serveur {self.host}:{self.port}")
+            # print_success(f"Connecté au serveur {self.host}:{self.port}")
 
             # Start background threads for message handling
             threading.Thread(target=self._receive_loop, daemon=True).start()
@@ -276,7 +277,7 @@ class Game:
                 for message in messages[:-1]:
                     if not message:
                         continue
-                    print_network(f"Message reçu: {message}")
+                    # print_network(f"Message reçu: {message}")
                     self._r_queue.put(message)
 
             except socket.timeout:
@@ -388,6 +389,7 @@ class Game:
         self.draw_text_center(
             f"pos mouse --> X: {x}, Y: {y}", self.font, self.TEXT_COL2, 10
         )
+        Character.switch_TMP__GET_SURFACE_HITBOX_ATTACKS_()
 
     def _broadcast_hud_state(self):
         if not hasattr(self, "hud") or self.hud is None:
@@ -413,9 +415,9 @@ class Game:
 
         # When starting directly in game initialise characters with defaults
         if self.etat == "game" and not self._game_initialized:
-            self.Menu.character_1 = self.Menu.character_1 or 2  # Water
-            self.Menu.character_2 = self.Menu.character_2 or 1  # Fire
-            self.Menu.character_3 = self.Menu.character_3 or 2  # Water
+            self.Menu.character_1 = self.Menu.character_1 or 2
+            self.Menu.character_2 = self.Menu.character_2 or 1
+            self.Menu.character_3 = self.Menu.character_3 or 2
             self._init_game_characters()
             self._game_initialized = True
 
@@ -563,9 +565,9 @@ class Game:
                                     self.send_to_server(
                                         f"[Retreat]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'slot': 1, 'active_char': self.active_char.char_num})}"
                                     )
-                                    print_info(
-                                        f"Retraite → perso {self.active_char.char_num} en jeu"
-                                    )
+                                    # print_info(
+                                    #     f"Retraite --> perso {self.active_char.char_num} en jeu"
+                                    # )
                             else:
                                 if (
                                     not self.support_1.is_dead
@@ -590,9 +592,9 @@ class Game:
                                     self.send_to_server(
                                         f"[Retreat]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'slot': 2, 'active_char': self.active_char.char_num})}"
                                     )
-                                    print_info(
-                                        f"Retraite → perso {self.active_char.char_num} en jeu"
-                                    )
+                                    # print_info(
+                                    #     f"Retraite --> perso {self.active_char.char_num} en jeu"
+                                    # )
                             else:
                                 if (
                                     not self.support_2.is_dead
@@ -631,14 +633,32 @@ class Game:
                 # Draw active character
                 current_sprite = self.active_char.get_current_sprite()
                 player_pos = self.active_char.position
-                self.screen.blit(current_sprite, player_pos)
+                if current_sprite is not None:
+                    self.screen.blit(current_sprite, player_pos)
+
+                char = self.active_char
+                if hasattr(char, "bubble_effect") and char.bubble_effect:
+                    char.bubble_effect.x = char.position[0]
+                    char.bubble_effect.y = char.position[1]
+                    char.bubble_effect.draw(self.screen)
+
+                targets = list(self.remote_players.values())
+
+                self.active_char.update_projectiles(delta_time, targets)
+                self.active_char.draw_projectiles(self.screen)
+
+                for pid, remote_char in self.remote_players.items():
+                    remote_char.update_projectiles(delta_time, [self.active_char])
+                    remote_char.draw_projectiles(self.screen)
 
                 # DRaw remote players
                 for pid, remote_char in self.remote_players.items():
                     remote_sprite = remote_char.get_current_sprite()
+
                     if remote_sprite:
                         self.screen.blit(remote_sprite, remote_char.position)
                     effect_sprite = remote_char.get_effect_sprite()
+
                     if effect_sprite:
                         ex = remote_char.position[0]
                         ey = remote_char.position[1]
@@ -693,6 +713,7 @@ class Game:
                         }
                         self.send_to_server(f"[EntityState]:{json.dumps(payload)}")
 
+                self.active_char.draw_hitbox(self.screen)
                 # draw HUD
                 if self.hud:
                     self.hud.update(dt)
