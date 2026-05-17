@@ -136,6 +136,21 @@ class Game:
         w = int(image.get_width() * scale)
         return (self.width - w) // 2
 
+    def _all_players_ready(self):
+        session_info = next(
+            (
+                s
+                for s in self.Menu.sessions
+                if s["titre"] == self.current_joined_session
+            ),
+            None,
+        )
+        if not session_info:
+            return False
+        nb_humans = session_info.get("nb_players", 1)
+        ready_count = sum(1 for v in self.Menu.players_ready.values() if v)
+        return ready_count >= nb_humans
+
     def _process_network_messages(self):
         while not self._r_queue.empty():
             message = self._r_queue.get_nowait()
@@ -188,6 +203,8 @@ class Game:
                 try:
                     data = json.loads(message.split(":", 1)[1])
                     self.Menu.update_player_ready(data["player_id"])
+                    if self._all_players_ready():
+                        self.game_started = True
                 except Exception as e:
                     print_error(f"Erreur PlayerReady: {e}")
 

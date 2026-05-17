@@ -248,7 +248,9 @@ class Serveur:
             self.broadcast_sessions()
 
         elif data.startswith("[PlayerReady]:"):
-            self.broadcast_except(data, exclude_socket=client_socket)
+            for client in self.clients:
+                self._send(client, data)
+            # self.broadcast_except(data, exclude_socket=client_socket)
             print_network("PlayerReady diffusé")
 
     # GAME STATE BROADCAST
