@@ -526,6 +526,10 @@ class Game:
                 )
                 self.Menu.p_character_submission = None
 
+                self.Menu.update_player_ready(self.Menu.CurrentPlayer_id)
+                if self._all_players_ready():
+                    self.game_started = True
+
             if self.Menu.p_leave_session is not None:
                 self.send_to_server(f"[LeaveSession]:{self.Menu.p_leave_session}")
                 self.Menu.p_leave_session = None
