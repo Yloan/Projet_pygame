@@ -491,37 +491,49 @@ class Character:
 
     def get_current_sprite(self):
         if self.is_hidden:
-            return None  # in the buubble
+            return None  # in the buuble
         left = self.direction == "left"
 
         if self.is_dead:
-            return self.frames_DEAD[-1]
+            frames = self.frames_DEAD
+            return frames[-1] if frames else None
 
         if self.is_hurt:
             frames = self.frames_HURT_left if left else self.frames_HURT
-            return frames[min(self.frame_HURT, len(frames) - 1)]
+            if not frames:
+                self.is_hurt = False
+            else:
+                return frames[min(self.frame_HURT, len(frames) - 1)]
 
         if self.is_attacking_s1:
             frames = self.frames_S1_left if left else self.frames_S1
-            return frames[min(self.frame_S1, len(frames) - 1)]
+            if frames:
+                return frames[min(self.frame_S1, len(frames) - 1)]
 
         if self.is_attacking_s2:
             frames = self.frames_S2_left if left else self.frames_S2
-            return frames[min(self.frame_S2, len(frames) - 1)]
+            if frames:
+                return frames[min(self.frame_S2, len(frames) - 1)]
 
         if self.is_attacking_s3:
             if self.s3_hit:
                 frames = self.frames_S3_2_left if left else self.frames_S3_2
-                return frames[min(self.frame_S3_2, len(frames) - 1)]
-            frames = self.frames_S3_left if left else self.frames_S3
-            return frames[min(self.frame_S3, len(frames) - 1)]
+                if frames:
+                    return frames[min(self.frame_S3_2, len(frames) - 1)]
+            else:
+                frames = self.frames_S3_left if left else self.frames_S3
+                if frames:
+                    return frames[min(self.frame_S3, len(frames) - 1)]
 
         if self.is_moving:
             frames = self.frames_MOVE_left if left else self.frames_MOVE
-            return frames[self.frame_MOVE]
+            if frames:
+                return frames[self.frame_MOVE % len(frames)]
 
         frames = self.frames_IDLE_left if left else self.frames_IDLE
-        return frames[self.frame_IDLE]
+        if frames:
+            return frames[self.frame_IDLE % len(frames)]
+        return None
 
     def get_body_rect(self):
         x, y = self.position
@@ -548,8 +560,10 @@ class Character:
         x, y = self.position
 
         if self.direction == "left":
-            width_frame = self.get_current_sprite().get_width()
-            px = -(px + sw) + width_frame
+            sprite = self.get_current_sprite()
+            if sprite is None:
+                return None
+            px = -(px + sw) + sprite.get_width()
 
         return pyg.Rect(x + px, y + py, sw, sh)
 
