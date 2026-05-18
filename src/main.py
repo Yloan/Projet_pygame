@@ -310,26 +310,44 @@ class Game:
 
     def _connect_to_server(self):
         try:
-            # Close existing socket
             if self._client_socket:
                 try:
                     self._client_socket.close()
                 except Exception:
                     pass
 
-            # Create new socket
             self._client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._client_socket.settimeout(2.0)
+            self._client_socket.settimeout(2)
             self._client_socket.connect((self.host, self.port))
-            # print_success(f"Connecté au serveur {self.host}:{self.port}")
 
-            # Start background threads for message handling
             threading.Thread(target=self._receive_loop, daemon=True).start()
             threading.Thread(target=self._send_loop, daemon=True).start()
 
         except Exception as e:
             print_error(f"Erreur de connexion au serveur: {e}")
             self._client_socket = None
+
+    def _reconnect_socket(self):
+        with self._client_lock:
+            if self._client_socket:
+                try:
+                    self._client_socket.close()
+                except Exception:
+                    pass
+            self._client_socket = None
+
+        while self.running:
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(2)
+
+                sock.connect((self.host, self.port))
+                with self._client_lock:
+                    self._client_socket = sock
+                return
+            except Exception as e:
+                print_error(f"Erreur de connexion au serveur: {e}")
+                time.sleep(1)
 
     def _receive_loop(self):
         while self.running:
@@ -341,13 +359,9 @@ class Game:
                 self.r_buffer += chunk
                 messages = self.r_buffer.split("\n")
                 self.r_buffer = messages[-1]
-
                 for message in messages[:-1]:
-                    if not message:
-                        continue
-                    # print_network(f"Message reçu: {message}")
-                    self._r_queue.put(message)
-
+                    if message:
+                        self._r_queue.put(message)
             except socket.timeout:
                 continue
             except Exception as e:
@@ -360,8 +374,7 @@ class Game:
                 self._client_socket = None
                 if self.running:
                     time.sleep(1.0)
-                    self._connect_to_server()
-                break
+                    self._reconnect_socket()
 
     def _send_loop(self):
         while self.running:
@@ -380,9 +393,7 @@ class Game:
                         self._send_queue.put_nowait(message)
                     except Exception:
                         pass
-                    if self.running:
-                        time.sleep(1.0)
-                        self._connect_to_server()
+                    time.sleep(0.1)
             except Exception as e:
                 print_error(f"Erreur envoi: {e}")
                 if self._client_socket:
@@ -395,40 +406,45 @@ class Game:
                     self._send_queue.put_nowait(message)
                 except Exception:
                     pass
-                if self.running:
-                    time.sleep(1.0)
-                    self._connect_to_server()
-
-    def send_to_server(self, message="Bonjour serveur"):
-        self._send_queue.put(message)
-
-    # GAME STATE MANAGEMENT
 
     def shutdown(self):
-
         print_info("Arrêt du jeu : fermeture connexion et threads")
-
-        if self.current_joined_session and self._client_socket:
-            self._client_socket.send(
-                f"[LeaveSession]:{self.current_joined_session}\n".encode("utf-8")
-            )
-            self.current_joined_session = None
-
         self.running = False
 
-        # Close client socket safely
+        if self.current_joined_session:
+            try:
+                if self._client_socket:
+                    self._client_socket.send(
+                        f"[LeaveSession]:{self.current_joined_session}\n".encode(
+                            "utf-8"
+                        )
+                    )
+            except Exception:
+                pass
+            self.current_joined_session = None
+
         with self._client_lock:
             if self._client_socket:
-                self._client_socket.shutdown(socket.SHUT_RDWR)
-                self._client_socket.close()
+                try:
+                    self._client_socket.shutdown(socket.SHUT_RDWR)
+                except Exception:
+                    pass
+                try:
+                    self._client_socket.close()
+                except Exception:
+                    pass
             self._client_socket = None
 
-        # Clear message queue
         while not self._send_queue.empty():
-            self._send_queue.get_nowait()
+            try:
+                self._send_queue.get_nowait()
+            except Exception:
+                break
 
-        # Quit pygame
-        pyg.quit()
+        try:
+            pyg.quit()
+        except Exception:
+            pass
 
     def _init_game_characters(self):
         c1 = self.Menu.character_1 or 1
@@ -458,6 +474,9 @@ class Game:
     def update(self):
         if self.active_char:
             self.active_char.update()
+
+    def send_to_server(self, message="Bonjour serveur"):
+        self._send_queue.put(message)
 
     # Some dev display
     def dev_display(self, liste_image=None):
