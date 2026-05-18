@@ -521,7 +521,8 @@ class HUD:
                     else:
                         self.skillState[skill] = "OK"
                         self.skillCooldownRemaining[skill] = 0
-
+                        self.skillAnimFrame[skill] = 0
+                        self.skillAnimTimer[skill] = 0
         if "assist" in data:
             if data["assist"] == "WAIT":
                 assDuration = data.get("assistDuration", self.assCooldownDuration)
