@@ -28,6 +28,14 @@ HUD_POSITIONS = {1: (10, 10), 2: (993, 10), 3: (10, 530), 4: (993, 530)}
 
 TIME_BEFORE_PROJECTILE = {1: {"s1": 4, "s2": 4}, 5: {"s1": 4}}
 
+# This will be changed when we will implement the other map (spawn slot by map)
+SPAWN_POSITIONS = {
+    1: (150, 320),
+    2: (1050, 320),
+    3: (150, 320),
+    4: (1050, 320),
+}
+
 
 class Game:
     def __init__(self, width=1280, height=720, fullscreen=False):
@@ -240,13 +248,24 @@ class Game:
                         if pid == my_id:
                             continue
 
+                        char_num = state.get("char_number", 1)
                         if pid not in self.remote_players:
-                            char_num = state.get("char_number", 1)
                             try:
                                 self.remote_players[pid] = Character(char_num)
                             except Exception as e:
                                 print_error(
                                     f"Impossible de créer remote Character-{char_num}: {e}"
+                                )
+                                continue
+
+                        elif self.remote_players[pid].char_num != char_num:
+                            old_pos = list(self.remote_players[pid].position)
+                            try:
+                                self.remote_players[pid] = Character(char_num)
+                                self.remote_players[pid].position = old_pos
+                            except Exception as e:
+                                print_error(
+                                    f"Impossible de recréer remote Character-{char_num}: {e}"
                                 )
                                 continue
 
@@ -382,11 +401,17 @@ class Game:
         c2 = self.Menu.character_2 or 1
         c3 = self.Menu.character_3 or 1
 
+        spawn = list(SPAWN_POSITIONS.get(self.Menu.CurrentPlayer_id, (150, 320)))
+
         self.active_char = player_module.Character(c1)
         self.support_1 = player_module.Character(c2)
         self.support_2 = player_module.Character(c3)
-        self.player = self.active_char
 
+        self.active_char.position = spawn[:]
+        self.support_1.position = spawn[:]
+        self.support_2.position = spawn[:]
+
+        self.player = self.active_char
         print_success(
             f"Jeu lancé | actif: perso {c1} | "
             f"support 1: perso {c2} | support 2: perso {c3}"
@@ -572,10 +597,12 @@ class Game:
                                     self._retreat_cooldown == 0
                                     and not self.support_1.is_dead
                                 ):
+                                    current_pos = list(self.active_char.position)
                                     self.active_char, self.support_1 = (
                                         self.support_1,
                                         self.active_char,
                                     )
+                                    self.active_char.position = current_pos
                                     self.player = self.active_char
                                     self._retreat_cooldown = 60
                                     self.send_to_server(
@@ -599,10 +626,12 @@ class Game:
                                     self._retreat_cooldown == 0
                                     and not self.support_2.is_dead
                                 ):
+                                    current_pos = list(self.active_char.position)
                                     self.active_char, self.support_2 = (
                                         self.support_2,
                                         self.active_char,
                                     )
+                                    self.active_char.position = current_pos
                                     self.player = self.active_char
                                     self._retreat_cooldown = 60
                                     self.send_to_server(
@@ -650,7 +679,10 @@ class Game:
                 current_sprite = self.active_char.get_current_sprite()
                 player_pos = self.active_char.position
                 if current_sprite is not None:
-                    self.screen.blit(current_sprite, player_pos)
+                    dx, dy = self.active_char.get_blit_offset(current_sprite)
+                    self.screen.blit(
+                        current_sprite, (player_pos[0] + dx, player_pos[1] + dy)
+                    )
 
                 char = self.active_char
                 if hasattr(char, "bubble_effect") and char.bubble_effect:
@@ -659,22 +691,23 @@ class Game:
                     char.bubble_effect.draw(self.screen)
 
                 targets = list(self.remote_players.values())
-
                 self.active_char.update_projectiles(delta_time, targets)
+                self.active_char.check_hits(targets)
                 self.active_char.draw_projectiles(self.screen)
 
+                # DRaw remote player
                 for pid, remote_char in self.remote_players.items():
+                    remote_char.check_hits([self.active_char])
                     remote_char.update_projectiles(delta_time, [self.active_char])
                     remote_char.draw_projectiles(self.screen)
 
-                # DRaw remote players
-                for pid, remote_char in self.remote_players.items():
                     remote_sprite = remote_char.get_current_sprite()
-
                     if remote_sprite:
-                        self.screen.blit(remote_sprite, remote_char.position)
-                    effect_sprite = remote_char.get_effect_sprite()
+                        dx, dy = remote_char.get_blit_offset(remote_sprite)
+                        rpos = remote_char.position
+                        self.screen.blit(remote_sprite, (rpos[0] + dx, rpos[1] + dy))
 
+                    effect_sprite = remote_char.get_effect_sprite()
                     if effect_sprite:
                         ex = remote_char.position[0]
                         ey = remote_char.position[1]

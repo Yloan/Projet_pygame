@@ -126,6 +126,53 @@ PROJECTILES_INFOS = {
     },
 }
 
+# 40x40 c la ref de base donc le offset serais a (0,0)
+# En gros ce dictionnaire met un offset pour eviter un decalage l'hors de la position visuel du joueur quand on fait ue animations d'attaque
+SPRITE_OFFSETS = {
+    1: {
+        "idle": (0, 0),
+        "move": (0, 0),
+        "hurt": (0, 0),
+        "s1": (0, 0),
+        "s2": (0, 0),
+        "s3": (0, 0),
+        "s3_2": (0, 0),
+    },
+    2: {
+        "idle": (0, 0),
+        "move": (0, 0),
+        "hurt": (0, 0),
+        "s1": (0, 0),
+        "s2": (0, -56),
+        "s3": (0, 0),
+        "s3_2": (0, -12),
+    },
+    3: {
+        "idle": (0, 0),
+        "move": (-10, -10),
+        "hurt": (0, 0),
+        "s1": (-10, -10),
+        "s2": (-10, -10),
+        "s3": (-10, -10),
+    },
+    4: {
+        "idle": (0, 0),
+        "move": (-12, 0),
+        "hurt": (0, 0),
+        "s1": (-18, 0),
+        "s2": (-60, -25),
+        "s3": (-68, -20),
+    },
+    5: {
+        "idle": (0, 0),
+        "move": (0, 0),
+        "hurt": (0, 0),
+        "s1": (0, 0),
+        "s2": (0, -22),
+        "s3": (0, 0),
+    },
+}
+
 COLOR_BODY = (0, 255, 0, 120)
 COLOR_ATTACK = (255, 60, 60, 160)
 
@@ -198,7 +245,7 @@ class Character:
     def _load_sheet(self, filename, w=FRAME_SIZE, h=FRAME_SIZE):
         try:
             path = get_asset_path("sprites", f"Character-{self.char_num}", filename)
-            # import os  # tmp
+            # import os  # tmpm
 
             # print_debug(f"Chargement : {path} | existe : {os.path.exists(path)}")
             # sheet = pyg.image.load(path).convert_alpha()
@@ -551,6 +598,32 @@ class Character:
     def switch_TMP__GET_SURFACE_HITBOX_ATTACKS_():
         global TMP__GET_SURFACE_HITBOX_ATTACKS_
         TMP__GET_SURFACE_HITBOX_ATTACKS_ = not TMP__GET_SURFACE_HITBOX_ATTACKS_
+
+    # petit helper
+    def get_anim_state(self):
+        if self.is_dead:
+            return "dead"
+        if self.is_hurt:
+            return "hurt"
+        if self.is_attacking_s1:
+            return "s1"
+        if self.is_attacking_s2:
+            return "s2"
+        if self.is_attacking_s3:
+            return "s3_2" if self.s3_hit else "s3"
+        if self.is_moving:
+            return "move"
+        return "idle"
+
+    def get_blit_offset(self, sprite):
+        anim = self.get_anim_state()
+        dx, dy = SPRITE_OFFSETS.get(self.char_num, {}).get(anim, (0, 0))
+
+        if self.direction == "left":
+            frame_w = sprite.get_width()
+            dx -= frame_w - FRAME_SIZE
+
+        return dx, dy
 
     def apply_network_state(self, state):
         if "pos" in state:
