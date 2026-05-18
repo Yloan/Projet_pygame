@@ -940,10 +940,10 @@ class Menu:
             if any(c is not None for c in self.players_characters[p_id]):
                 human_present.add(p_id)
 
-        ready_count = sum(1 for p_id in human_present if self.players_ready[p_id])
-        if ready_count == len(human_present) and ready_count > 0:
-            self.menu_state = "start game"
-            self.etat = "game"
+        # ready_count = sum(1 for p_id in human_present if self.players_ready[p_id])
+        # if ready_count == len(human_present) and ready_count > 0:
+        #     self.menu_state = "start game"
+        #     self.etat = "game"
 
     def method_menu(self):
         # MAIN METHOD FOR THE MENU

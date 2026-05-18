@@ -162,9 +162,11 @@ class Game:
         )
         if not session_info:
             return False
-        nb_humans = session_info.nb_players
+        max_humans = 4 - session_info.nb_bots
+        if session_info.nb_players < max_humans:
+            return False
         ready_count = sum(1 for v in self.Menu.players_ready.values() if v)
-        return ready_count >= nb_humans
+        return ready_count >= max_humans
 
     def _process_network_messages(self):
         while not self._r_queue.empty():
@@ -536,12 +538,15 @@ class Game:
                 screen.blit(self.wallpaper, (0, 0))
 
                 self.Menu.method_menu()
-                if self.Menu.etat == "game" and not self._game_initialized:
+                if self.game_started and not self._game_initialized:
                     self._init_game_characters()
                     self._game_initialized = True
                     self.etat = "game"
-                elif self.Menu.etat == "game":
+                    self.Menu.etat = "game"
+                elif self.game_started:
                     self.etat = "game"
+                    self.Menu.etat = "game"
+
                 if self.Menu.menu_state == "creation_parameters_session_menu":
                     for event in pyg.event.get():
                         self.Menu.input_box.handle_event(event)

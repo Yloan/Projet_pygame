@@ -94,6 +94,7 @@ class Serveur:
         client_socket.close()
         if client_socket in self.clients:
             self.clients.remove(client_socket)
+
         self.recv_buffers.pop(client_socket, None)
         print_info("Client déconnecté")
 
