@@ -253,6 +253,9 @@ class Serveur:
             # self.broadcast_except(data, exclude_socket=client_socket)
             print_network("PlayerReady diffusé")
 
+        elif data.startswith("[ProjectileSpawned]:"):
+            self.broadcast_except(data, exclude_socket=client_socket)
+
     # GAME STATE BROADCAST
 
     def _broadcast_game_state(self, sessionName):

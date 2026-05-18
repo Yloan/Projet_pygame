@@ -10,7 +10,7 @@ import game.characters as player_module
 import ui.menu as menu
 import ui.Music as music_module
 import utils.paths as __path__
-from game.characters import FRAME_SIZE, Character
+from game.characters import FRAME_SIZE, PROJECTILES_INFOS, Character, Projectile
 from game.map_laoder import MapLoader
 from ui.console import (
     print_debug,
@@ -35,6 +35,16 @@ SPAWN_POSITIONS = {
     3: (150, 320),
     4: (1050, 320),
 }
+
+SKILL_COOLDOWNS = {
+    # duree in secs
+    1: {"S1": 2, "S2": 4, "S3": 7},
+    2: {"S1": 2, "S2": 4, "S3": 8},
+    3: {"S1": 2, "S2": 4, "S3": 7},
+    4: {"S1": 1.5, "S2": 5, "S3": 8},
+    5: {"S1": 2, "S2": 4, "S3": 6},
+}
+RETREAT_COOLDOWN_DURATION = 4  # secs aussi
 
 
 class Game:
@@ -274,6 +284,28 @@ class Game:
                 except Exception as e:
                     print_error(f"Erreur GameState: {e}")
 
+            elif message.startswith("[ProjectileSpawned]:"):
+                try:
+                    data = json.loads(message.split(":", 1)[1])
+                    pid = data["player_id"]
+                    if pid == self.Menu.CurrentPlayer_id:
+                        continue
+                    if pid not in self.remote_players:
+                        continue
+
+                    char_num = data["char_num"]
+                    skill_num = data["skill_num"]
+                    direction = data["direction"]
+                    pos = (data["x"], data["y"])
+
+                    proj_data = PROJECTILES_INFOS.get(char_num, {}).get(f"s{skill_num}")
+                    if proj_data:
+                        self.remote_players[pid].projectiles.append(
+                            Projectile(char_num, skill_num, pos, direction, proj_data)
+                        )
+                except Exception as e:
+                    print_error(f"Erreur ProjectileSpawned: {e}")
+
     def _connect_to_server(self):
         try:
             # Close existing socket
@@ -411,6 +443,8 @@ class Game:
         self.support_1.position = spawn[:]
         self.support_2.position = spawn[:]
 
+        self._last_char_health = self.active_char.health
+
         self.player = self.active_char
         print_success(
             f"Jeu lancé | actif: perso {c1} | "
@@ -441,6 +475,35 @@ class Game:
         self.send_to_server(f"[HUDUpdate]:{json.dumps(payload)}")
 
     # MAIN GAME LOOP
+
+    def _send_skill(self, skill_num):
+        skill_key = f"S{skill_num}"
+
+        if self.hud and not self.hud.isSkillReady(skill_key):
+            return
+
+        if not self.active_char.use_skill(skill_num):
+            return
+
+        if self.hud:
+            duration = SKILL_COOLDOWNS.get(self.active_char.char_num, {}).get(
+                skill_key, 3.0
+            )
+            self.hud.startCooldown(skill_key, duration)
+
+        base = {
+            "player_id": self.Menu.CurrentPlayer_id,
+            "session": self.current_joined_session,
+            "char_num": self.active_char.char_num,
+            "skill_num": skill_num,
+            "x": self.active_char.position[0],
+            "y": self.active_char.position[1],
+            "direction": self.active_char.direction,
+        }
+        self.send_to_server(f"[SkillUsed]:{json.dumps(base)}")
+
+        if PROJECTILES_INFOS.get(self.active_char.char_num, {}).get(f"s{skill_num}"):
+            self.send_to_server(f"[ProjectileSpawned]:{json.dumps(base)}")
 
     def run(self):
 
@@ -560,8 +623,8 @@ class Game:
 
             # GAME STATE - Actual gameplay
             if self.etat == "game":
-                dt = self.clock.tick(60) / 1000  # seconds (for HUD)
-                delta_time = int(dt * 1000)  # ms (for animations)
+                dt = self.clock.tick(60) / 1000
+                delta_time = int(dt * 1000)
 
                 for event in pyg.event.get():
                     if event.type == pyg.QUIT:
@@ -573,23 +636,6 @@ class Game:
                         if event.key == pyg.K_F2:
                             self.dev_display_ = not self.dev_display_
 
-                        # active character skills — A / S / D
-                        if event.key == pyg.K_a:
-                            if self.active_char.use_skill(1):
-                                self.send_to_server(
-                                    f"[SkillUsed]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'char_num': self.active_char.char_num, 'skill': 1})}"
-                                )
-                        if event.key == pyg.K_s:
-                            if self.active_char.use_skill(2):
-                                self.send_to_server(
-                                    f"[SkillUsed]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'char_num': self.active_char.char_num, 'skill': 2})}"
-                                )
-                        if event.key == pyg.K_d:
-                            if self.active_char.use_skill(3):
-                                self.send_to_server(
-                                    f"[SkillUsed]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'char_num': self.active_char.char_num, 'skill': 3})}"
-                                )
-
                         keys_now = pyg.key.get_pressed()
                         if event.key == pyg.K_q:
                             if keys_now[pyg.K_e]:
@@ -597,20 +643,24 @@ class Game:
                                     self._retreat_cooldown == 0
                                     and not self.support_1.is_dead
                                 ):
-                                    current_pos = list(self.active_char.position)
-                                    self.active_char, self.support_1 = (
-                                        self.support_1,
-                                        self.active_char,
-                                    )
-                                    self.active_char.position = current_pos
-                                    self.player = self.active_char
-                                    self._retreat_cooldown = 60
-                                    self.send_to_server(
-                                        f"[Retreat]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'slot': 1, 'active_char': self.active_char.char_num})}"
-                                    )
-                                    # print_info(
-                                    #     f"Retraite --> perso {self.active_char.char_num} en jeu"
-                                    # )
+                                    if self.hud and not self.hud.isAssReady():
+                                        pass
+                                    else:
+                                        current_pos = list(self.active_char.position)
+                                        self.active_char, self.support_1 = (
+                                            self.support_1,
+                                            self.active_char,
+                                        )
+                                        self.active_char.position = current_pos
+                                        self.player = self.active_char
+                                        self._retreat_cooldown = 60
+                                        if self.hud:
+                                            self.hud.startAssCooldown(
+                                                RETREAT_COOLDOWN_DURATION
+                                            )
+                                        self.send_to_server(
+                                            f"[Retreat]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'slot': 1, 'active_char': self.active_char.char_num})}"
+                                        )
                             else:
                                 if (
                                     not self.support_1.is_dead
@@ -626,20 +676,24 @@ class Game:
                                     self._retreat_cooldown == 0
                                     and not self.support_2.is_dead
                                 ):
-                                    current_pos = list(self.active_char.position)
-                                    self.active_char, self.support_2 = (
-                                        self.support_2,
-                                        self.active_char,
-                                    )
-                                    self.active_char.position = current_pos
-                                    self.player = self.active_char
-                                    self._retreat_cooldown = 60
-                                    self.send_to_server(
-                                        f"[Retreat]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'slot': 2, 'active_char': self.active_char.char_num})}"
-                                    )
-                                    # print_info(
-                                    #     f"Retraite --> perso {self.active_char.char_num} en jeu"
-                                    # )
+                                    if self.hud and not self.hud.isAssReady():
+                                        pass
+                                    else:
+                                        current_pos = list(self.active_char.position)
+                                        self.active_char, self.support_2 = (
+                                            self.support_2,
+                                            self.active_char,
+                                        )
+                                        self.active_char.position = current_pos
+                                        self.player = self.active_char
+                                        self._retreat_cooldown = 60
+                                        if self.hud:
+                                            self.hud.startAssCooldown(
+                                                RETREAT_COOLDOWN_DURATION
+                                            )
+                                        self.send_to_server(
+                                            f"[Retreat]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'slot': 2, 'active_char': self.active_char.char_num})}"
+                                        )
                             else:
                                 if (
                                     not self.support_2.is_dead
@@ -648,6 +702,13 @@ class Game:
                                     self.send_to_server(
                                         f"[SupportSkill]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'slot': 2, 'char_num': self.support_2.char_num, 'skill': 1})}"
                                     )
+
+                        if event.key == pyg.K_a:
+                            self._send_skill(1)
+                        if event.key == pyg.K_s:
+                            self._send_skill(2)
+                        if event.key == pyg.K_d:
+                            self._send_skill(3)
 
                 if self._retreat_cooldown > 0:
                     self._retreat_cooldown -= 1
@@ -694,6 +755,14 @@ class Game:
                 self.active_char.update_projectiles(delta_time, targets)
                 self.active_char.check_hits(targets)
                 self.active_char.draw_projectiles(self.screen)
+
+                if self.hud and self.active_char:
+                    delta = self._last_char_health - self.active_char.health
+                    if delta > 0:
+                        # Conversion : health 0-100 → HUD 54 points visuels
+                        hud_dmg = max(1, round(delta * 54 / 100))
+                        self.hud.DealsDamage(hud_dmg)
+                    self._last_char_health = self.active_char.health
 
                 # DRaw remote player
                 for pid, remote_char in self.remote_players.items():
