@@ -171,7 +171,7 @@ class Game:
                         (
                             s
                             for s in self.Menu.sessions
-                            if s["titre"] == self.current_joined_session
+                            if s.titre == self.current_joined_session
                         ),
                         None,
                     )
@@ -515,10 +515,7 @@ class Game:
                 self.send_to_server(f"[CharacterUpdate]:{json.dumps(update_data)}")
                 self.Menu.p_character_update = False
 
-            if (
-                hasattr(self.Menu, "pending_character_submission")
-                and self.Menu.p_character_submission is not None
-            ):
+            if self.Menu.p_character_submission is not None:
                 self.send_to_server(
                     f"[PlayerReady]:{json.dumps(self.Menu.p_character_submission)}"
                 )
