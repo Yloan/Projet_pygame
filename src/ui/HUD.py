@@ -533,6 +533,8 @@ class HUD:
             else:
                 self.assState = "OK"
                 self.assCooldownRemaining = 0
+                self.assFrame = 0
+                self.assAnimTimer = 0
 
         self.verifyColorBar()
 
