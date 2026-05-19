@@ -283,7 +283,7 @@ class Game:
                         elif self.remote_players[pid].char_num != char_num:
                             old_pos = list(self.remote_players[pid].position)
                             try:
-                                self.remote_players[pid] = Character(char_num)
+                                self.remote_players[pid] = make_character(char_num)
                                 self.remote_players[pid].position = old_pos
                             except Exception as e:
                                 print_error(

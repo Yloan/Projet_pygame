@@ -286,8 +286,16 @@ class Character:
         move = self._load_sheet("MOVE-Sheet.png", mw, mh) or self._blank(w=mw, h=mh)
         hurt = self._load_sheet("HURT-Sheet.png") or idle
         dead = self._load_sheet("DEAD-Sheet.png") or self._blank((80, 0, 0))
-        s1 = self._load_sheet("S1-Sheet.png", s1w, s1h) or self._blank(w=s1w, h=s1h)
-        s2 = self._load_sheet("S2-Sheet.png", s2w, s2h) or self._blank(w=s2w, h=s2h)
+        s1 = (
+            self._load_sheet("S1-1-Sheet.png", s1w, s1h)
+            or self._load_sheet("S1-Sheet.png", s1w, s1h)
+            or self._blank(w=s1w, h=s1h)
+        )
+        s2 = (
+            self._load_sheet("S2-1-Sheet.png", s2w, s2h)
+            or self._load_sheet("S2-Sheet.png", s2w, s2h)
+            or self._blank(w=s2w, h=s2h)
+        )
 
         self.frames_IDLE = idle
         self.frames_MOVE = move
@@ -886,6 +894,13 @@ def make_character(char_num):
     return cls() if cls else Character(char_num)
 
 
+# petit helper pour les classes qui suivent
+def _resolve_path(relative_path):
+    # Converti "assets/sprites/X/Y.png" en get_asset_path("sprites", "X", "Y.png")
+    parts = relative_path.replace("assets/", "").split("/")
+    return get_asset_path(*parts)
+
+
 class Projectile:
     def __init__(self, char_num, skill_num, origin_pos, direction, data):
         self.x, self.y = float(origin_pos[0]), float(origin_pos[1])
@@ -908,7 +923,7 @@ class Projectile:
             "damage"
         ]
 
-        sheet = pyg.image.load(data["path"]).convert_alpha()
+        sheet = pyg.image.load(_resolve_path(data["path"])).convert_alpha()
         n = max(1, sheet.get_width() // self.width)
         raw_frames = [
             sheet.subsurface((i * self.width, 0, self.width, self.height))
@@ -1056,7 +1071,7 @@ class SubProjectile:
         self.frame_duration = data["frame_duration"]
         self.loop = data.get("loop", False)
 
-        sheet = pyg.image.load(data["path"]).convert_alpha()
+        sheet = pyg.image.load(_resolve_path(data["path"])).convert_alpha()
         n = max(1, sheet.get_width() // self.width)
         self.frames = [
             sheet.subsurface((i * self.width, 0, self.width, self.height))
