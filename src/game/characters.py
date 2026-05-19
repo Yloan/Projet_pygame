@@ -951,7 +951,7 @@ class Projectile:
         else:
             self._effect_frames = []
 
-    def update(self, dt, targets):
+    def update(self, dt, targets=None):
         if self.is_dead:
             for sub in self.sub_projectiles:
                 sub.update(dt)
