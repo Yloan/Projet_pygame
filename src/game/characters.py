@@ -658,18 +658,24 @@ class Character:
         if "is_hurt" in state:
             self.is_hurt = bool(state["is_hurt"])
 
-        atk = state.get("is_attacking", {})
-        self.is_attacking_s1 = bool(atk.get("1", False))
-        self.is_attacking_s2 = bool(atk.get("2", False))
-        self.is_attacking_s3 = bool(atk.get("3", False))
+        if "is_hidden" in state:
+            new_hidden = bool(state["is_hidden"])
+            if not new_hidden and self.is_hidden:
+                self.bubble_effect = None
+            self.is_hidden = new_hidden
 
-        idx = state.get("anim_indices", {})
-        self.frame_IDLE = int(idx.get("idle", self.frame_IDLE))
-        self.frame_MOVE = int(idx.get("move", self.frame_MOVE))
-        self.frame_HURT = int(idx.get("hurt", self.frame_HURT))
-        self.frame_S1 = int(idx.get("skill1", self.frame_S1))
-        self.frame_S2 = int(idx.get("skill2", self.frame_S2))
-        self.frame_S3 = int(idx.get("skill3", self.frame_S3))
+        ak = state.get("is_attacking", {})
+        self.is_attacking_s1 = bool(ak.get("1", False))
+        self.is_attacking_s2 = bool(ak.get("2", False))
+        self.is_attacking_s3 = bool(ak.get("3", False))
+
+        i = state.get("anim_indices", {})
+        self.frame_IDLE = int(i.get("idle", self.frame_IDLE))
+        self.frame_MOVE = int(i.get("move", self.frame_MOVE))
+        self.frame_HURT = int(i.get("hurt", self.frame_HURT))
+        self.frame_S1 = int(i.get("skill1", self.frame_S1))
+        self.frame_S2 = int(i.get("skill2", self.frame_S2))
+        self.frame_S3 = int(i.get("skill3", self.frame_S3))
 
     def get_effect_sprite(self):
         return None
