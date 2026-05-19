@@ -463,6 +463,8 @@ class Character:
 
         self.bubble_source_char = None
 
+        self.is_remote = False
+
     def move(self, direction):
         x, y = self.position
         if direction == "up":
@@ -744,10 +746,11 @@ class Character:
                 if hitbox.colliderect(target.get_body_rect()):
                     target.take_damage(dmg)
                     self._hit_this_swing.add(id(target))
-                    self.s3_hit = True
-                    self.frame_S3_2 = 0
-                    self.timer_S3_2 = 0
                     self._apply_status_on_hit(target, skill)
+                    if not self.is_remote:
+                        self.s3_hit = True
+                        self.frame_S3_2 = 0
+                        self.timer_S3_2 = 0
                     return
 
             tid = id(target)
