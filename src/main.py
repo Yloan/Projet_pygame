@@ -847,8 +847,11 @@ class Game:
                         self.hud.DealsDamage(hud_dmg)
                     self._last_char_health = self.active_char.health
 
-                # DRaw remote player
+                # Draw remote player
                 for pid, remote_char in self.remote_players.items():
+                    # maj of StatusManager
+                    remote_char.status.update(delta_time)
+
                     remote_char.check_hits([self.active_char])
                     remote_char.update_projectiles(delta_time, [self.active_char])
                     remote_char.draw_projectiles(self.screen)

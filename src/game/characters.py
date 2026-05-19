@@ -136,7 +136,7 @@ SPRITE_OFFSETS = {
         "idle": (0, 0),
         "move": (-10, -10),
         "hurt": (0, 0),
-        "s1": (-10, -10),  # fallback
+        "s1": (-10, -10),
         "s1_1": (-10, -10),
         "s1_2": (-10, -10),
         "s1_3": (-10, -10),
@@ -230,6 +230,9 @@ class Character:
         char_dimensi = DIMENS.get(self.char_num, {})
         if anim in char_dimensi:
             return char_dimensi[anim]
+        parent = anim.split("_")[0]
+        if parent != anim and parent in char_dimensi:
+            return char_dimensi[parent]
         return (FRAME_SIZE, FRAME_SIZE)
 
     def _blank(self, color=None, w=None, h=None):
@@ -686,7 +689,7 @@ class Character:
                     "path": "assets/sprites/Character-2/effect-2-S3-Sheet.png",
                     "frames": 4,
                     "frame_duration": DISABLED_DURATION // 4,
-                    "width": 128,
+                    "width": 32,
                     "height": 32,
                 }
                 target.bubble_effect = SubProjectile(
@@ -747,11 +750,20 @@ class Character3(Character):
 
     def _load_animations(self):
         super()._load_animations()
-        s1w, s1h = self._dims("S1")
 
-        s1_1 = self._load_sheet("S1-1-Sheet.png", s1w, s1h) or self._blank(w=s1w, h=s1h)
-        s1_2 = self._load_sheet("S1-2-Sheet.png", s1w, s1h) or self._blank(w=s1w, h=s1h)
-        s1_3 = self._load_sheet("S1-3-Sheet.png", s1w, s1h) or self._blank(w=s1w, h=s1h)
+        s1_1w, s1_1h = self._dims("S1_1")
+        s1_2w, s1_2h = self._dims("S1_2")
+        s1_3w, s1_3h = self._dims("S1_3")
+
+        s1_1 = self._load_sheet("S1-1-Sheet.png", s1_1w, s1_1h) or self._blank(
+            w=s1_1w, h=s1_1h
+        )
+        s1_2 = self._load_sheet("S1-2-Sheet.png", s1_2w, s1_2h) or self._blank(
+            w=s1_2w, h=s1_2h
+        )
+        s1_3 = self._load_sheet("S1-3-Sheet.png", s1_3w, s1_3h) or self._blank(
+            w=s1_3w, h=s1_3h
+        )
 
         self.frames_S1_1 = s1_1
         self.frames_S1_2_anim = s1_2
