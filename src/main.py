@@ -916,6 +916,8 @@ class Game:
                             "pos": list(player_pos),
                             "is_hidden": self.active_char.is_hidden,
                             "is_moving": bool(is_moving),
+                            "s3_hit": self.active_char.s3_hit,
+                            "frame_s3_2": self.active_char.frame_S3_2,
                             "is_attacking": {
                                 "1": self.active_char.is_attacking_s1,
                                 "2": self.active_char.is_attacking_s2,

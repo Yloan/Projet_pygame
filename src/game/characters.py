@@ -283,6 +283,18 @@ CHAR6_CANS_HUD_POSITIONS = {
 }
 CHAR6_CANS_GAP = 50
 
+# Data pour update les bubbles dans les remotes
+BUBBLE_EFFECT_DATA = {
+    2: {
+        "path": "assets/sprites/Character-2/effect-2-S3-Sheet.png",
+        "frames": 4,
+        "frame_duration": 200,
+        "width": 32,
+        "height": 32,
+        "loop": True,
+    }
+}
+
 COLOR_BODY = (0, 255, 0, 120)
 COLOR_ATTACK = (255, 60, 60, 160)
 
@@ -498,9 +510,12 @@ class Character:
         if is_attacking:
             return False
 
-        setattr(self, flag, True)
-        setattr(self, frame_attr, 0)
-        setattr(self, timer_attr, 0)
+        self.is_attacking_s3 = True
+        self.frame_S3 = 0
+        self.timer_S3 = 0
+        self.s3_hit = False
+        self.frame_S3_2 = 0
+        self.timer_S3_2 = 0
         self._hit_this_swing = set()
 
         proj_data = PROJECTILES_INFOS.get(self.char_num, {}).get(skill_key)
@@ -537,6 +552,7 @@ class Character:
                 self._pending_projectiles.pop(1, None)
 
     def update_animation(self, dt, is_moving):
+        self.status.update(dt)
 
         if hasattr(self, "bubble_effect") and self.bubble_effect:
             self.bubble_effect.update(dt)
@@ -544,7 +560,6 @@ class Character:
                 self.bubble_effect = None
                 self.is_hidden = False
 
-        self.status.update(dt)
         if self.status.is_disabled:
             is_moving = False
         push_delta = self.status.get_push_delta(dt)
@@ -577,6 +592,7 @@ class Character:
                     self._maybe_spawn_projectile(3)
                     if self.frame_S3_2 >= len(self.frames_S3_2):
                         self.frame_S3_2 = 0
+                        self.timer_S3_2 = 0
                         self.is_attacking_s3 = False
                         self.s3_hit = False
                         self._hit_this_swing = set()
@@ -831,17 +847,11 @@ class Character:
                 target.status.apply_wet()
                 target.status.apply_disabled(self.direction)
                 target.is_hidden = True
-                effect_data = {
-                    "path": "assets/sprites/Character-2/effect-2-S3-Sheet.png",
-                    "frames": 4,
-                    "frame_duration": 200,
-                    "width": 32,
-                    "height": 32,
-                    "loop": True,
-                }
-                target.bubble_effect = SubProjectile(
-                    target.position[0], target.position[1], effect_data
-                )
+                effect_data = BUBBLE_EFFECT_DATA.get(self.char_num)
+                if effect_data:
+                    target.bubble_effect = SubProjectile(
+                        target.position[0], target.position[1], effect_data
+                    )
 
 
 class Furnace(Character):
