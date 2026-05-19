@@ -35,8 +35,8 @@ DIMENS = {
     },
     3: {
         "MOVE": (60, 60),
-        "S1": (120, 60),  # S1-1 et S1-3 partagent ces dims
-        "S1_2": (120, 60),  # ← à ajuster si S1-2 a des dims différentes
+        "S1": (120, 60),
+        "S1_2": (64, 60),
         "S2": (80, 60),
         "S3": (120, 60),
     },
@@ -189,7 +189,6 @@ class Character:
         self.position = (400, 400)
         self.direction = "right"
 
-        # Initialisé avant _load_animations pour ne pas écraser ce qu'elle charge
         self.frames_S3_2 = []
         self.frames_S3_2_left = []
 
@@ -230,10 +229,6 @@ class Character:
         self.timer_S3_2 = 0
 
     def _dims(self, anim, fallback=None):
-        """Retourne (w, h) pour l'animation demandée.
-        Si la clé n'existe pas, essaie `fallback`, puis (FRAME_SIZE, FRAME_SIZE).
-        Convention : "S1_2" → fallback "S1", "S3_2" → fallback "S3", etc.
-        """
         char_dimensi = DIMENS.get(self.char_num, {})
         if anim in char_dimensi:
             return char_dimensi[anim]
@@ -412,10 +407,7 @@ class Character:
         for p in self.projectiles:
             p.draw(surface)
 
-    # ── Hook overridable pour l'animation du skill 1 ──────────────────────────
     def _handle_s1_update(self, dt):
-        """Avance l'animation du skill 1.
-        Overridable par les sous-classes pour les skills multi-phases."""
         self.timer_S1 += dt
         if self.timer_S1 >= SKILL_SPEED:
             self.timer_S1 = 0
@@ -809,7 +801,6 @@ class Character3(Character):
                 self.timer_S1_2 = 0
                 self.frame_S1_2 += 1
                 if self.frame_S1_2 >= len(self.frames_S1_2_anim):
-                    # Parry terminé → counter
                     self.s1_phase = 3
                     self.frame_S1_3 = 0
                     self.timer_S1_3 = 0
@@ -820,7 +811,6 @@ class Character3(Character):
                 self.timer_S1_3 = 0
                 self.frame_S1_3 += 1
                 if self.frame_S1_3 >= len(self.frames_S1_3):
-                    # Fin du skill
                     self.is_attacking_s1 = False
                     self.s1_phase = 1
                     self.s1_parried = False

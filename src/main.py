@@ -852,7 +852,6 @@ class Game:
                     remote_char.check_hits([self.active_char])
                     remote_char.update_projectiles(delta_time, [self.active_char])
                     remote_char.draw_projectiles(self.screen)
-                    remote_char.status.update(delta_time)
 
                     remote_sprite = remote_char.get_current_sprite()
                     if remote_sprite:
