@@ -914,6 +914,9 @@ class Game:
                             "direction": self.active_char.direction,
                             "health": self.active_char.health,
                             "pos": list(player_pos),
+                            "bubble_caster": getattr(
+                                self.active_char, "bubble_source_char", None
+                            ),
                             "is_hidden": self.active_char.is_hidden,
                             "is_moving": bool(is_moving),
                             "s3_hit": self.active_char.s3_hit,

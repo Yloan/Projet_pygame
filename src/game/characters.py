@@ -461,6 +461,8 @@ class Character:
         self.frames_S2_left = self._flip(s2)
         self.frames_S3_left = self._flip(s3)
 
+        self.bubble_source_char = None
+
     def move(self, direction):
         x, y = self.position
         if direction == "up":
@@ -499,24 +501,27 @@ class Character:
     def use_skill(self, skill_num):
         skill_key = f"s{skill_num}"
         frames_map = {
-            1: (self.is_attacking_s1, "is_attacking_s1", "frame_S1", "timer_S1"),
-            2: (self.is_attacking_s2, "is_attacking_s2", "frame_S2", "timer_S2"),
-            3: (self.is_attacking_s3, "is_attacking_s3", "frame_S3", "timer_S3"),
+            1: ("is_attacking_s1", "frame_S1", "timer_S1"),
+            2: ("is_attacking_s2", "frame_S2", "timer_S2"),
+            3: ("is_attacking_s3", "frame_S3", "timer_S3"),
         }
 
         if skill_num not in frames_map:
             return False
-        is_attacking, flag, frame_attr, timer_attr = frames_map[skill_num]
-        if is_attacking:
+
+        flag, frame_attr, timer_attr = frames_map[skill_num]
+        if getattr(self, flag):
             return False
 
-        self.is_attacking_s3 = True
-        self.frame_S3 = 0
-        self.timer_S3 = 0
-        self.s3_hit = False
-        self.frame_S3_2 = 0
-        self.timer_S3_2 = 0
+        setattr(self, flag, True)
+        setattr(self, frame_attr, 0)
+        setattr(self, timer_attr, 0)
         self._hit_this_swing = set()
+
+        if skill_num == 3:
+            self.s3_hit = False
+            self.frame_S3_2 = 0
+            self.timer_S3_2 = 0
 
         proj_data = PROJECTILES_INFOS.get(self.char_num, {}).get(skill_key)
         if proj_data:
@@ -807,9 +812,24 @@ class Character:
 
         if "is_hidden" in state:
             new_hidden = bool(state["is_hidden"])
-            if not new_hidden and self.is_hidden:
+            if new_hidden and not self.is_hidden:
+                # Bulle vient d'apparaître → crée le visuel localement
+                caster = state.get("bubble_caster")
+                if caster is not None:
+                    effect_data = BUBBLE_EFFECT_DATA.get(int(caster))
+                    if effect_data:
+                        self.bubble_effect = SubProjectile(
+                            self.position[0], self.position[1], effect_data
+                        )
+            elif not new_hidden and self.is_hidden:
                 self.bubble_effect = None
+                self.bubble_source_char = None
             self.is_hidden = new_hidden
+
+        if "s3_hit" in state:
+            self.s3_hit = bool(state["s3_hit"])
+        if "frame_s3_2" in state:
+            self.frame_S3_2 = int(state["frame_s3_2"])
 
         ak = state.get("is_attacking", {})
         self.is_attacking_s1 = bool(ak.get("1", False))
@@ -847,6 +867,7 @@ class Character:
                 target.status.apply_wet()
                 target.status.apply_disabled(self.direction)
                 target.is_hidden = True
+                target.bubble_source_char = self.char_num
                 effect_data = BUBBLE_EFFECT_DATA.get(self.char_num)
                 if effect_data:
                     target.bubble_effect = SubProjectile(
