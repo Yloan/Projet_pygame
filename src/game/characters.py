@@ -9,6 +9,7 @@ IDLE_SPEED = 100
 MOVE_SPEED = 150
 HURT_SPEED = 80
 SKILL_SPEED = 100
+DISABLED_DURATION = 3000  # Durée du statut disabled en ms
 
 CHAR_STATS = {
     1: {"speed": 3, "health": 100, "color": (220, 80, 20)},
@@ -34,7 +35,7 @@ DIMENS = {
     },
     3: {
         "MOVE": (60, 60),
-        "S1": (120, 60),
+        "S1": (64, 60),
         "S2": (80, 60),
         "S3": (120, 60),
     },
@@ -135,7 +136,10 @@ SPRITE_OFFSETS = {
         "idle": (0, 0),
         "move": (-10, -10),
         "hurt": (0, 0),
-        "s1": (-10, -10),
+        "s1": (-10, -10),  # fallback
+        "s1_1": (-10, -10),
+        "s1_2": (-10, -10),
+        "s1_3": (-10, -10),
         "s2": (-10, -10),
         "s3": (-10, -10),
     },
@@ -238,11 +242,6 @@ class Character:
     def _load_sheet(self, filename, w=FRAME_SIZE, h=FRAME_SIZE):
         try:
             path = get_asset_path("sprites", f"Character-{self.char_num}", filename)
-            # import os  # tmpm
-
-            # print_debug(f"Chargement : {path} | existe : {os.path.exists(path)}")
-            # sheet = pyg.image.load(path).convert_alpha()
-            # print(f"[DEBUG] sheet size: {sheet.get_size()} | frame size: {w}x{h}")
             sheet = pyg.image.load(path).convert_alpha()
             n = max(1, sheet.get_width() // w)
             frames = []
@@ -404,12 +403,24 @@ class Character:
         for p in self.projectiles:
             p.draw(surface)
 
+    def _handle_s1_update(self, dt):
+        self.timer_S1 += dt
+        if self.timer_S1 >= SKILL_SPEED:
+            self.timer_S1 = 0
+            self.frame_S1 += 1
+            if self.frame_S1 >= len(self.frames_S1):
+                self.frame_S1 = 0
+                self.is_attacking_s1 = False
+                self._hit_this_swing = set()
+
     def update_animation(self, dt, is_moving):
 
+        # FIX : réinitialiser is_hidden quand la bulle expire
         if hasattr(self, "bubble_effect") and self.bubble_effect:
             self.bubble_effect.update(dt)
             if not self.status.is_disabled:
                 self.bubble_effect = None
+                self.is_hidden = False
 
         self.status.update(dt)
         if self.status.is_disabled:
@@ -422,14 +433,7 @@ class Character:
         self.is_moving = is_moving
 
         if self.is_attacking_s1:
-            self.timer_S1 += dt
-            if self.timer_S1 >= SKILL_SPEED:
-                self.timer_S1 = 0
-                self.frame_S1 += 1
-                if self.frame_S1 >= len(self.frames_S1):
-                    self.frame_S1 = 0
-                    self.is_attacking_s1 = False
-                    self._hit_this_swing = set()
+            self._handle_s1_update(dt)
 
         if self.is_attacking_s2:
             self.timer_S2 += dt
@@ -700,6 +704,195 @@ class Water(Character):
         super().__init__(2)
 
 
+# CHARACTER 3 — je voulais pas faire des sous classes mais la c'est necessaire aaah j'ai la fleeeeemme
+"""
+Bon reflechissons
+
+L'approche actuelle (flags s3_hit / frames_S3_2 dans la classe de base) fonctionne pour un
+seul cas mais ne scale pas
+L'apporhce que je faisais seraÒ chiante a grand echelle je dois adapter.
+
+
+Character3(Character), Character4(Character), Character5(Character),
+chacun overridant les méthodes nécessaires
+La classe de base ne change pas (hors fix char 2)
+
+Donc je dois aussi refaire la class Character...
+Ce qu
+
+Ok commencons.
+"""
+
+
+CHAR3_S1_PHASE3_HITBOX = {"offset": (15, 3), "size": (90, 45)}
+CHAR3_S1_DAMAGE_NORMAL = 25
+CHAR3_S1_DAMAGE_PARRY = 55
+
+
+class Character3(Character):
+    def __init__(self):
+        self.s1_phase = 1
+        self.s1_parried = False
+        self.frame_S1_2 = 0
+        self.timer_S1_2 = 0
+        self.frame_S1_3 = 0
+        self.timer_S1_3 = 0
+        self.frames_S1_1 = []
+        self.frames_S1_2_anim = []
+        self.frames_S1_3 = []
+        self.frames_S1_1_left = []
+        self.frames_S1_2_anim_left = []
+        self.frames_S1_3_left = []
+        super().__init__(3)
+
+    def _load_animations(self):
+        super()._load_animations()
+        s1w, s1h = self._dims("S1")
+
+        s1_1 = self._load_sheet("S1-1-Sheet.png", s1w, s1h) or self._blank(w=s1w, h=s1h)
+        s1_2 = self._load_sheet("S1-2-Sheet.png", s1w, s1h) or self._blank(w=s1w, h=s1h)
+        s1_3 = self._load_sheet("S1-3-Sheet.png", s1w, s1h) or self._blank(w=s1w, h=s1h)
+
+        self.frames_S1_1 = s1_1
+        self.frames_S1_2_anim = s1_2
+        self.frames_S1_3 = s1_3
+        self.frames_S1_1_left = self._flip(s1_1)
+        self.frames_S1_2_anim_left = self._flip(s1_2)
+        self.frames_S1_3_left = self._flip(s1_3)
+
+        self.frames_S1 = s1_1
+        self.frames_S1_left = self.frames_S1_1_left
+
+    def use_skill(self, skill_num):
+        if skill_num == 1 and not self.is_attacking_s1:
+            self.is_attacking_s1 = True
+            self.s1_phase = 1
+            self.s1_parried = False
+            self.frame_S1 = 0
+            self.timer_S1 = 0
+            self.frame_S1_2 = 0
+            self.timer_S1_2 = 0
+            self.frame_S1_3 = 0
+            self.timer_S1_3 = 0
+            self._hit_this_swing = set()
+            return True
+        return super().use_skill(skill_num)
+
+    def take_damage(self, amount):
+        if self.is_attacking_s1 and self.s1_phase == 1:
+            self.s1_parried = True
+            return
+
+        super().take_damage(amount)
+
+    def _handle_s1_update(self, dt):
+        if self.s1_phase == 1:
+            if self.s1_parried:
+                self.s1_phase = 2
+                self.frame_S1_2 = 0
+                self.timer_S1_2 = 0
+                return
+
+            self.timer_S1 += dt
+            if self.timer_S1 >= SKILL_SPEED:
+                self.timer_S1 = 0
+                self.frame_S1 += 1
+                if self.frame_S1 >= len(self.frames_S1_1):
+                    self.s1_phase = 3
+                    self.frame_S1_3 = 0
+                    self.timer_S1_3 = 0
+
+        elif self.s1_phase == 2:
+            self.timer_S1_2 += dt
+            if self.timer_S1_2 >= SKILL_SPEED:
+                self.timer_S1_2 = 0
+                self.frame_S1_2 += 1
+                if self.frame_S1_2 >= len(self.frames_S1_2_anim):
+                    self.s1_phase = 3
+                    self.frame_S1_3 = 0
+                    self.timer_S1_3 = 0
+
+        elif self.s1_phase == 3:
+            self.timer_S1_3 += dt
+            if self.timer_S1_3 >= SKILL_SPEED:
+                self.timer_S1_3 = 0
+                self.frame_S1_3 += 1
+                if self.frame_S1_3 >= len(self.frames_S1_3):
+                    self.is_attacking_s1 = False
+                    self.s1_phase = 1
+                    self.s1_parried = False
+                    self._hit_this_swing = set()
+
+    def get_current_sprite(self):
+        if self.is_hidden:
+            return None
+
+        if self.is_attacking_s1:
+            left = self.direction == "left"
+            if self.s1_phase == 1:
+                frames = self.frames_S1_1_left if left else self.frames_S1_1
+                idx = self.frame_S1
+            elif self.s1_phase == 2:
+                frames = self.frames_S1_2_anim_left if left else self.frames_S1_2_anim
+                idx = self.frame_S1_2
+            else:
+                frames = self.frames_S1_3_left if left else self.frames_S1_3
+                idx = self.frame_S1_3
+            if frames:
+                return frames[min(idx, len(frames) - 1)]
+            return None
+
+        return super().get_current_sprite()
+
+    def get_anim_state(self):
+        if self.is_attacking_s1:
+            return f"s1_{self.s1_phase}"
+        return super().get_anim_state()
+
+    def get_attack_hitbox(self):
+        if self.is_attacking_s1 and self.s1_phase in (1, 2):
+            return None
+        return super().get_attack_hitbox()
+
+    def check_hits(self, targets):
+        if self.is_attacking_s1:
+            if self.s1_phase != 3:
+                return
+
+            px, py = CHAR3_S1_PHASE3_HITBOX["offset"]
+            sw, sh = CHAR3_S1_PHASE3_HITBOX["size"]
+            x, y = self.position
+            if self.direction == "left":
+                px = FRAME_SIZE - px - sw
+            hitbox = pyg.Rect(x + px, y + py, sw, sh)
+
+            damage = (
+                CHAR3_S1_DAMAGE_PARRY if self.s1_parried else CHAR3_S1_DAMAGE_NORMAL
+            )
+
+            for target in targets:
+                if target is self or target.is_dead:
+                    continue
+                tid = id(target)
+                if tid in self._hit_this_swing:
+                    continue
+                if hitbox.colliderect(target.get_body_rect()):
+                    target.take_damage(damage)
+                    self._hit_this_swing.add(tid)
+        else:
+            super().check_hits(targets)
+
+
+def make_character(char_num):
+    data = {
+        3: Character3,
+        # 4: Character4,   # juste apres
+        # 5: Character5,   # juste apres
+    }
+    cs = data.get(char_num)
+    return cs() if cs else Character(char_num)
+
+
 class Projectile:
     def __init__(self, char_num, skill_num, origin_pos, direction, data):
         self.x, self.y = float(origin_pos[0]), float(origin_pos[1])
@@ -727,7 +920,6 @@ class Projectile:
         raw_frames = [
             sheet.subsurface((i * self.width, 0, self.width, self.height))
             for i in range(n - 1, -1, -1)
-            # for i in range(n)
         ]
         self.frames_right = raw_frames
         self.frames_left = [pyg.transform.flip(f, True, False) for f in raw_frames]

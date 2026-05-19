@@ -10,7 +10,13 @@ import game.characters as player_module
 import ui.menu as menu
 import ui.Music as music_module
 import utils.paths as __path__
-from game.characters import FRAME_SIZE, PROJECTILES_INFOS, Character, Projectile
+from game.characters import (
+    FRAME_SIZE,
+    PROJECTILES_INFOS,
+    Character,
+    Projectile,
+    make_character,
+)
 from game.map_laoder import MapLoader
 from ui.console import (
     print_debug,
@@ -267,7 +273,7 @@ class Game:
                         char_num = state.get("char_number", 1)
                         if pid not in self.remote_players:
                             try:
-                                self.remote_players[pid] = Character(char_num)
+                                self.remote_players[pid] = make_character(char_num)
                             except Exception as e:
                                 print_error(
                                     f"Impossible de créer remote Character-{char_num}: {e}"
@@ -506,9 +512,9 @@ class Game:
 
         spawn = list(SPAWN_POSITIONS.get(self.Menu.CurrentPlayer_id, (150, 320)))
 
-        self.active_char = player_module.Character(c1)
-        self.support_1 = player_module.Character(c2)
-        self.support_2 = player_module.Character(c3)
+        self.active_char = player_module.make_character(c1)
+        self.support_1 = player_module.make_character(c2)
+        self.support_2 = player_module.make_character(c3)
 
         self.active_char.position = spawn[:]
         self.support_1.position = spawn[:]
@@ -852,6 +858,18 @@ class Game:
                         dx, dy = remote_char.get_blit_offset(remote_sprite)
                         rpos = remote_char.position
                         self.screen.blit(remote_sprite, (rpos[0] + dx, rpos[1] + dy))
+
+                    if (
+                        hasattr(remote_char, "bubble_effect")
+                        and remote_char.bubble_effect
+                    ):
+                        remote_char.bubble_effect.x = remote_char.position[0]
+                        remote_char.bubble_effect.y = remote_char.position[1]
+                        remote_char.bubble_effect.update(delta_time)
+                        remote_char.bubble_effect.draw(self.screen)
+                        if not remote_char.status.is_disabled:
+                            remote_char.bubble_effect = None
+                            remote_char.is_hidden = False
 
                     effect_sprite = remote_char.get_effect_sprite()
                     if effect_sprite:
