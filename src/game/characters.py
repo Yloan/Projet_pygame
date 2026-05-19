@@ -644,23 +644,42 @@ class Character:
         if "health" in state:
             self.health = int(state["health"])
             self.is_dead = self.health <= 0
-        if "is_moving" in state:
-            self.is_moving = bool(state["is_moving"])
-        if "is_hurt" in state:
-            self.is_hurt = bool(state["is_hurt"])
 
-        atk = state.get("is_attacking", {})
-        self.is_attacking_s1 = bool(atk.get("1", False))
-        self.is_attacking_s2 = bool(atk.get("2", False))
-        self.is_attacking_s3 = bool(atk.get("3", False))
+        if not hasattr(self, "_last_net_atk"):
+            self._last_net_atk = {"1": False, "2": False, "3": False}
+        if not hasattr(self, "_last_net_hurt"):
+            self._last_net_hurt = False
 
-        idx = state.get("anim_indices", {})
-        self.frame_IDLE = int(idx.get("idle", self.frame_IDLE))
-        self.frame_MOVE = int(idx.get("move", self.frame_MOVE))
-        self.frame_HURT = int(idx.get("hurt", self.frame_HURT))
-        self.frame_S1 = int(idx.get("skill1", self.frame_S1))
-        self.frame_S2 = int(idx.get("skill2", self.frame_S2))
-        self.frame_S3 = int(idx.get("skill3", self.frame_S3))
+        _hurt = bool(state.get("is_hurt", False))
+        if _hurt and not self._last_net_hurt:
+            self.is_hurt = True
+            self.frame_HURT = 0
+            self.timer_HURT = 0
+        self._last_net_hurt = _hurt
+
+        # Edge detection for Skill/Attack animations
+        ak = state.get("is_attacking", {})
+        for skill_id in ["1", "2", "3"]:
+            net_atk = bool(ak.get(skill_id, False))
+            if net_atk and not self._last_net_atk[skill_id]:
+                setattr(self, f"is_attacking_s{skill_id}", True)
+                setattr(self, f"frame_S{skill_id}", 0)
+                setattr(self, f"timer_S{skill_id}", 0)
+                self._hit_this_swing = set()
+            self._last_net_atk[skill_id] = net_atk
+
+        i = state.get("anim_indices", {})
+        self.frame_IDLE = int(i.get("idle", self.frame_IDLE))
+        self.frame_MOVE = int(i.get("move", self.frame_MOVE))
+
+        if not self.is_hurt:
+            self.frame_HURT = int(i.get("hurt", self.frame_HURT))
+        if not self.is_attacking_s1:
+            self.frame_S1 = int(i.get("skill1", self.frame_S1))
+        if not self.is_attacking_s2:
+            self.frame_S2 = int(i.get("skill2", self.frame_S2))
+        if not self.is_attacking_s3:
+            self.frame_S3 = int(i.get("skill3", self.frame_S3))
 
     def get_effect_sprite(self):
         return None
