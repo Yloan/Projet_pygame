@@ -1098,7 +1098,7 @@ class SubProjectile:
         if TMP__GET_SURFACE_HITBOX_ATTACKS_:
             pyg.draw.rect(surface, (255, 255, 0), self.get_rect(), 2)
 
-    def update(self, dt):
+    def update(self, dt, target=None):
         if self.is_dead:
             return
 
