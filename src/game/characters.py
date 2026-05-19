@@ -51,8 +51,8 @@ DIMENS = {
 
 # Hitbox d'attaque par personnage et par skill
 # "offset" : (x, y) par rapport a la position du perso (direction droite, c adapte quand c a gauche)
-# "size"   : (largeur, hauteur) de la hitbox
-# "damage" : degats infliges au contact
+# "size" : (largeur, hauteur) de la hitbox
+# "damage" : c assez evident
 HITBOX_DATA = {
     1: {
         1: {"offset": (38, -5), "size": (44, 32), "damage": 15},
@@ -60,23 +60,23 @@ HITBOX_DATA = {
         3: {"offset": (48, -12), "size": (75, 42), "damage": 40},
     },
     2: {
-        1: {"offset": (0, 0), "size": (0, 0), "damage": 12},
-        2: {"offset": (0, 0), "size": (0, 0), "damage": 22},
-        3: {"offset": (0, 0), "size": (0, 0), "damage": 35},
+        1: {"offset": (30, 20), "size": (150, 20), "damage": 12},
+        2: {"offset": (40, 0), "size": (40, 40), "damage": 22},
+        3: {"offset": (30, 20), "size": (150, 20), "damage": 35},
     },
     3: {
-        1: {"offset": (85, 25), "size": (30, 20), "damage": 18},
-        2: {"offset": (45, 20), "size": (20, 40), "damage": 28},
-        3: {"offset": (20, 8), "size": (90, 45), "damage": 45},
+        1: {"offset": (70, 16), "size": (30, 20), "damage": 18},
+        2: {"offset": (30, 15), "size": (20, 40), "damage": 28},
+        3: {"offset": (15, 3), "size": (90, 45), "damage": 45},
     },
     4: {
         1: {"offset": (40, -5), "size": (42, 30), "damage": 10},
-        2: {"offset": (20, -30), "size": (80, 70), "damage": 30},
-        3: {"offset": (50, -20), "size": (100, 60), "damage": 50},
+        2: {"offset": (-50, 0), "size": (160, 80), "damage": 30},
+        3: {"offset": (50, 0), "size": (100, 50), "damage": 50},
     },
     5: {
         1: {"offset": (0, 0), "size": (0, 0), "damage": 12},
-        2: {"offset": (18, 37), "size": (80, 45), "damage": 24},
+        2: {"offset": (-15, 30), "size": (85, 35), "damage": 24},
         3: {"offset": (0, 0), "size": (0, 0), "damage": 0},
     },
     6: {
@@ -107,22 +107,6 @@ PROJECTILES_INFOS = {
                 "height": 20,
             },
         },
-        "s2": {
-            "path": "assets/sprites/Character-5/6-PROJECTILE-2-1-Sheet.png",
-            "frames": 4,
-            "loops": 2,
-            "stops": True,
-            "speed": 5,
-            "width": 20,
-            "height": 20,
-            "sub": {
-                "path": "assets/sprites/Character-5/6-PROJECTILE-2-2-Sheet.png",
-                "frames": 1,
-                "frame_duration": 150,
-                "width": 20,
-                "height": 20,
-            },
-        },
     },
 }
 
@@ -142,8 +126,8 @@ SPRITE_OFFSETS = {
         "idle": (0, 0),
         "move": (0, 0),
         "hurt": (0, 0),
-        "s1": (0, 0),
-        "s2": (0, -56),
+        "s1": (-5, 0),
+        "s2": (0, -25),
         "s3": (0, 0),
         "s3_2": (0, -12),
     },
@@ -160,18 +144,27 @@ SPRITE_OFFSETS = {
         "move": (-12, 0),
         "hurt": (0, 0),
         "s1": (-18, 0),
-        "s2": (-60, -25),
-        "s3": (-68, -20),
+        "s2": (-55, -12),
+        "s3": (-30, -27),
     },
     5: {
         "idle": (0, 0),
         "move": (0, 0),
         "hurt": (0, 0),
         "s1": (0, 0),
-        "s2": (0, -22),
+        "s2": (-35, -15),
         "s3": (0, 0),
     },
 }
+
+# En haut du fichier, ajustable
+CHAR6_CANS_HUD_POSITIONS = {
+    1: (300, 12),
+    2: (1143, 12),
+    3: (300, 542),
+    4: (1143, 542),
+}
+CHAR6_CANS_GAP = 50
 
 COLOR_BODY = (0, 255, 0, 120)
 COLOR_ATTACK = (255, 60, 60, 160)
@@ -560,10 +553,7 @@ class Character:
         x, y = self.position
 
         if self.direction == "left":
-            sprite = self.get_current_sprite()
-            if sprite is None:
-                return None
-            px = -(px + sw) + sprite.get_width()
+            px = FRAME_SIZE - px - sw
 
         return pyg.Rect(x + px, y + py, sw, sh)
 
@@ -635,7 +625,7 @@ class Character:
 
         if self.direction == "left":
             frame_w = sprite.get_width()
-            dx -= frame_w - FRAME_SIZE
+            dx = -(frame_w - FRAME_SIZE) - dx
 
         return dx, dy
 

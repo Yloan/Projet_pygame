@@ -135,6 +135,10 @@ class Game:
         self.delta_time_entity_send = 0
         self.SENT_INTERVAL = 2
 
+        self._char6_wtr_frames = None
+        self._char6_soda_frames = None
+        self._char6_cans_loaded = False
+
     def switch_music(self, i=None):
         if i is not None:
             self.current_music = i
@@ -446,10 +450,59 @@ class Game:
         except Exception:
             pass
 
+    def _load_char6_hud(self):
+        try:
+            import pygame as pyg
+
+            sheet_wtr = pyg.image.load(
+                "assets/sprites/Character-5/HUD-SPEC-6-WTR-Sheet.png"
+            ).convert_alpha()
+            frame_w = sheet_wtr.get_width() // 4
+            frame_h = sheet_wtr.get_height()
+            self._char6_wtr_frames = [
+                sheet_wtr.subsurface((i * frame_w, 0, frame_w, frame_h))
+                for i in range(4)
+            ]
+            self._char6_soda_frames = self._char6_wtr_frames
+            self._char6_cans_loaded = True
+        except Exception as e:
+            print_error(f"Erreur chargement HUD char6: {e}")
+
+    def _draw_char6_hud(self, surface, player_id, water_cans=4, soda_cans=4):
+        if not self._char6_cans_loaded or not self._char6_wtr_frames:
+            return
+
+        pos = CHAR6_CANS_HUD_POSITIONS.get(player_id)
+        if not pos:
+            return
+
+        x, y = pos
+        frame = self._char6_wtr_frames[0]
+        fw = frame.get_width()
+        fh = frame.get_height()
+        gap = 4
+
+        for i in range(4):
+            alpha = 255 if i < water_cans else 80
+            f = frame.copy()
+            f.set_alpha(alpha)
+            surface.blit(f, (x + i * (fw + gap), y))
+
+        if self._char6_soda_frames:
+            sf = self._char6_soda_frames[0]
+            for i in range(4):
+                alpha = 255 if i < soda_cans else 80
+                f = sf.copy()
+                f.set_alpha(alpha)
+                surface.blit(f, (x + i * (fw + gap), y + CHAR6_CANS_GAP))
+
     def _init_game_characters(self):
         c1 = self.Menu.character_1 or 1
         c2 = self.Menu.character_2 or 1
         c3 = self.Menu.character_3 or 1
+
+        if c1 == 6 or c2 == 6 or c3 == 6:
+            self._load_char6_hud()
 
         spawn = list(SPAWN_POSITIONS.get(self.Menu.CurrentPlayer_id, (150, 320)))
 
@@ -816,7 +869,14 @@ class Game:
                 # Broadcast HUD
                 self._broadcast_hud_state()
 
-                # send entity state to server
+                # Draw char 6 special HUD
+                if self._char6_cans_loaded and self.active_char.char_num == 6:
+                    water = getattr(self.active_char, "water_cans", 4)
+                    soda = getattr(self.active_char, "soda_cans", 4)
+                    self._draw_char6_hud(
+                        self.screen, self.Menu.CurrentPlayer_id, water, soda
+                    )
+
                 self.delta_time_entity_send += 1
                 if self.delta_time_entity_send >= self.SENT_INTERVAL:
                     self.delta_time_entity_send = 0
