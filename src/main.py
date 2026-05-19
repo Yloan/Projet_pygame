@@ -582,9 +582,6 @@ class Game:
         }
         self.send_to_server(f"[SkillUsed]:{json.dumps(base)}")
 
-        if PROJECTILES_INFOS.get(self.active_char.char_num, {}).get(f"s{skill_num}"):
-            self.send_to_server(f"[ProjectileSpawned]:{json.dumps(base)}")
-
     def run(self):
 
         # Initialize and connect to server
@@ -818,6 +815,19 @@ class Game:
                     self.active_char.move("right")
 
                 self.active_char.update_animation(delta_time, is_moving)
+
+                for skill_num, proj in self.active_char._just_spawned_projectiles:
+                    base = {
+                        "player_id": self.Menu.CurrentPlayer_id,
+                        "session": self.current_joined_session,
+                        "char_num": self.active_char.char_num,
+                        "skill_num": skill_num,
+                        "x": self.active_char.position[0],
+                        "y": self.active_char.position[1],
+                        "direction": self.active_char.direction,
+                    }
+                    self.send_to_server(f"[ProjectileSpawned]:{json.dumps(base)}")
+                self.active_char._just_spawned_projectiles.clear()
 
                 # Draw active character
                 current_sprite = self.active_char.get_current_sprite()

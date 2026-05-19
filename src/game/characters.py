@@ -1,6 +1,9 @@
 import pygame as pyg
 
-from ui.console import print_debug
+from ui.console import (
+    print_debug,
+    print_warning,
+)
 from utils.paths import get_asset_path
 from utils.status import StatusManager
 
@@ -57,34 +60,142 @@ DIMENS = {
 # "damage" : c assez evident
 HITBOX_DATA = {
     1: {
-        1: {"offset": (38, -5), "size": (44, 32), "damage": 15},
-        2: {"offset": (25, -22), "size": (58, 58), "damage": 25},
-        3: {"offset": (48, -12), "size": (75, 42), "damage": 40},
+        1: {
+            "offset": (38, -5),
+            "size": (44, 32),
+            "damage": 15,
+            "frame_start": 0,
+            "frame_end": 10,
+        },
+        2: {
+            "offset": (25, -22),
+            "size": (58, 58),
+            "damage": 25,
+            "frame_start": 0,
+            "frame_end": 10,
+        },
+        3: {
+            "offset": (48, -12),
+            "size": (75, 42),
+            "damage": 40,
+            "frame_start": 0,
+            "frame_end": 10,
+        },
     },
     2: {
-        1: {"offset": (30, 20), "size": (150, 20), "damage": 12},
-        2: {"offset": (40, 0), "size": (40, 40), "damage": 22},
-        3: {"offset": (30, 20), "size": (150, 20), "damage": 35},
+        1: {
+            "offset": (30, 20),
+            "size": (150, 20),
+            "damage": 12,
+            "frame_start": 0,
+            "frame_end": 10,
+        },
+        2: {
+            "offset": (40, 0),
+            "size": (40, 40),
+            "damage": 22,
+            "frame_start": 0,
+            "frame_end": 10,
+        },
+        3: {
+            "offset": (30, 20),
+            "size": (150, 20),
+            "damage": 35,
+            "frame_start": 0,
+            "frame_end": 10,
+        },
     },
     3: {
-        1: {"offset": (70, 16), "size": (30, 20), "damage": 18},
-        2: {"offset": (30, 15), "size": (20, 40), "damage": 28},
-        3: {"offset": (15, 3), "size": (90, 45), "damage": 45},
+        1: {
+            "offset": (70, 16),
+            "size": (30, 20),
+            "damage": 18,
+            "frame_start": 0,
+            "frame_end": 10,
+        },
+        2: {
+            "offset": (30, 15),
+            "size": (20, 40),
+            "damage": 28,
+            "frame_start": 0,
+            "frame_end": 10,
+        },
+        3: {
+            "offset": (15, 3),
+            "size": (90, 45),
+            "damage": 45,
+            "frame_start": 0,
+            "frame_end": 10,
+        },
     },
     4: {
-        1: {"offset": (40, -5), "size": (42, 30), "damage": 10},
-        2: {"offset": (-50, 0), "size": (160, 80), "damage": 30},
-        3: {"offset": (50, 0), "size": (100, 50), "damage": 50},
+        1: {
+            "offset": (40, -5),
+            "size": (42, 30),
+            "damage": 10,
+            "frame_start": 0,
+            "frame_end": 10,
+        },
+        2: {
+            "offset": (-50, 0),
+            "size": (160, 80),
+            "damage": 30,
+            "frame_start": 0,
+            "frame_end": 10,
+        },
+        3: {
+            "offset": (50, 0),
+            "size": (100, 50),
+            "damage": 50,
+            "frame_start": 0,
+            "frame_end": 10,
+        },
     },
     5: {
-        1: {"offset": (0, 0), "size": (0, 0), "damage": 12},
-        2: {"offset": (-15, 30), "size": (85, 35), "damage": 24},
-        3: {"offset": (0, 0), "size": (0, 0), "damage": 0},
+        1: {
+            "offset": (0, 0),
+            "size": (0, 0),
+            "damage": 12,
+            "frame_start": 0,
+            "frame_end": 10,
+        },
+        2: {
+            "offset": (-15, 30),
+            "size": (85, 35),
+            "damage": 24,
+            "frame_start": 0,
+            "frame_end": 10,
+        },
+        3: {
+            "offset": (0, 0),
+            "size": (0, 0),
+            "damage": 0,
+            "frame_start": 0,
+            "frame_end": 10,
+        },
     },
     6: {
-        1: {"offset": (36, -8), "size": (38, 34), "damage": 14},
-        2: {"offset": (24, -22), "size": (55, 55), "damage": 22},
-        3: {"offset": (44, -12), "size": (72, 44), "damage": 36},
+        1: {
+            "offset": (36, -8),
+            "size": (38, 34),
+            "damage": 14,
+            "frame_start": 0,
+            "frame_end": 10,
+        },
+        2: {
+            "offset": (24, -22),
+            "size": (55, 55),
+            "damage": 22,
+            "frame_start": 0,
+            "frame_end": 10,
+        },
+        3: {
+            "offset": (44, -12),
+            "size": (72, 44),
+            "damage": 36,
+            "frame_start": 0,
+            "frame_end": 10,
+        },
     },
 }
 _DEFAULT_HITBOX = {"offset": (36, -8), "size": (40, 36), "damage": 10}
@@ -101,6 +212,7 @@ PROJECTILES_INFOS = {
             "speed": 5,
             "width": 20,
             "height": 20,
+            "spawn_frame": 4,
             "sub": {
                 "path": "assets/sprites/Character-5/6-PROJECTILE-1-2-Sheet.png",
                 "frames": 1,
@@ -228,6 +340,9 @@ class Character:
         self.frame_S3_2 = 0
         self.timer_S3_2 = 0
 
+        self._pending_projectiles = {}
+        self._just_spawned_projectiles = []
+
     def _dims(self, anim, fallback=None):
         char_dimensi = DIMENS.get(self.char_num, {})
         if anim in char_dimensi:
@@ -243,6 +358,21 @@ class Character:
         surf.fill(color if color else self.color)
         return [surf]
 
+    def _maybe_spawn_projectile(self, skill_num):
+        proj_data = self._pending_projectiles.get(skill_num)
+        if proj_data is None:
+            return
+        current_frame = {1: self.frame_S1, 2: self.frame_S2, 3: self.frame_S3}.get(
+            skill_num, 0
+        )
+        if current_frame >= proj_data.get("spawn_frame", 0):
+            p = Projectile(
+                self.char_num, skill_num, self.position, self.direction, proj_data
+            )
+            self.projectiles.append(p)
+            self._just_spawned_projectiles.append((skill_num, p))
+            del self._pending_projectiles[skill_num]
+
     def _load_sheet(self, filename, w=FRAME_SIZE, h=FRAME_SIZE):
         try:
             path = get_asset_path("sprites", f"Character-{self.char_num}", filename)
@@ -252,8 +382,15 @@ class Character:
             for i in range(n):
                 if (i + 1) * w <= sheet.get_width() and h <= sheet.get_height():
                     frames.append(sheet.subsurface((i * w, 0, w, h)))
+            if not frames:
+                print_warning(
+                    f"[LOAD] {filename} trouvé mais 0 frames extraites (sheet={sheet.get_size()}, w={w}, h={h})"
+                )
             return frames if frames else None
-        except (FileNotFoundError, pyg.error):
+        except (FileNotFoundError, pyg.error) as e:
+            print_warning(
+                f"[LOAD] {filename} introuvable pour char {self.char_num}: {e}"
+            )
             return None
 
     @staticmethod
@@ -349,62 +486,34 @@ class Character:
 
     def use_skill(self, skill_num):
         skill_key = f"s{skill_num}"
+        frames_map = {
+            1: (self.is_attacking_s1, "is_attacking_s1", "frame_S1", "timer_S1"),
+            2: (self.is_attacking_s2, "is_attacking_s2", "frame_S2", "timer_S2"),
+            3: (self.is_attacking_s3, "is_attacking_s3", "frame_S3", "timer_S3"),
+        }
 
-        if skill_num == 1 and not self.is_attacking_s1:
-            self.is_attacking_s1 = True
-            self.frame_S1 = 0
-            self.timer_S1 = 0
-            self._hit_this_swing = set()
-            proj_data = PROJECTILES_INFOS.get(self.char_num, {}).get(skill_key)
-            if proj_data:
-                self.projectiles.append(
-                    Projectile(
-                        self.char_num,
-                        skill_num,
-                        self.position,
-                        self.direction,
-                        proj_data,
-                    )
+        if skill_num not in frames_map:
+            return False
+        is_attacking, flag, frame_attr, timer_attr = frames_map[skill_num]
+        if is_attacking:
+            return False
+
+        setattr(self, flag, True)
+        setattr(self, frame_attr, 0)
+        setattr(self, timer_attr, 0)
+        self._hit_this_swing = set()
+
+        proj_data = PROJECTILES_INFOS.get(self.char_num, {}).get(skill_key)
+        if proj_data:
+            if proj_data.get("spawn_frame", 0) == 0:
+                p = Projectile(
+                    self.char_num, skill_num, self.position, self.direction, proj_data
                 )
-            return True
-
-        if skill_num == 2 and not self.is_attacking_s2:
-            self.is_attacking_s2 = True
-            self.frame_S2 = 0
-            self.timer_S2 = 0
-            self._hit_this_swing = set()
-            proj_data = PROJECTILES_INFOS.get(self.char_num, {}).get(skill_key)
-            if proj_data:
-                self.projectiles.append(
-                    Projectile(
-                        self.char_num,
-                        skill_num,
-                        self.position,
-                        self.direction,
-                        proj_data,
-                    )
-                )
-            return True
-
-        if skill_num == 3 and not self.is_attacking_s3:
-            self.is_attacking_s3 = True
-            self.frame_S3 = 0
-            self.timer_S3 = 0
-            self._hit_this_swing = set()
-            proj_data = PROJECTILES_INFOS.get(self.char_num, {}).get(skill_key)
-            if proj_data:
-                self.projectiles.append(
-                    Projectile(
-                        self.char_num,
-                        skill_num,
-                        self.position,
-                        self.direction,
-                        proj_data,
-                    )
-                )
-            return True
-
-        return False
+                self.projectiles.append(p)
+                self._just_spawned_projectiles.append((skill_num, p))
+            else:
+                self._pending_projectiles[skill_num] = proj_data
+        return True
 
     def update_projectiles(self, dt, targets):
         for p in self.projectiles:
@@ -420,14 +529,15 @@ class Character:
         if self.timer_S1 >= SKILL_SPEED:
             self.timer_S1 = 0
             self.frame_S1 += 1
+            self._maybe_spawn_projectile(1)
             if self.frame_S1 >= len(self.frames_S1):
                 self.frame_S1 = 0
                 self.is_attacking_s1 = False
                 self._hit_this_swing = set()
+                self._pending_projectiles.pop(1, None)
 
     def update_animation(self, dt, is_moving):
 
-        # FIX : réinitialiser is_hidden quand la bulle expire
         if hasattr(self, "bubble_effect") and self.bubble_effect:
             self.bubble_effect.update(dt)
             if not self.status.is_disabled:
@@ -452,6 +562,7 @@ class Character:
             if self.timer_S2 >= SKILL_SPEED:
                 self.timer_S2 = 0
                 self.frame_S2 += 1
+                self._maybe_spawn_projectile(2)
                 if self.frame_S2 >= len(self.frames_S2):
                     self.frame_S2 = 0
                     self.is_attacking_s2 = False
@@ -463,11 +574,13 @@ class Character:
                 if self.timer_S3_2 >= SKILL_SPEED:
                     self.timer_S3_2 = 0
                     self.frame_S3_2 += 1
+                    self._maybe_spawn_projectile(3)
                     if self.frame_S3_2 >= len(self.frames_S3_2):
                         self.frame_S3_2 = 0
                         self.is_attacking_s3 = False
                         self.s3_hit = False
                         self._hit_this_swing = set()
+
             else:
                 self.timer_S3 += dt
                 if self.timer_S3 >= SKILL_SPEED:
@@ -558,22 +671,40 @@ class Character:
             return 3  # and 3
         return None  # No skill activated
 
+    def _current_skill_frame(self):
+        skill = self._active_skill()
+        return {1: self.frame_S1, 2: self.frame_S2, 3: self.frame_S3}.get(skill, 0)
+
     def get_attack_hitbox(self):
         skill = self._active_skill()
         if skill is None:
             return None
 
         data = HITBOX_DATA.get(self.char_num, {}).get(skill, _DEFAULT_HITBOX)
+
+        current_frame = self._current_skill_frame()
+        if current_frame < data.get("frame_start", 0):
+            return None
+        if data.get("frame_end") is not None and current_frame > data["frame_end"]:
+            return None
+
         px, py = data["offset"]
         sw, sh = data["size"]
         x, y = self.position
-
         if self.direction == "left":
             px = FRAME_SIZE - px - sw
-
         return pyg.Rect(x + px, y + py, sw, sh)
 
     def check_hits(self, targets):
+
+        skill = self._active_skill()
+        if skill is None:
+            return
+
+        hitbox = self.get_attack_hitbox()
+        if hitbox is None:  # out of frame
+            return
+
         skill = self._active_skill()
         if skill is None:
             return
@@ -954,6 +1085,12 @@ class Projectile:
             self._effect_frames = []
 
     def update(self, dt, targets):
+
+        if self.current_frame >= self.total_frames:
+            if self.stops and self.sub_data and not self._hit_targets:
+                self._spawn_sub(self.x, self.y)
+            self.is_dead = True
+
         if self.is_dead:
             for sub in self.sub_projectiles:
                 sub.update(dt)
