@@ -423,8 +423,8 @@ class Character:
         s3w, s3h = self._dims("S3")
 
         s3 = (
-            self._load_sheet("S3-1-Sheet.png", s3w, s3h)
-            or self._load_sheet("S3-Sheet.png", s3w, s3h)
+            self._load_sheet("S3-Sheet.png", s3w, s3h)
+            or self._load_sheet("S3-1-Sheet.png", s3w, s3h)
             or self._blank(w=s3w, h=s3h)
         )
 
@@ -436,13 +436,13 @@ class Character:
         hurt = self._load_sheet("HURT-Sheet.png") or idle
         dead = self._load_sheet("DEAD-Sheet.png") or self._blank((80, 0, 0))
         s1 = (
-            self._load_sheet("S1-1-Sheet.png", s1w, s1h)
-            or self._load_sheet("S1-Sheet.png", s1w, s1h)
+            self._load_sheet("S1-Sheet.png", s1w, s1h)
+            or self._load_sheet("S1-1-Sheet.png", s1w, s1h)
             or self._blank(w=s1w, h=s1h)
         )
         s2 = (
-            self._load_sheet("S2-1-Sheet.png", s2w, s2h)
-            or self._load_sheet("S2-Sheet.png", s2w, s2h)
+            self._load_sheet("S2-Sheet.png", s2w, s2h)
+            or self._load_sheet("S2-1-Sheet.png", s2w, s2h)
             or self._blank(w=s2w, h=s2h)
         )
 
@@ -611,6 +611,9 @@ class Character:
                         self.frame_S3 = 0
                         self.is_attacking_s3 = False
                         self._hit_this_swing = set()
+                        self.s3_hit = False
+                        self.frame_S3_2 = 0
+                        self.timer_S3_2 = 0
 
         if self.is_hurt:
             self.timer_HURT += dt
