@@ -35,7 +35,8 @@ DIMENS = {
     },
     3: {
         "MOVE": (60, 60),
-        "S1": (64, 60),
+        "S1": (120, 60),  # S1-1 et S1-3 partagent ces dims
+        "S1_2": (120, 60),  # ← à ajuster si S1-2 a des dims différentes
         "S2": (80, 60),
         "S3": (120, 60),
     },
@@ -136,7 +137,7 @@ SPRITE_OFFSETS = {
         "idle": (0, 0),
         "move": (-10, -10),
         "hurt": (0, 0),
-        "s1": (-10, -10),
+        "s1": (-10, -10),  # fallback
         "s1_1": (-10, -10),
         "s1_2": (-10, -10),
         "s1_3": (-10, -10),
@@ -188,6 +189,10 @@ class Character:
         self.position = (400, 400)
         self.direction = "right"
 
+        # Initialisé avant _load_animations pour ne pas écraser ce qu'elle charge
+        self.frames_S3_2 = []
+        self.frames_S3_2_left = []
+
         self._load_animations()
 
         self.frame_IDLE = 0
@@ -223,16 +228,17 @@ class Character:
         self.s3_hit = False
         self.frame_S3_2 = 0
         self.timer_S3_2 = 0
-        self.frames_S3_2 = []
-        self.frames_S3_2_left = []
 
-    def _dims(self, anim):
+    def _dims(self, anim, fallback=None):
+        """Retourne (w, h) pour l'animation demandée.
+        Si la clé n'existe pas, essaie `fallback`, puis (FRAME_SIZE, FRAME_SIZE).
+        Convention : "S1_2" → fallback "S1", "S3_2" → fallback "S3", etc.
+        """
         char_dimensi = DIMENS.get(self.char_num, {})
         if anim in char_dimensi:
             return char_dimensi[anim]
-        parent = anim.split("_")[0]
-        if parent != anim and parent in char_dimensi:
-            return char_dimensi[parent]
+        if fallback is not None and fallback in char_dimensi:
+            return char_dimensi[fallback]
         return (FRAME_SIZE, FRAME_SIZE)
 
     def _blank(self, color=None, w=None, h=None):
@@ -406,7 +412,10 @@ class Character:
         for p in self.projectiles:
             p.draw(surface)
 
+    # ── Hook overridable pour l'animation du skill 1 ──────────────────────────
     def _handle_s1_update(self, dt):
+        """Avance l'animation du skill 1.
+        Overridable par les sous-classes pour les skills multi-phases."""
         self.timer_S1 += dt
         if self.timer_S1 >= SKILL_SPEED:
             self.timer_S1 = 0
@@ -644,42 +653,23 @@ class Character:
         if "health" in state:
             self.health = int(state["health"])
             self.is_dead = self.health <= 0
+        if "is_moving" in state:
+            self.is_moving = bool(state["is_moving"])
+        if "is_hurt" in state:
+            self.is_hurt = bool(state["is_hurt"])
 
-        if not hasattr(self, "_last_net_atk"):
-            self._last_net_atk = {"1": False, "2": False, "3": False}
-        if not hasattr(self, "_last_net_hurt"):
-            self._last_net_hurt = False
+        atk = state.get("is_attacking", {})
+        self.is_attacking_s1 = bool(atk.get("1", False))
+        self.is_attacking_s2 = bool(atk.get("2", False))
+        self.is_attacking_s3 = bool(atk.get("3", False))
 
-        _hurt = bool(state.get("is_hurt", False))
-        if _hurt and not self._last_net_hurt:
-            self.is_hurt = True
-            self.frame_HURT = 0
-            self.timer_HURT = 0
-        self._last_net_hurt = _hurt
-
-        # Edge detection for Skill/Attack animations
-        ak = state.get("is_attacking", {})
-        for skill_id in ["1", "2", "3"]:
-            net_atk = bool(ak.get(skill_id, False))
-            if net_atk and not self._last_net_atk[skill_id]:
-                setattr(self, f"is_attacking_s{skill_id}", True)
-                setattr(self, f"frame_S{skill_id}", 0)
-                setattr(self, f"timer_S{skill_id}", 0)
-                self._hit_this_swing = set()
-            self._last_net_atk[skill_id] = net_atk
-
-        i = state.get("anim_indices", {})
-        self.frame_IDLE = int(i.get("idle", self.frame_IDLE))
-        self.frame_MOVE = int(i.get("move", self.frame_MOVE))
-
-        if not self.is_hurt:
-            self.frame_HURT = int(i.get("hurt", self.frame_HURT))
-        if not self.is_attacking_s1:
-            self.frame_S1 = int(i.get("skill1", self.frame_S1))
-        if not self.is_attacking_s2:
-            self.frame_S2 = int(i.get("skill2", self.frame_S2))
-        if not self.is_attacking_s3:
-            self.frame_S3 = int(i.get("skill3", self.frame_S3))
+        idx = state.get("anim_indices", {})
+        self.frame_IDLE = int(idx.get("idle", self.frame_IDLE))
+        self.frame_MOVE = int(idx.get("move", self.frame_MOVE))
+        self.frame_HURT = int(idx.get("hurt", self.frame_HURT))
+        self.frame_S1 = int(idx.get("skill1", self.frame_S1))
+        self.frame_S2 = int(idx.get("skill2", self.frame_S2))
+        self.frame_S3 = int(idx.get("skill3", self.frame_S3))
 
     def get_effect_sprite(self):
         return None
@@ -707,9 +697,10 @@ class Character:
                 effect_data = {
                     "path": "assets/sprites/Character-2/effect-2-S3-Sheet.png",
                     "frames": 4,
-                    "frame_duration": DISABLED_DURATION // 4,
+                    "frame_duration": 200,
                     "width": 32,
                     "height": 32,
+                    "loop": True,
                 }
                 target.bubble_effect = SubProjectile(
                     target.position[0], target.position[1], effect_data
@@ -724,26 +715,6 @@ class Furnace(Character):
 class Water(Character):
     def __init__(self):
         super().__init__(2)
-
-
-# CHARACTER 3 — je voulais pas faire des sous classes mais la c'est necessaire aaah j'ai la fleeeeemme
-"""
-Bon reflechissons
-
-L'approche actuelle (flags s3_hit / frames_S3_2 dans la classe de base) fonctionne pour un
-seul cas mais ne scale pas
-L'apporhce que je faisais seraÒ chiante a grand echelle je dois adapter.
-
-
-Character3(Character), Character4(Character), Character5(Character),
-chacun overridant les méthodes nécessaires
-La classe de base ne change pas (hors fix char 2)
-
-Donc je dois aussi refaire la class Character...
-Ce qu
-
-Ok commencons.
-"""
 
 
 CHAR3_S1_PHASE3_HITBOX = {"offset": (15, 3), "size": (90, 45)}
@@ -770,9 +741,9 @@ class Character3(Character):
     def _load_animations(self):
         super()._load_animations()
 
-        s1_1w, s1_1h = self._dims("S1_1")
-        s1_2w, s1_2h = self._dims("S1_2")
-        s1_3w, s1_3h = self._dims("S1_3")
+        s1_1w, s1_1h = self._dims("S1_1", "S1")
+        s1_2w, s1_2h = self._dims("S1_2", "S1")
+        s1_3w, s1_3h = self._dims("S1_3", "S1")
 
         s1_1 = self._load_sheet("S1-1-Sheet.png", s1_1w, s1_1h) or self._blank(
             w=s1_1w, h=s1_1h
@@ -813,7 +784,6 @@ class Character3(Character):
         if self.is_attacking_s1 and self.s1_phase == 1:
             self.s1_parried = True
             return
-
         super().take_damage(amount)
 
     def _handle_s1_update(self, dt):
@@ -839,6 +809,7 @@ class Character3(Character):
                 self.timer_S1_2 = 0
                 self.frame_S1_2 += 1
                 if self.frame_S1_2 >= len(self.frames_S1_2_anim):
+                    # Parry terminé → counter
                     self.s1_phase = 3
                     self.frame_S1_3 = 0
                     self.timer_S1_3 = 0
@@ -849,6 +820,7 @@ class Character3(Character):
                 self.timer_S1_3 = 0
                 self.frame_S1_3 += 1
                 if self.frame_S1_3 >= len(self.frames_S1_3):
+                    # Fin du skill
                     self.is_attacking_s1 = False
                     self.s1_phase = 1
                     self.s1_parried = False
@@ -915,13 +887,13 @@ class Character3(Character):
 
 
 def make_character(char_num):
-    data = {
+    _registry = {
         3: Character3,
-        # 4: Character4,   # juste apres
-        # 5: Character5,   # juste apres
+        # 4: Character4,   # à venir
+        # 5: Character5,   # à venir
     }
-    cs = data.get(char_num)
-    return cs() if cs else Character(char_num)
+    cls = _registry.get(char_num)
+    return cls() if cls else Character(char_num)
 
 
 class Projectile:
@@ -970,7 +942,7 @@ class Projectile:
         else:
             self._effect_frames = []
 
-    def update(self, dt, targets=None):
+    def update(self, dt, targets):
         if self.is_dead:
             for sub in self.sub_projectiles:
                 sub.update(dt)
@@ -1092,6 +1064,7 @@ class SubProjectile:
         self.width = data["width"]
         self.height = data["height"]
         self.frame_duration = data["frame_duration"]
+        self.loop = data.get("loop", False)
 
         sheet = pyg.image.load(data["path"]).convert_alpha()
         n = max(1, sheet.get_width() // self.width)
@@ -1117,7 +1090,7 @@ class SubProjectile:
         if TMP__GET_SURFACE_HITBOX_ATTACKS_:
             pyg.draw.rect(surface, (255, 255, 0), self.get_rect(), 2)
 
-    def update(self, dt, target=None):
+    def update(self, dt):
         if self.is_dead:
             return
 
@@ -1126,4 +1099,7 @@ class SubProjectile:
             self.timer = 0
             self.current_frame += 1
             if self.current_frame >= self.total_frames:
-                self.is_dead = True
+                if self.loop:
+                    self.current_frame = 0
+                else:
+                    self.is_dead = True
