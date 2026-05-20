@@ -10,7 +10,7 @@ from utils.status import StatusManager
 FRAME_SIZE = 40
 IDLE_SPEED = 100
 MOVE_SPEED = 150
-HURT_SPEED = 80
+HURT_SPEED = 180
 SKILL_SPEED = 100
 DISABLED_DURATION = 3000  # Durée de  disabled en ms
 
@@ -46,7 +46,12 @@ DIMENS = {
     4: {
         "MOVE": (64, 40),
         "S1": (75, 40),
+        "S1_1": (75, 40),
+        "S1_2": (75, 40),
+        "S1_3": (75, 40),
         "S2": (160, 91),
+        "S2_1": (160, 91),
+        "S2_2": (160, 91),
         "S3": (176, 80),
     },
     5: {
@@ -87,22 +92,22 @@ HITBOX_DATA = {
             "offset": (30, 20),
             "size": (150, 20),
             "damage": 12,
-            "frame_start": 0,
-            "frame_end": 10,
+            "frame_start": 5,
+            "frame_end": 99,
         },
         2: {
             "offset": (40, 0),
             "size": (40, 40),
             "damage": 22,
-            "frame_start": 0,
-            "frame_end": 10,
+            "frame_start": 5,
+            "frame_end": 8,
         },
         3: {
             "offset": (30, 20),
             "size": (150, 20),
             "damage": 35,
             "frame_start": 0,
-            "frame_end": 10,
+            "frame_end": 99,
         },
     },
     3: {
@@ -133,22 +138,22 @@ HITBOX_DATA = {
             "offset": (40, -5),
             "size": (42, 30),
             "damage": 10,
-            "frame_start": 0,
-            "frame_end": 10,
+            "frame_start": 5,
+            "frame_end": 99,
         },
         2: {
             "offset": (-50, 0),
             "size": (160, 80),
             "damage": 30,
-            "frame_start": 0,
-            "frame_end": 10,
+            "frame_start": 12,
+            "frame_end": 99,
         },
         3: {
             "offset": (50, 0),
             "size": (100, 50),
             "damage": 50,
-            "frame_start": 0,
-            "frame_end": 10,
+            "frame_start": 10,
+            "frame_end": 99,
         },
     },
     5: {
@@ -157,21 +162,21 @@ HITBOX_DATA = {
             "size": (0, 0),
             "damage": 12,
             "frame_start": 0,
-            "frame_end": 10,
+            "frame_end": 99,
         },
         2: {
             "offset": (-15, 30),
             "size": (85, 35),
             "damage": 24,
-            "frame_start": 0,
-            "frame_end": 10,
+            "frame_start": 10,
+            "frame_end": 14,
         },
         3: {
             "offset": (0, 0),
             "size": (0, 0),
             "damage": 0,
             "frame_start": 0,
-            "frame_end": 10,
+            "frame_end": 99,
         },
     },
     6: {
@@ -212,7 +217,7 @@ PROJECTILES_INFOS = {
             "speed": 5,
             "width": 20,
             "height": 20,
-            "spawn_frame": 4,
+            "spawn_frame": 5,
             "sub": {
                 "path": "assets/sprites/Character-5/6-PROJECTILE-1-2-Sheet.png",
                 "frames": 1,
@@ -229,7 +234,7 @@ PROJECTILES_INFOS = {
             "speed": 5,
             "width": 20,
             "height": 20,
-            "spawn_frame": 4,
+            "spawn_frame": 5,
             "sub": {
                 "path": "assets/sprites/Character-5/6-PROJECTILE-2-2-Sheet.png",
                 "frames": 1,
@@ -278,7 +283,12 @@ SPRITE_OFFSETS = {
         "move": (-12, 0),
         "hurt": (0, 0),
         "s1": (-18, 0),
+        "s1_1": (-18, 0),
+        "s1_2": (-18, 0),
+        "s1_3": (-18, 0),
         "s2": (-55, -12),
+        "s2_1": (-55, -12),
+        "s2_2": (-55, -12),
         "s3": (-30, -27),
     },
     5: {
@@ -509,6 +519,9 @@ class Character:
         self.is_remote = False
 
     def move(self, direction):
+        if self.is_attacking_s1 or self.is_attacking_s2 or self.is_attacking_s3:
+            return
+
         x, y = self.position
         nx, ny = 0, 0
         if direction == "up":
@@ -959,6 +972,30 @@ class Water(Character):
     def __init__(self):
         super().__init__(2)
 
+    def get_attack_hitbox(self):
+        if not self.is_attacking_s3 or self.s3_hit:
+            return super().get_attack_hitbox()
+
+        data = HITBOX_DATA[2][3]
+        px, py = data["offset"]
+        sh = data["size"][1]
+        full_w = data["size"][0]
+
+        frm = self.frame_S3
+        if frm <= 5:
+            return None
+
+        ratio = min(1.0, (frm - 5) / 11.0)
+        sw = int(full_w * ratio)
+        if sw <= 0:
+            return None
+
+        x, y = self.position
+        if self.direction == "left":
+            px = FRAME_SIZE - px - sw
+
+        return pyg.Rect(x + px, y + py, sw, sh)
+
 
 CHAR3_S1_PHASE3_HITBOX = {"offset": (15, 3), "size": (90, 45)}
 CHAR3_S1_DAMAGE_NORMAL = 25
@@ -1139,7 +1176,6 @@ def make_character(char_num):
 
 # petit helper pour les classes qui suivent
 def _resolve_path(relative_path):
-    # Converti "assets/sprites/X/Y.png" en get_asset_path("sprites", "X", "Y.png")
     parts = relative_path.replace("assets/", "").split("/")
     return get_asset_path(*parts)
 
@@ -1581,7 +1617,10 @@ class Character4(Character):
                     self._hit_this_swing.add(id(tgt))
 
     def get_attack_hitbox(self):
-        if self.is_attacking_s1 and self.s1_phse != 1:
+        if self.is_attacking_s1:
+            if self.s1_phse in (2, 3):
+                return None
+        if self.is_attacking_s2 and self.s2_vrt == 1:
             return None
         return super().get_attack_hitbox()
 
@@ -1654,6 +1693,8 @@ class Character5(Character):
         self.wtr_cns = 4
         self.sda_cns = 4
         self._cns_ctx = "water"
+        self._pending_s2_on_s1 = None
+
         super().__init__(5)
 
     def use_skill(self, skill_num):
@@ -1697,6 +1738,7 @@ class Character5(Character):
                 self._hit_this_swing = set()
                 proj_data = PROJECTILES_INFOS.get(self.char_num, {}).get("s2")
                 if proj_data:
+                    self._pending_s2_on_s1 = proj_data
                     if proj_data.get("spawn_frame", 0) == 0:
                         p = Projectile(
                             self.char_num, 2, self.position, self.direction, proj_data
@@ -1726,7 +1768,29 @@ class Character5(Character):
     def check_hits(self, targets):
         if self.is_attacking_s3:
             return
-        super().check_hits(targets)
+        if self.is_attacking_s2 and self._cns_ctx == "fallback":
+            if self.frame_S2 <= 9 or self.frame_S2 > 14:
+                return
+            data = HITBOX_DATA[5][2]
+            px, py = data["offset"]
+            sw, sh = data["size"]
+            x, y = self.position
+            if self.direction == "left":
+                px = FRAME_SIZE - px - sw
+            hbx = pyg.Rect(x + px, y + py, sw, sh)
+            dmg = data["damage"]
+            for tgt in targets:
+                if tgt is self or tgt.is_dead:
+                    continue
+                if id(tgt) in self._hit_this_swing:
+                    continue
+                if hbx.colliderect(tgt.get_body_rect()):
+                    tgt.take_damage(dmg)
+                    self._hit_this_swing.add(id(tgt))
+            return
+        if self.is_attacking_s2 and self._cns_ctx == "soda":
+            return
+        Character.check_hits(self, targets)
 
     def _apply_status_on_hit(self, target, skill):
         if skill == 1:
@@ -1734,3 +1798,27 @@ class Character5(Character):
                 target.status.apply_wet()
             elif self._cns_ctx == "soda":
                 target.status.apply_oiled()
+
+    def _handle_s1_update(self, dt):
+        self.timer_S1 += dt
+        if self.timer_S1 >= SKILL_SPEED:
+            self.timer_S1 = 0
+            self.frame_S1 += 1
+            if hasattr(self, "_pending_s2_on_s1") and self._pending_s2_on_s1:
+                proj_data = self._pending_s2_on_s1
+                if self.frame_S1 >= proj_data.get("spawn_frame", 0):
+                    p = Projectile(
+                        self.char_num, 2, self.position, self.direction, proj_data
+                    )
+                    self.projectiles.append(p)
+                    self._just_spawned_projectiles.append((2, p))
+                    self._pending_s2_on_s1 = None
+            else:
+                self._maybe_spawn_projectile(1)
+            if self.frame_S1 >= len(self.frames_S1):
+                self.frame_S1 = 0
+                self.is_attacking_s1 = False
+                self._hit_this_swing = set()
+                self._pending_projectiles.pop(1, None)
+                if hasattr(self, "_pending_s2_on_s1"):
+                    self._pending_s2_on_s1 = None
