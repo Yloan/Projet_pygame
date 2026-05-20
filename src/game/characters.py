@@ -12,7 +12,7 @@ IDLE_SPEED = 100
 MOVE_SPEED = 150
 HURT_SPEED = 80
 SKILL_SPEED = 100
-DISABLED_DURATION = 3000  # Durée du statut disabled en ms
+DISABLED_DURATION = 3000  # Durée de  disabled en ms
 
 CHAR_STATS = {
     1: {"speed": 3, "health": 100, "color": (220, 80, 20)},
@@ -221,6 +221,23 @@ PROJECTILES_INFOS = {
                 "height": 20,
             },
         },
+        "s2": {
+            "path": "assets/sprites/Character-5/6-PROJECTILE-2-1-Sheet.png",
+            "frames": 4,
+            "loops": 3,
+            "stops": True,
+            "speed": 5,
+            "width": 20,
+            "height": 20,
+            "spawn_frame": 4,
+            "sub": {
+                "path": "assets/sprites/Character-5/6-PROJECTILE-2-2-Sheet.png",
+                "frames": 1,
+                "frame_duration": 150,
+                "width": 20,
+                "height": 20,
+            },
+        },
     },
 }
 
@@ -319,24 +336,6 @@ SPRITE_OFFSETS_4_UPDATE = {
     "s2_1": (-55, -12),
     "s2_2": (-55, -12),
     "s3": (-30, -27),
-}
-
-PROJECTILES_INFOS_5_S2 = {
-    "path": "assets/sprites/Character-5/6-PROJECTILE-2-1-Sheet.png",
-    "frames": 4,
-    "loops": 3,
-    "stops": True,
-    "speed": 5,
-    "width": 20,
-    "height": 20,
-    "spawn_frame": 4,
-    "sub": {
-        "path": "assets/sprites/Character-5/6-PROJECTILE-2-2-Sheet.png",
-        "frames": 1,
-        "frame_duration": 150,
-        "width": 20,
-        "height": 20,
-    },
 }
 
 COLOR_BODY = (0, 255, 0, 120)

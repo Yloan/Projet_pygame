@@ -26,7 +26,7 @@ from ui.console import (
     print_success,
     print_warning,
 )
-from ui.HUD import HUD
+from ui.HUD import HUD, _draw_char4_hud, _draw_char5_hud, _load_spec_hud_sheets
 
 # Gloabl variables
 MESSAGE_DELIMITER = "\n"
@@ -141,9 +141,10 @@ class Game:
         self.delta_time_entity_send = 0
         self.SENT_INTERVAL = 2
 
-        self._char6_wtr_frames = None
-        self._char6_soda_frames = None
-        self._char6_cans_loaded = False
+        self._chrg_frms = None
+        self._wtr_frms = None
+        self._sda_frms = None
+        self._spec_hud_loaded = False
 
     def switch_music(self, i=None):
         if i is not None:
@@ -508,8 +509,8 @@ class Game:
         c2 = self.Menu.character_2 or 1
         c3 = self.Menu.character_3 or 1
 
-        if c1 == 6 or c2 == 6 or c3 == 6:
-            self._load_char6_hud()
+        if c1 in (4, 5) or c2 in (4, 5) or c3 in (4, 5):
+            _load_spec_hud_sheets(self)
 
         spawn = list(SPAWN_POSITIONS.get(self.Menu.CurrentPlayer_id, (150, 320)))
 
@@ -899,12 +900,12 @@ class Game:
                 self._broadcast_hud_state()
 
                 # Draw char 6 special HUD
-                if self._char6_cans_loaded and self.active_char.char_num == 6:
-                    water = getattr(self.active_char, "water_cans", 4)
-                    soda = getattr(self.active_char, "soda_cans", 4)
-                    self._draw_char6_hud(
-                        self.screen, self.Menu.CurrentPlayer_id, water, soda
-                    )
+                if self._spec_hud_loaded:
+                    cnum = self.active_char.char_num
+                    if cnum == 4:
+                        _draw_char4_hud(self, self.screen, self.Menu.CurrentPlayer_id)
+                    elif cnum == 5:
+                        _draw_char5_hud(self, self.screen, self.Menu.CurrentPlayer_id)
 
                 self.delta_time_entity_send += 1
                 if self.delta_time_entity_send >= self.SENT_INTERVAL:

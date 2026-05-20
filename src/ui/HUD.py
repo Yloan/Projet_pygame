@@ -13,6 +13,28 @@ from ui.console import (
 )
 
 # Global variables
+
+SPEC_HUD_POSITIONS = {
+    1: (304, 13),
+    2: (900, 13),
+    3: (304, 685),
+    4: (900, 685),
+}
+
+CHRG_SHEET_W = 100
+CHRG_SHEET_H = 26
+CHRG_FRAMES = 5
+
+WTR_SHEET_W = 130
+WTR_SHEET_H = 15
+WTR_FRAMES = 5
+
+SDA_SHEET_W = 130
+SDA_SHEET_H = 15
+SDA_FRAMES = 5
+
+SDA_ROW_GAP = 19
+
 TOTAL_CHUNK_HEALTH = 18
 SIZE_FRAMES_HP_CORE = 16
 
@@ -580,3 +602,71 @@ class HUD:
         self.deltaTimeS1 = 0
         self.deltaTimeS2 = 0
         self.deltaTimeS3 = 0
+
+
+def _load_spec_hud_sheets(self):
+    try:
+        import pygame as pyg
+
+        sht_chrg = pyg.image.load(
+            "assets/sprites/Character-4/HUD-SPEC-4-CHARGE-Sheet.png"
+        ).convert_alpha()
+        fw = CHRG_SHEET_W // CHRG_FRAMES
+        self._chrg_frms = [
+            sht_chrg.subsurface((i * fw, 0, fw, CHRG_SHEET_H))
+            for i in range(CHRG_FRAMES)
+        ]
+
+        sht_wtr = pyg.image.load(
+            "assets/sprites/Character-5/HUD-SPEC-6-WTR-Sheet.png"
+        ).convert_alpha()
+        fw2 = WTR_SHEET_W // WTR_FRAMES
+        self._wtr_frms = [
+            sht_wtr.subsurface((i * fw2, 0, fw2, WTR_SHEET_H))
+            for i in range(WTR_FRAMES)
+        ]
+
+        sht_sda = pyg.image.load(
+            "assets/sprites/Character-5/HUD-SPEC-6-SODA-Sheet.png"
+        ).convert_alpha()
+        fw3 = SDA_SHEET_W // SDA_FRAMES
+        self._sda_frms = [
+            sht_sda.subsurface((i * fw3, 0, fw3, SDA_SHEET_H))
+            for i in range(SDA_FRAMES)
+        ]
+
+        self._spec_hud_loaded = True
+    except Exception as e:
+        from ui.console import print_error
+
+        print_error(f"Erreur chargement spec HUD: {e}")
+        self._spec_hud_loaded = False
+
+
+def _draw_char4_hud(self, surface, player_id):
+    if not self._spec_hud_loaded or not self._chrg_frms:
+        return
+    pos = SPEC_HUD_POSITIONS.get(player_id)
+    if not pos:
+        return
+    x, y = pos
+    chrgs = getattr(self.active_char, "chrgs", 0)
+    frm_idx = max(0, min(CHRG_FRAMES - 1, chrgs))
+    surface.blit(self._chrg_frms[frm_idx], (x, y))
+
+
+def _draw_char5_hud(self, surface, player_id):
+    if not self._spec_hud_loaded or not self._wtr_frms or not self._sda_frms:
+        return
+    pos = SPEC_HUD_POSITIONS.get(player_id)
+    if not pos:
+        return
+    x, y = pos
+    wtr = getattr(self.active_char, "wtr_cns", 4)
+    sda = getattr(self.active_char, "sda_cns", 4)
+
+    wtr_idx = max(0, min(WTR_FRAMES - 1, WTR_FRAMES - 1 - wtr))
+    sda_idx = max(0, min(SDA_FRAMES - 1, SDA_FRAMES - 1 - sda))
+
+    surface.blit(self._wtr_frms[wtr_idx], (x, y))
+    surface.blit(self._sda_frms[sda_idx], (x, y + SDA_ROW_GAP))
