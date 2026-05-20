@@ -24,6 +24,9 @@ DISABLED_DURATION = 5000
 PUSH_DURATION = 300
 PUSH_SPEED = 4
 BUBBLE_DRIFT = 0.5
+OILED_DURATION = 4000
+GRAB_MAX_SPD = 18
+GRAB_GRWTH = 1.09
 
 
 class StatusEffect:
@@ -69,6 +72,50 @@ class PushedStatus(StatusEffect):
         return delta if self.direction == "right" else -delta
 
 
+class StunStatus(StatusEffect):
+    def __init__(self, duration):
+        super().__init__(duration)
+
+
+class OiledStatus(StatusEffect):
+    def __init__(self):
+        super().__init__(OILED_DURATION)
+        self.drft_x = 0.0
+        self.drft_y = 0.0
+
+    def set_drift(self, nx, ny, spd):
+        self.drft_x = nx * spd * 0.4
+        self.drft_y = ny * spd * 0.4
+
+    def get_drift(self, dt):
+        if not self.is_active:
+            return 0.0, 0.0
+        decay = 0.95 ** (dt / 16.0)
+        self.drft_x *= decay
+        self.drft_y *= decay
+        return self.drft_x, self.drft_y
+
+
+class GrabStatus(StatusEffect):
+    def __init__(self, src_char):
+        super().__init__(60000)
+        self.src = src_char
+        self.cur_spd = 1.5
+
+    def get_pull_delta(self, tgt_pos, dt):
+        if not self.is_active:
+            return 0.0, 0.0
+        self.cur_spd = min(GRAB_MAX_SPD, self.cur_spd * (GRAB_GRWTH ** (dt / 16.0)))
+        tx, ty = self.src.position
+        cx, cy = tgt_pos
+        dx = tx - cx
+        dy = ty - cy
+        dist = (dx * dx + dy * dy) ** 0.5
+        if dist < 3:
+            return 0.0, 0.0
+        return (dx / dist) * self.cur_spd, (dy / dist) * self.cur_spd
+
+
 class StatusManager:
     def __init__(self):
         self.effects = {}
@@ -81,6 +128,15 @@ class StatusManager:
 
     def apply_pushed(self, direction):
         self.effects["pushed"] = PushedStatus(direction)
+
+    def apply_stun(self, duration):
+        self.effects["stun"] = StunStatus(duration)
+
+    def apply_oiled(self):
+        self.effects["oiled"] = OiledStatus()
+
+    def apply_grabbed(self, src_char):
+        self.effects["grabbed"] = GrabStatus(src_char)
 
     def update(self, dt):
         for key, effect in list(self.effects.items()):
@@ -104,6 +160,21 @@ class StatusManager:
         return e is not None and e.is_active
 
     @property
+    def is_stunned(self):
+        e = self.effects.get("stun")
+        return e is not None and e.is_active
+
+    @property
+    def is_oiled(self):
+        e = self.effects.get("oiled")
+        return e is not None and e.is_active
+
+    @property
+    def is_grabbed(self):
+        e = self.effects.get("grabbed")
+        return e is not None and e.is_active
+
+    @property
     def bubble_offset(self):
         d = self.effects.get("disabled")
         return d.bubble_offset if d and d.is_active else 0.0
@@ -111,6 +182,10 @@ class StatusManager:
     def get_push_delta(self, dt):
         p = self.effects.get("pushed")
         return p.get_delta(dt) if p else 0
+
+    def get_grab_delta(self, tgt_pos, dt):
+        g = self.effects.get("grabbed")
+        return g.get_pull_delta(tgt_pos, dt) if g else (0.0, 0.0)
 
     def clear(self):
         self.effects = {}

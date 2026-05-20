@@ -295,6 +295,50 @@ BUBBLE_EFFECT_DATA = {
     }
 }
 
+DIMENS_4_UPDATE = {
+    "MOVE": (64, 40),
+    "S1": (75, 40),
+    "S1_1": (75, 40),
+    "S1_2": (75, 40),
+    "S1_3": (75, 40),
+    "S2": (160, 91),
+    "S2_1": (160, 91),
+    "S2_2": (160, 91),
+    "S3": (176, 80),
+}
+
+SPRITE_OFFSETS_4_UPDATE = {
+    "idle": (0, 0),
+    "move": (-12, 0),
+    "hurt": (0, 0),
+    "s1": (-18, 0),
+    "s1_1": (-18, 0),
+    "s1_2": (-18, 0),
+    "s1_3": (-18, 0),
+    "s2": (-55, -12),
+    "s2_1": (-55, -12),
+    "s2_2": (-55, -12),
+    "s3": (-30, -27),
+}
+
+PROJECTILES_INFOS_5_S2 = {
+    "path": "assets/sprites/Character-5/6-PROJECTILE-2-1-Sheet.png",
+    "frames": 4,
+    "loops": 3,
+    "stops": True,
+    "speed": 5,
+    "width": 20,
+    "height": 20,
+    "spawn_frame": 4,
+    "sub": {
+        "path": "assets/sprites/Character-5/6-PROJECTILE-2-2-Sheet.png",
+        "frames": 1,
+        "frame_duration": 150,
+        "width": 20,
+        "height": 20,
+    },
+}
+
 COLOR_BODY = (0, 255, 0, 120)
 COLOR_ATTACK = (255, 60, 60, 160)
 
@@ -467,16 +511,26 @@ class Character:
 
     def move(self, direction):
         x, y = self.position
+        nx, ny = 0, 0
         if direction == "up":
             self.position = (x, y - self.speed)
+            nx, ny = 0, 1
         elif direction == "down":
             self.position = (x, y + self.speed)
+            nx, ny = 0, -1
         elif direction == "left":
             self.position = (x - self.speed, y)
+            nx, ny = -1, 0
             self.direction = "left"
         elif direction == "right":
             self.position = (x + self.speed, y)
             self.direction = "right"
+            nx, ny = 1, 0
+
+        if self.status.is_oiled:
+            oild = self.status.effects.get("oiled")
+            if oild:
+                oild.set_drift(nx, ny, self.speed)
 
     def take_damage(self, amount):
         if self.status.is_disabled:
@@ -509,6 +563,9 @@ class Character:
         }
 
         if skill_num not in frames_map:
+            return False
+
+        if self.status.is_stunned:
             return False
 
         flag, frame_attr, timer_attr = frames_map[skill_num]
@@ -575,6 +632,20 @@ class Character:
             self.position = (x + push_delta, y)
 
         self.is_moving = is_moving
+
+        grb_dx, grb_dy = self.status.get_grab_delta(self.position, dt)
+        if grb_dx != 0.0 or grb_dy != 0.0:
+            x, y = self.position
+            self.position = (int(x + grb_dx), int(y + grb_dy))
+        if self.status.is_stunned or self.status.is_grabbed:
+            is_moving = False
+        if self.status.is_oiled:
+            oild = self.status.effects.get("oiled")
+            if oild:
+                odx, ody = oild.get_drift(dt)
+                if odx != 0.0 or ody != 0.0:
+                    x, y = self.position
+                    self.position = (x + int(odx), y + int(ody))
 
         if self.is_attacking_s1:
             self._handle_s1_update(dt)
@@ -819,7 +890,6 @@ class Character:
         if "is_hidden" in state:
             new_hidden = bool(state["is_hidden"])
             if new_hidden and not self.is_hidden:
-                # Bulle vient d'apparaître → crée le visuel localement
                 caster = state.get("bubble_caster")
                 if caster is not None:
                     effect_data = BUBBLE_EFFECT_DATA.get(int(caster))
@@ -1061,8 +1131,8 @@ class Character3(Character):
 def make_character(char_num):
     _registry = {
         3: Character3,
-        # 4: Character4,   # à venir
-        # 5: Character5,   # à venir
+        4: Character4,
+        5: Character5,
     }
     cls = _registry.get(char_num)
     return cls() if cls else Character(char_num)
@@ -1288,3 +1358,380 @@ class SubProjectile:
                     self.current_frame = 0
                 else:
                     self.is_dead = True
+
+
+class Character4(Character):
+    MAX_CHRGS = 4
+    CHRG_INTRVL = 15000
+
+    def __init__(self):
+        self.chrgs = 0
+        self.chrg_tmr = 0
+        self.s1_phse = 1
+        self.s1_htd = False
+        self.grbd_tgt = None
+        self.s2_vrt = 1
+        self._s3_chrgs_spnt = 0
+
+        self.frm_S1_1 = 0
+        self.frm_S1_2 = 0
+        self.frm_S1_3 = 0
+        self.timr_S1_1 = 0
+        self.timr_S1_2 = 0
+        self.timr_S1_3 = 0
+
+        self.frms_S1_1 = []
+        self.frms_S1_1_left = []
+        self.frms_S1_2 = []
+        self.frms_S1_2_left = []
+        self.frms_S1_3 = []
+        self.frms_S1_3_left = []
+        self.frms_S2_1 = []
+        self.frms_S2_1_left = []
+        self.frms_S2_2 = []
+        self.frms_S2_2_left = []
+
+        super().__init__(4)
+
+    def _load_animations(self):
+        super()._load_animations()
+
+        s11w, s11h = self._dims("S1_1", "S1")
+        s12w, s12h = self._dims("S1_2", "S1")
+        s13w, s13h = self._dims("S1_3", "S1")
+        s21w, s21h = self._dims("S2_1", "S2")
+        s22w, s22h = self._dims("S2_2", "S2")
+
+        s1_1 = self._load_sheet("S1-1-Sheet.png", s11w, s11h) or self._blank(
+            w=s11w, h=s11h
+        )
+        s1_2 = self._load_sheet("S1-2-Sheet.png", s12w, s12h) or self._blank(
+            w=s12w, h=s12h
+        )
+        s1_3 = self._load_sheet("S1-3-Sheet.png", s13w, s13h) or self._blank(
+            w=s13w, h=s13h
+        )
+        s2_1 = self._load_sheet("S2-1-Sheet.png", s21w, s21h) or self._blank(
+            w=s21w, h=s21h
+        )
+        s2_2 = self._load_sheet("S2-2-Sheet.png", s22w, s22h) or self._blank(
+            w=s22w, h=s22h
+        )
+
+        self.frms_S1_1 = s1_1
+        self.frms_S1_2 = s1_2
+        self.frms_S1_3 = s1_3
+        self.frms_S2_1 = s2_1
+        self.frms_S2_2 = s2_2
+
+        self.frms_S1_1_left = self._flip(s1_1)
+        self.frms_S1_2_left = self._flip(s1_2)
+        self.frms_S1_3_left = self._flip(s1_3)
+        self.frms_S2_1_left = self._flip(s2_1)
+        self.frms_S2_2_left = self._flip(s2_2)
+
+        self.frames_S1 = s1_1
+        self.frames_S1_left = self.frms_S1_1_left
+
+    def use_skill(self, skill_num):
+        if skill_num == 1 and not self.is_attacking_s1:
+            self.is_attacking_s1 = True
+            self.s1_phse = 1
+            self.s1_htd = False
+            self.grbd_tgt = None
+            self.frm_S1_1 = 0
+            self.frm_S1_2 = 0
+            self.frm_S1_3 = 0
+            self.timr_S1_1 = 0
+            self.timr_S1_2 = 0
+            self.timr_S1_3 = 0
+            self._hit_this_swing = set()
+            return True
+
+        if skill_num == 2 and not self.is_attacking_s2:
+            self.s2_vrt = 1 if self.chrgs < 3 else 2
+            if self.s2_vrt == 1:
+                self.chrgs = min(self.MAX_CHRGS, self.chrgs + 1)
+                self.frames_S2 = self.frms_S2_1
+                self.frames_S2_left = self.frms_S2_1_left
+            else:
+                self.chrgs = max(0, self.chrgs - 2)
+                self.frames_S2 = self.frms_S2_2
+                self.frames_S2_left = self.frms_S2_2_left
+            self.is_attacking_s2 = True
+            self.frame_S2 = 0
+            self.timer_S2 = 0
+            self._hit_this_swing = set()
+            return True
+
+        if skill_num == 3 and not self.is_attacking_s3:
+            self._s3_chrgs_spnt = self.chrgs
+            self.chrgs = 0
+            self.is_attacking_s3 = True
+            self.frame_S3 = 0
+            self.timer_S3 = 0
+            self._hit_this_swing = set()
+            return True
+
+        return False
+
+    def _handle_s1_update(self, dt):
+        if self.s1_phse == 1:
+            self.timr_S1_1 += dt
+            if self.timr_S1_1 >= SKILL_SPEED:
+                self.timr_S1_1 = 0
+                self.frm_S1_1 += 1
+                if self.frm_S1_1 >= len(self.frms_S1_1):
+                    if self.s1_htd:
+                        self.s1_phse = 2
+                        self.frm_S1_2 = 0
+                        self.timr_S1_2 = 0
+                    else:
+                        self.s1_phse = 3
+                        self.frm_S1_3 = 0
+                        self.timr_S1_3 = 0
+
+        elif self.s1_phse == 2:
+            self.timr_S1_2 += dt
+            if self.timr_S1_2 >= SKILL_SPEED:
+                self.timr_S1_2 = 0
+                self.frm_S1_2 += 1
+                if self.frm_S1_2 >= len(self.frms_S1_2):
+                    if self.grbd_tgt:
+                        self.grbd_tgt.status.effects.pop("grabbed", None)
+                        self.grbd_tgt = None
+                    self.s1_phse = 3
+                    self.frm_S1_3 = 0
+                    self.timr_S1_3 = 0
+
+        elif self.s1_phse == 3:
+            self.timr_S1_3 += dt
+            if self.timr_S1_3 >= SKILL_SPEED:
+                self.timr_S1_3 = 0
+                self.frm_S1_3 += 1
+                if self.frm_S1_3 >= len(self.frms_S1_3):
+                    self.is_attacking_s1 = False
+                    self.s1_phse = 1
+                    self._hit_this_swing = set()
+
+    def update_animation(self, dt, is_moving):
+        self.chrg_tmr += dt
+        if self.chrg_tmr >= self.CHRG_INTRVL:
+            self.chrg_tmr = 0
+            self.chrgs = min(self.MAX_CHRGS, self.chrgs + 1)
+        if self.status.is_stunned:
+            is_moving = False
+        super().update_animation(dt, is_moving)
+
+    def check_hits(self, targets):
+        if self.is_attacking_s1:
+            if self.s1_phse != 1:
+                return
+            hbx = self.get_attack_hitbox()
+            if hbx is None:
+                return
+            dmg = HITBOX_DATA.get(self.char_num, {}).get(1, _DEFAULT_HITBOX)["damage"]
+            for tgt in targets:
+                if tgt is self or tgt.is_dead:
+                    continue
+                if id(tgt) in self._hit_this_swing:
+                    continue
+                if hbx.colliderect(tgt.get_body_rect()):
+                    tgt.take_damage(dmg)
+                    self._hit_this_swing.add(id(tgt))
+                    self.s1_htd = True
+                    self.chrgs = min(self.MAX_CHRGS, self.chrgs + 2)
+                    tgt.status.apply_grabbed(self)
+                    self.grbd_tgt = tgt
+                    return
+            return
+
+        if self.is_attacking_s2:
+            if self.s2_vrt == 1:
+                return
+            hbx = self.get_attack_hitbox()
+            if hbx is None:
+                return
+            dmg = HITBOX_DATA.get(self.char_num, {}).get(2, _DEFAULT_HITBOX)["damage"]
+            for tgt in targets:
+                if tgt is self or tgt.is_dead:
+                    continue
+                if id(tgt) in self._hit_this_swing:
+                    continue
+                if hbx.colliderect(tgt.get_body_rect()):
+                    tgt.take_damage(dmg)
+                    tgt.status.apply_stun(2000)
+                    self._hit_this_swing.add(id(tgt))
+            return
+
+        if self.is_attacking_s3:
+            hbx = self.get_attack_hitbox()
+            if hbx is None:
+                return
+            dmg = HITBOX_DATA.get(self.char_num, {}).get(3, _DEFAULT_HITBOX)["damage"]
+            stun_dur = self._s3_chrgs_spnt * 2000
+            for tgt in targets:
+                if tgt is self or tgt.is_dead:
+                    continue
+                if id(tgt) in self._hit_this_swing:
+                    continue
+                if hbx.colliderect(tgt.get_body_rect()):
+                    tgt.take_damage(dmg)
+                    if stun_dur > 0:
+                        tgt.status.apply_stun(stun_dur)
+                    self._hit_this_swing.add(id(tgt))
+
+    def get_attack_hitbox(self):
+        if self.is_attacking_s1 and self.s1_phse != 1:
+            return None
+        return super().get_attack_hitbox()
+
+    def get_current_sprite(self):
+        if self.is_hidden:
+            return None
+
+        lft = self.direction == "left"
+
+        if self.is_dead:
+            return self.frames_DEAD[-1] if self.frames_DEAD else None
+
+        if self.is_hurt:
+            frms = self.frames_HURT_left if lft else self.frames_HURT
+            if frms:
+                return frms[min(self.frame_HURT, len(frms) - 1)]
+
+        if self.is_attacking_s1:
+            if self.s1_phse == 1:
+                frms = self.frms_S1_1_left if lft else self.frms_S1_1
+                idx = self.frm_S1_1
+            elif self.s1_phse == 2:
+                frms = self.frms_S1_2_left if lft else self.frms_S1_2
+                idx = self.frm_S1_2
+            else:
+                frms = self.frms_S1_3_left if lft else self.frms_S1_3
+                idx = self.frm_S1_3
+            if frms:
+                return frms[min(idx, len(frms) - 1)]
+            return None
+
+        if self.is_attacking_s2:
+            frms = (
+                (self.frms_S2_2_left if lft else self.frms_S2_2)
+                if self.s2_vrt == 2
+                else (self.frms_S2_1_left if lft else self.frms_S2_1)
+            )
+            if frms:
+                return frms[min(self.frame_S2, len(frms) - 1)]
+            return None
+
+        if self.is_attacking_s3:
+            frms = self.frames_S3_left if lft else self.frames_S3
+            if frms:
+                return frms[min(self.frame_S3, len(frms) - 1)]
+            return None
+
+        if self.is_moving:
+            frms = self.frames_MOVE_left if lft else self.frames_MOVE
+            if frms:
+                return frms[self.frame_MOVE % len(frms)]
+
+        frms = self.frames_IDLE_left if lft else self.frames_IDLE
+        if frms:
+            return frms[self.frame_IDLE % len(frms)]
+        return None
+
+    def get_anim_state(self):
+        if self.is_attacking_s1:
+            return f"s1_{self.s1_phse}"
+        if self.is_attacking_s2:
+            return f"s2_{self.s2_vrt}"
+        return super().get_anim_state()
+
+
+class Character5(Character):
+    MAX_CNS = 4
+
+    def __init__(self):
+        self.wtr_cns = 4
+        self.sda_cns = 4
+        self._cns_ctx = "water"
+        super().__init__(5)
+
+    def use_skill(self, skill_num):
+        if skill_num == 1:
+            if self.is_attacking_s1 or self.is_attacking_s2:
+                return False
+            if self.wtr_cns > 0:
+                self.wtr_cns -= 1
+                self._cns_ctx = "water"
+                self.is_attacking_s1 = True
+                self.frame_S1 = 0
+                self.timer_S1 = 0
+                self._hit_this_swing = set()
+                proj_data = PROJECTILES_INFOS.get(self.char_num, {}).get("s1")
+                if proj_data:
+                    if proj_data.get("spawn_frame", 0) == 0:
+                        p = Projectile(
+                            self.char_num, 1, self.position, self.direction, proj_data
+                        )
+                        self.projectiles.append(p)
+                        self._just_spawned_projectiles.append((1, p))
+                    else:
+                        self._pending_projectiles[1] = proj_data
+            else:
+                self._cns_ctx = "fallback"
+                self.is_attacking_s2 = True
+                self.frame_S2 = 0
+                self.timer_S2 = 0
+                self._hit_this_swing = set()
+            return True
+
+        if skill_num == 2:
+            if self.is_attacking_s1 or self.is_attacking_s2:
+                return False
+            if self.sda_cns > 0:
+                self.sda_cns -= 1
+                self._cns_ctx = "soda"
+                self.is_attacking_s1 = True
+                self.frame_S1 = 0
+                self.timer_S1 = 0
+                self._hit_this_swing = set()
+                proj_data = PROJECTILES_INFOS.get(self.char_num, {}).get("s2")
+                if proj_data:
+                    if proj_data.get("spawn_frame", 0) == 0:
+                        p = Projectile(
+                            self.char_num, 2, self.position, self.direction, proj_data
+                        )
+                        self.projectiles.append(p)
+                        self._just_spawned_projectiles.append((2, p))
+                    else:
+                        self._pending_projectiles[2] = proj_data
+            else:
+                self._cns_ctx = "fallback"
+                self.is_attacking_s2 = True
+                self.frame_S2 = 0
+                self.timer_S2 = 0
+                self._hit_this_swing = set()
+            return True
+
+        if skill_num == 3 and not self.is_attacking_s3:
+            self.is_attacking_s3 = True
+            self.frame_S3 = 0
+            self.timer_S3 = 0
+            self.wtr_cns = self.MAX_CNS
+            self.sda_cns = self.MAX_CNS
+            return True
+
+        return False
+
+    def check_hits(self, targets):
+        if self.is_attacking_s3:
+            return
+        super().check_hits(targets)
+
+    def _apply_status_on_hit(self, target, skill):
+        if skill == 1:
+            if self._cns_ctx == "water":
+                target.status.apply_wet()
+            elif self._cns_ctx == "soda":
+                target.status.apply_oiled()
