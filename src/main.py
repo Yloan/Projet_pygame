@@ -1,5 +1,6 @@
 import json
 import queue
+import random as r
 import socket
 import threading
 import time
@@ -7,6 +8,7 @@ import time
 import pygame as pyg
 
 import game.characters as player_module
+import game.ia as bot_module
 import ui.menu as menu
 import ui.Music as music_module
 import utils.paths as __path__
@@ -51,6 +53,8 @@ SKILL_COOLDOWNS = {
     5: {"S1": 2, "S2": 4, "S3": 6},
 }
 RETREAT_COOLDOWN_DURATION = 4  # secs aussi
+
+BOTS_ENABLED: bool = True
 
 
 class Game:
@@ -145,6 +149,8 @@ class Game:
         self._wtr_frms = None
         self._sda_frms = None
         self._spec_hud_loaded = False
+
+        self.bots = []
 
     def switch_music(self, i=None):
         if i is not None:
@@ -596,12 +602,6 @@ class Game:
         # self.etat = "game"
 
         # When starting directly in game initialise characters with defaults
-        if self.etat == "game" and not self._game_initialized:
-            self.Menu.character_1 = self.Menu.character_1 or 2
-            self.Menu.character_2 = self.Menu.character_2 or 1
-            self.Menu.character_3 = self.Menu.character_3 or 2
-            self._init_game_characters()
-            self._game_initialized = True
 
         pyg.mixer.init()
         self.musics[self.current_music].play()
@@ -620,6 +620,29 @@ class Game:
                     self._game_initialized = True
                     self.etat = "game"
                     self.Menu.etat = "game"
+
+                    if BOTS_ENABLED:
+                        session_info = next(
+                            (
+                                s
+                                for s in self.Menu.sessions
+                                if s.titre == self.current_joined_session
+                            ),
+                            None,
+                        )
+                        nb_bots = session_info.nb_bots if session_info else 1
+                        nb_players = session_info.nb_players if session_info else 1
+                        for i in range(nb_bots):
+                            bot_id = 4 - i
+                            spawn = SPAWN_POSITIONS.get(bot_id, (640, 360))
+                            self.bots.append(
+                                bot_module.Bot(
+                                    char_num=r.randint(1, 5),
+                                    nb_players=nb_players,
+                                    position=spawn,
+                                )
+                            )
+
                 elif self.game_started:
                     self.etat = "game"
                     self.Menu.etat = "game"
@@ -850,6 +873,29 @@ class Game:
                 self.active_char.update_projectiles(delta_time, targets)
                 self.active_char.check_hits(targets)
                 self.active_char.draw_projectiles(self.screen)
+
+                if BOTS_ENABLED:
+                    for bot in self.bots:
+                        # Mettre à jour la position du joueur local dans le bot
+                        bot.update_player_position(
+                            self.Menu.CurrentPlayer_id, list(self.active_char.position)
+                        )
+
+                        # Et des remote players
+                        for pid, remote_char in self.remote_players.items():
+                            bot.update_player_position(pid, list(remote_char.position))
+
+                        bot.update(delta_time)
+
+                        # Dessiner le bot comme un remote player
+                        sprite = bot.char.get_current_sprite()
+                        print_debug(
+                            f"Bot sprite: {sprite}, pos: {bot.current_position}"
+                        )
+                        if sprite:
+                            dx, dy = bot.char.get_blit_offset(sprite)
+                            pos = bot.current_position
+                            self.screen.blit(sprite, (pos[0] + dx, pos[1] + dy))
 
                 if self.hud and self.active_char:
                     delta = self._last_char_health - self.active_char.health
