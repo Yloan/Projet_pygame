@@ -94,6 +94,7 @@ HITBOX_DATA = {
             "damage": 12,
             "frame_start": 5,
             "frame_end": 99,
+            "status_applied": lambda atk, tgt: tgt.status.apply_wet(),
         },
         2: {
             "offset": (40, 0),
@@ -101,6 +102,7 @@ HITBOX_DATA = {
             "damage": 22,
             "frame_start": 5,
             "frame_end": 8,
+            "status_applied": lambda atk, tgt: tgt.status.apply_pushed(atk.direction),
         },
         3: {
             "offset": (30, 20),
@@ -108,6 +110,10 @@ HITBOX_DATA = {
             "damage": 35,
             "frame_start": 0,
             "frame_end": 99,
+            "status_applied": lambda atk, tgt: (
+                tgt.status.apply_wet(),
+                tgt.status.apply_disabled(atk.direction),
+            ),
         },
     },
     3: {
@@ -140,6 +146,7 @@ HITBOX_DATA = {
             "damage": 10,
             "frame_start": 5,
             "frame_end": 99,
+            "status_applied": lambda atk, tgt: tgt.status.apply_grabbed(atk),
         },
         2: {
             "offset": (-50, 0),
@@ -147,6 +154,7 @@ HITBOX_DATA = {
             "damage": 30,
             "frame_start": 12,
             "frame_end": 99,
+            "status_applied": lambda atk, tgt: tgt.status.apply_stun(2000),
         },
         3: {
             "offset": (50, 0),
@@ -939,31 +947,10 @@ class Character:
         return None
 
     def _apply_status_on_hit(self, target, skill):
-        if self.char_num == 2:
-            if skill == 1:
-                target.status.apply_wet()
-                effect_data = {
-                    "path": "assets/sprites/Character-2/effect-2-S1-Sheet.png",
-                    "frames": 2,
-                    "frame_duration": 150,
-                    "width": 160,
-                    "height": 48,
-                }
-                self.projectiles.append(
-                    SubProjectile(target.position[0], target.position[1], effect_data)
-                )
-            elif skill == 2:
-                target.status.apply_pushed(self.direction)
-            elif skill == 3:
-                target.status.apply_wet()
-                target.status.apply_disabled(self.direction)
-                target.is_hidden = True
-                target.bubble_source_char = self.char_num
-                effect_data = BUBBLE_EFFECT_DATA.get(self.char_num)
-                if effect_data:
-                    target.bubble_effect = SubProjectile(
-                        target.position[0], target.position[1], effect_data
-                    )
+        data = HITBOX_DATA.get(self.char_num, {}).get(skill, {})
+        fn = data.get("status_applied")
+        if fn:
+            fn(self, target)
 
 
 class Furnace(Character):
@@ -998,6 +985,30 @@ class Water(Character):
             px = FRAME_SIZE - px - sw
 
         return pyg.Rect(x + px, y + py, sw, sh)
+
+    def _apply_status_on_hit(self, target, skill):
+        super()._apply_status_on_hit(target, skill)
+
+        if skill == 3:
+            target.is_hidden = True
+            target.bubble_source_char = self.char_num
+            effect_data = BUBBLE_EFFECT_DATA.get(self.char_num)
+            if effect_data:
+                target.bubble_effect = SubProjectile(
+                    target.position[0], target.position[1], effect_data
+                )
+
+        elif skill == 1:
+            effect_data = {
+                "path": "assets/sprites/Character-2/effect-2-S1-Sheet.png",
+                "frames": 2,
+                "frame_duration": 150,
+                "width": 160,
+                "height": 48,
+            }
+            self.projectiles.append(
+                SubProjectile(target.position[0], target.position[1], effect_data)
+            )
 
 
 CHAR3_S1_PHASE3_HITBOX = {"offset": (15, 3), "size": (90, 45)}
