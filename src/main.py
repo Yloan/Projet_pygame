@@ -861,7 +861,7 @@ class Game:
 
                 # DRaw remote player
                 for pid, remote_char in self.remote_players.items():
-                    remote_char.check_hits([self.active_char])
+                    # remote_char.check_hits([self.active_char]) # Probablement un bug reste a voir apres
                     remote_char.update_projectiles(delta_time, [self.active_char])
                     remote_char.draw_projectiles(self.screen)
 

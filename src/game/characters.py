@@ -128,8 +128,8 @@ HITBOX_DATA = {
         3: {
             "offset": (15, 3),
             "size": (90, 45),
-            "damage": 45,
-            "frame_start": 0,
+            "damage": 1,
+            "frame_start": 2,
             "frame_end": 10,
         },
     },
@@ -271,7 +271,7 @@ SPRITE_OFFSETS = {
         "idle": (0, 0),
         "move": (-10, -10),
         "hurt": (0, 0),
-        "s1": (-10, -10),  # fallback
+        "s1": (-10, -10),
         "s1_1": (-10, -10),
         "s1_2": (-10, -10),
         "s1_3": (-10, -10),
@@ -826,7 +826,9 @@ class Character:
                 continue
 
             if skill == 3 and not self.s3_hit:
-                if hitbox.colliderect(target.get_body_rect()):
+                if hitbox.colliderect(target.get_body_rect()) and not self.s3_hit:
+                    if id(target) in self._hit_this_swing:
+                        continue
                     target.take_damage(dmg)
                     self._hit_this_swing.add(id(target))
                     self._apply_status_on_hit(target, skill)
@@ -835,6 +837,7 @@ class Character:
                         self.frame_S3_2 = 0
                         self.timer_S3_2 = 0
                     return
+                continue
 
             tid = id(target)
             if tid in self._hit_this_swing:
@@ -1157,10 +1160,13 @@ class Character3(Character):
                 tid = id(target)
                 if tid in self._hit_this_swing:
                     continue
-                if hitbox.colliderect(target.get_body_rect()):
+                if hitbox.colliderect(target.get_body_rect()) and not s3_already_hit:
                     target.take_damage(damage)
                     self._hit_this_swing.add(tid)
         else:
+            print_debug(
+                f"char3 check_hits fallback | s3={self.is_attacking_s3} | s3_hit={self.s3_hit} | hitbox={self.get_attack_hitbox()}"
+            )
             super().check_hits(targets)
 
 
@@ -1779,13 +1785,15 @@ class Character5(Character):
                 px = FRAME_SIZE - px - sw
             hbx = pyg.Rect(x + px, y + py, sw, sh)
             dmg = data["damage"]
+            dmg_hited = False
             for tgt in targets:
                 if tgt is self or tgt.is_dead:
                     continue
                 if id(tgt) in self._hit_this_swing:
                     continue
-                if hbx.colliderect(tgt.get_body_rect()):
+                if hbx.colliderect(tgt.get_body_rect()) and not dmg_hited:
                     tgt.take_damage(dmg)
+                    dmg_hited = True
                     self._hit_this_swing.add(id(tgt))
             return
         if self.is_attacking_s2 and self._cns_ctx == "soda":
