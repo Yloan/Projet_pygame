@@ -1,5 +1,6 @@
 import pygame as pyg
 
+from game.map_laoder import MAP1_COLLISIONS
 from ui.console import (
     print_debug,
     print_warning,
@@ -26,7 +27,7 @@ CHAR_STATS = {
     9: {"speed": 2, "health": 100, "color": (100, 200, 50)},
 }
 DEFAULT_STATS = {"speed": 2, "health": 100, "color": (128, 128, 128)}
-
+COLLISION_THICKNESS = 10
 TMP__GET_SURFACE_HITBOX_ATTACKS_ = False
 DIMENS = {
     2: {
@@ -527,25 +528,35 @@ class Character:
         self.is_remote = False
 
     def move(self, direction):
+        if self.is_dead or self.is_hurt:
+            return
         if self.is_attacking_s1 or self.is_attacking_s2 or self.is_attacking_s3:
             return
 
         x, y = self.position
         nx, ny = 0, 0
         if direction == "up":
-            self.position = (x, y - self.speed)
             nx, ny = 0, 1
+            new_pos = (x, y - self.speed)
         elif direction == "down":
-            self.position = (x, y + self.speed)
             nx, ny = 0, -1
+            new_pos = (x, y + self.speed)
         elif direction == "left":
-            self.position = (x - self.speed, y)
             nx, ny = -1, 0
+            new_pos = (x - self.speed, y)
             self.direction = "left"
         elif direction == "right":
-            self.position = (x + self.speed, y)
-            self.direction = "right"
             nx, ny = 1, 0
+            new_pos = (x + self.speed, y)
+            self.direction = "right"
+        else:
+            return
+
+        player_rect = pyg.Rect(int(new_pos[0]), int(new_pos[1]), FRAME_SIZE, FRAME_SIZE)
+        if any(player_rect.colliderect(wall) for wall in MAP1_COLLISIONS):
+            return
+
+        self.position = new_pos
 
         if self.status.is_oiled:
             oild = self.status.effects.get("oiled")
@@ -559,6 +570,7 @@ class Character:
         self.health = max(0, self.health - amount)
         if self.health == 0:
             self.is_dead = True
+            self.status.apply_disabled("right")
         else:
             self.is_hurt = True
             self.frame_HURT = 0
@@ -581,6 +593,9 @@ class Character:
             2: ("is_attacking_s2", "frame_S2", "timer_S2"),
             3: ("is_attacking_s3", "frame_S3", "timer_S3"),
         }
+
+        if self.is_dead or self.is_hurt:
+            return False
 
         if skill_num not in frames_map:
             return False
@@ -1171,7 +1186,7 @@ class Character3(Character):
                 tid = id(target)
                 if tid in self._hit_this_swing:
                     continue
-                if hitbox.colliderect(target.get_body_rect()) and not s3_already_hit:
+                if hitbox.colliderect(target.get_body_rect()):
                     target.take_damage(damage)
                     self._hit_this_swing.add(tid)
         else:

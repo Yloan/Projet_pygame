@@ -19,7 +19,7 @@ from game.characters import (
     Projectile,
     make_character,
 )
-from game.map_laoder import MapLoader
+from game.map_laoder import MAP1_COLLISIONS, MapLoader
 from ui.console import (
     print_debug,
     print_error,
@@ -36,12 +36,13 @@ HUD_POSITIONS = {1: (10, 10), 2: (993, 10), 3: (10, 530), 4: (993, 530)}
 
 TIME_BEFORE_PROJECTILE = {1: {"s1": 4, "s2": 4}, 5: {"s1": 4}}
 
+COLLISION_THICKNESS = 10
 # This will be changed when we will implement the other map (spawn slot by map)
 SPAWN_POSITIONS = {
     1: (150, 320),
     2: (1050, 320),
-    3: (150, 320),
-    4: (1050, 320),
+    3: (260, 320),
+    4: (1050, 350),
 }
 
 SKILL_COOLDOWNS = {
@@ -552,6 +553,8 @@ class Game:
             f"pos mouse --> X: {x}, Y: {y}", self.font, self.TEXT_COL2, 10
         )
         Character.switch_TMP__GET_SURFACE_HITBOX_ATTACKS_()
+        for wall in MAP1_COLLISIONS:
+            pyg.draw.rect(self.screen, (255, 0, 255), wall, 2)
 
     def _broadcast_hud_state(self):
         if not hasattr(self, "hud") or self.hud is None:
@@ -635,13 +638,14 @@ class Game:
                         for i in range(nb_bots):
                             bot_id = 4 - i
                             spawn = SPAWN_POSITIONS.get(bot_id, (640, 360))
-                            self.bots.append(
-                                bot_module.Bot(
-                                    char_num=r.randint(1, 5),
-                                    nb_players=nb_players,
-                                    position=spawn,
-                                )
+                            bot = bot_module.Bot(
+                                char_num=r.randint(1, 5),
+                                nb_players=nb_players,
+                                position=spawn,
                             )
+                            bot.bot_id = bot_id
+                            bot.health = bot.char.health
+                            self.bots.append(bot)
 
                 elif self.game_started:
                     self.etat = "game"
@@ -875,19 +879,33 @@ class Game:
                 self.active_char.draw_projectiles(self.screen)
 
                 if BOTS_ENABLED:
+                    bot_chars = [bot.char for bot in self.bots]
                     for bot in self.bots:
-                        # Mettre à jour la position du joueur local dans le bot
                         bot.update_player_position(
                             self.Menu.CurrentPlayer_id, list(self.active_char.position)
                         )
 
-                        # Et des remote players
+                        if hasattr(bot, "bot_id") and bot.bot_id in self.other_huds:
+                            delta = bot.health - bot.char.health
+                            if delta > 0:
+                                hud_dmg = max(1, round(delta * 54 / 100))
+                                self.other_huds[bot.bot_id].DealsDamage(hud_dmg)
+                            bot.health = bot.char.health
+
                         for pid, remote_char in self.remote_players.items():
                             bot.update_player_position(pid, list(remote_char.position))
 
-                        bot.update(delta_time)
+                        # les autres bots sont aussi des cibles
+                        for j, other_bot in enumerate(self.bots):
+                            if j != i:
+                                bot.update_player_position(
+                                    -(j + 1),
+                                    list(other_bot.current_position),
+                                )
 
-                        # Dessiner le bot comme un remote player
+                        bot.update(delta_time)
+                        bot.char.check_hits([self.active_char])
+
                         sprite = bot.char.get_current_sprite()
                         print_debug(
                             f"Bot sprite: {sprite}, pos: {bot.current_position}"
@@ -897,17 +915,23 @@ class Game:
                             pos = bot.current_position
                             self.screen.blit(sprite, (pos[0] + dx, pos[1] + dy))
 
+                    targets = list(self.remote_players.values()) + bot_chars
+                    self.active_char.update_projectiles(delta_time, targets)
+                    self.active_char.check_hits(targets)
+                    self.active_char.draw_projectiles(self.screen)
+
                 if self.hud and self.active_char:
                     delta = self._last_char_health - self.active_char.health
                     if delta > 0:
-                        # Conversion : health 0-100 → HUD 54 points visuels
                         hud_dmg = max(1, round(delta * 54 / 100))
                         self.hud.DealsDamage(hud_dmg)
                     self._last_char_health = self.active_char.health
 
                 # DRaw remote player
                 for pid, remote_char in self.remote_players.items():
-                    # remote_char.check_hits([self.active_char]) # Probablement un bug reste a voir apres
+                    remote_char.check_hits(
+                        [self.active_char]
+                    )  # Probablement un bug reste a voir apres
                     remote_char.update_projectiles(delta_time, [self.active_char])
                     remote_char.draw_projectiles(self.screen)
 
