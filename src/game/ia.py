@@ -85,7 +85,7 @@ class Bot:
 
     def verify_range(self, skill: str, position_targeted: tuple) -> bool:
         """
-        Retourne True si la cible est à portée du skill donné.
+        Retourne True si la cible est à portée du skill donné
         """
         skill_range_key = INFOS_SKILL_RANGE.get(self.char_num, {}).get(skill)
         if skill_range_key is None:
@@ -95,7 +95,7 @@ class Bot:
 
     def _update_direction(self, target_position: tuple):
         """
-        Met à jour la direction du char (left/right) selon la cible.
+        Met à jour la direction du char (left/right) selon la cible
         """
         if target_position[0] >= self.current_position[0]:
             self.char.direction = "right"
@@ -107,13 +107,12 @@ class Bot:
         _, closest_pos = self.get_closest_player()
         distance = self._distance_to(closest_pos)
 
-        # En dessous de 20% de vie → fuite prioritaire
+        # En dessous de 20% de vie --> fuite prioritaire
         if health_in_pourcent <= 20:
             action = r.choice(["flee", "flee", "flee", "flee", "follow"])
 
         elif health_in_pourcent <= 60:
             if distance <= RANGE_ATTACK["close"] * 1.5:
-                # À portée : attaque souvent
                 action = r.choice(
                     [
                         "attack",
@@ -127,7 +126,6 @@ class Bot:
                     ]
                 )
             else:
-                # Trop loin : se rapproche
                 action = r.choice(
                     [
                         "follow",
@@ -138,7 +136,6 @@ class Bot:
                     ]
                 )
 
-        # Au-dessus de 60% → mobile, cherche à engager
         else:
             if distance <= RANGE_ATTACK["close"] * 2:
                 action = r.choice(
@@ -241,7 +238,6 @@ class Bot:
         dx = closest_position[0] - self.current_position[0]
         dy = closest_position[1] - self.current_position[1]
 
-        # Normalisation pour que la vitesse soit constante en diagonale
         distance = sqrt(dx * dx + dy * dy)
         if distance == 0:
             return
@@ -256,27 +252,21 @@ class Bot:
 
     def pick_attack(self):
         """
-        Choisit un skill en fonction de la portée et du cooldown.
-        N'attaque que si la cible est à portée du skill choisi.
+        Choisit un skill en fonction de la portée et du cooldown
         """
         if self._attack_cooldown > 0:
-            # Pas encore prêt, se rapproche en attendant
             self.follow_closest_player()
             return
 
         _, closest_pos = self.get_closest_player()
         self._update_direction(closest_pos)
 
-        # Construire la liste des skills disponibles à portée
         skill_infos = INFOS_SKILL_RANGE.get(self.char_num, {})
         available_skills = [
-            int(s[1])  # "s1" → 1
-            for s in skill_infos
-            if self.verify_range(s, closest_pos)
+            int(s[1]) for s in skill_infos if self.verify_range(s, closest_pos)
         ]
 
         if not available_skills:
-            # Hors portée : se rapprocher
             self.follow_closest_player()
             return
 
@@ -308,14 +298,12 @@ class Bot:
         nx = dx / distance
         ny = dy / distance
 
-        # On part dans la direction opposée
         self.current_position = (
             self.current_position[0] - nx * self.speed,
             self.current_position[1] - ny * self.speed,
         )
 
     def update(self, dt):
-        # Décrémenter le cooldown d'attaque
         if self._attack_cooldown > 0:
             self._attack_cooldown -= 1
 
@@ -325,7 +313,6 @@ class Bot:
         if self.duration_action <= 0:
             self.current_action = self.pick_action()
 
-        # Exécuter l'action courante
         if self.current_action is not None:
             if self.current_action in ("top", "bottom", "right", "left", "rest"):
                 self.actions["random"][self.current_action]()
