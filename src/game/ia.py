@@ -196,7 +196,7 @@ class Bot:
         self.position_players[player_id] = position
 
     def get_closest_player(self):
-        """Return a tuple: (player_id, closest_position)."""
+        """Return a tuple: (player_id, closest_position)"""
         closest_position = (0, 0)
         min_distance = inf
         player_followed = None
