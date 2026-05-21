@@ -30,6 +30,7 @@ DEFAULT_STATS = {"speed": 2, "health": 100, "color": (128, 128, 128)}
 COLLISION_THICKNESS = 10
 TMP__GET_SURFACE_HITBOX_ATTACKS_ = False
 DIMENS = {
+    1: {"MOVE": (40, 40), "S1": (80, 60), "S2": (7, 50), "S3": (121, 60)},
     2: {
         "MOVE": (FRAME_SIZE, FRAME_SIZE),
         "S1": (168, 40),
@@ -70,22 +71,22 @@ HITBOX_DATA = {
             "offset": (38, -5),
             "size": (44, 32),
             "damage": 15,
-            "frame_start": 0,
-            "frame_end": 10,
+            "frame_start": 2,
+            "frame_end": 99,
         },
         2: {
             "offset": (25, -22),
             "size": (58, 58),
             "damage": 25,
             "frame_start": 0,
-            "frame_end": 10,
+            "frame_end": 8,
         },
         3: {
             "offset": (48, -12),
             "size": (75, 42),
             "damage": 40,
             "frame_start": 0,
-            "frame_end": 10,
+            "frame_end": 99,
         },
     },
     2: {

@@ -141,7 +141,7 @@ class Bot:
 
     # Réflexion
 
-    def reflexion(self) -> str:
+    def reflexion(self):
         health_in_pourcent = int(self.char.health / self.max_health * 100)
         _, closest_pos = self.get_closest_player()
         distance = self._distance_to(closest_pos)

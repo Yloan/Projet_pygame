@@ -63,7 +63,7 @@ class Menu:
         ).convert_alpha()
         self.wallpaper = pyg.transform.scale(self.wallpaper, (self.width, self.height))
         self.choice_chracters = pyg.image.load(
-            "assets/wallpapers/SELECT-SCREEN.png"
+            "assets/wallpapers/menewer-Sheet.png"
         ).convert_alpha()
         self.choice_chracters = pyg.transform.scale(
             self.choice_chracters, (self.width, self.height)
@@ -127,14 +127,17 @@ class Menu:
 
         # LOAD CHARACTER SELECTION IMAGES
         image_ch = []
-        for i in range(1, 19):
+        for i in range(1, 7):
             Img = pyg.image.load(
                 f"assets/characters_selection/Character_{i}.png"
             ).convert_alpha()
+
+            Img = pyg.transform.scale(Img, (143, 107))
             image_ch.append(Img)
 
         self.image_ch = image_ch
         self.char_p_scale = 9.5
+        # self.char_p_scale = 1
 
         ___size_frame_idle_ = 40
         self._idle_preview_frames = {}
@@ -209,11 +212,11 @@ class Menu:
         self.four_players_button = button.Button(
             self.center_x(four_players_img, -0.5) + 150, 350, four_players_img, 1
         )
+        Back_selection_character_img = pyg.transform.scale(
+            Back_selection_character_img, (63, 57)
+        )
         self.Back_selection_character = button.Button(
-            self.center_x(Back_selection_character_img, 77),
-            10,
-            Back_selection_character_img,
-            2.7,
+            37, 6, Back_selection_character_img, 1
         )
 
         # # Sessions buttons
@@ -225,63 +228,16 @@ class Menu:
             x=655, y=400, image=self.button_session, scale=0.5
         )
 
-        # character buttons left
-        self.character_1_button = button.Button(
-            self.center_x(image_ch[0], 25), 125, image_ch[0], 4
-        )
-        self.character_2_button = button.Button(
-            self.center_x(image_ch[1], 12), 125, image_ch[1], 4
-        )
-        self.character_3_button = button.Button(
-            self.center_x(image_ch[2], 25), 240, image_ch[2], 4
-        )
-        self.character_4_button = button.Button(
-            self.center_x(image_ch[3], 12.5), 240, image_ch[3], 4
-        )
-        self.character_5_button = button.Button(
-            self.center_x(image_ch[4], 24.4), 355, image_ch[4], 4
-        )
-        self.character_6_button = button.Button(
-            self.center_x(image_ch[5], 12.5), 355, image_ch[5], 4
-        )
-        self.character_7_button = button.Button(
-            self.center_x(image_ch[6], 25), 470, image_ch[6], 4
-        )
-        self.character_8_button = button.Button(
-            self.center_x(image_ch[7], 12.5), 470, image_ch[7], 4
-        )
-        self.character_9_button = button.Button(
-            self.center_x(image_ch[8], 19), 582, image_ch[8], 4
-        )
+        # Colonne gauche
+        self.character_1_button = button.Button(358, 213, image_ch[0], 1)
+        self.character_2_button = button.Button(570, 213, image_ch[1], 1)
 
-        # character buttons right
-        self.character_10_button = button.Button(
-            self.center_x(image_ch[9], -17), 125, image_ch[9], 4
-        )
-        self.character_11_button = button.Button(
-            self.center_x(image_ch[10], -4), 125, image_ch[10], 4
-        )
-        self.character_12_button = button.Button(
-            self.center_x(image_ch[11], -16), 240, image_ch[11], 4
-        )
-        self.character_13_button = button.Button(
-            self.center_x(image_ch[12], -4), 240, image_ch[12], 4
-        )
-        self.character_14_button = button.Button(
-            self.center_x(image_ch[13], -16.2), 355, image_ch[13], 4
-        )
-        self.character_15_button = button.Button(
-            self.center_x(image_ch[14], -4.1), 355, image_ch[14], 4
-        )
-        self.character_16_button = button.Button(
-            self.center_x(image_ch[15], -16.2), 470, image_ch[15], 4
-        )
-        self.character_17_button = button.Button(
-            self.center_x(image_ch[16], -4.1), 470, image_ch[16], 4
-        )
-        self.character_18_button = button.Button(
-            self.center_x(image_ch[17], -11), 582, image_ch[17], 4
-        )
+        # Colonne droite
+        self.character_3_button = button.Button(781, 213, image_ch[2], 1)
+        self.character_4_button = button.Button(420, 404, image_ch[3], 1)
+
+        # Centre bas
+        self.character_5_button = button.Button(713, 404, image_ch[5], 1)
 
         # character choosen
         character_choosen_img = pyg.image.load(
@@ -318,6 +274,8 @@ class Menu:
             3: (1036, 125),
             4: (1036, 442),
         }
+
+        self.preview_center_pos = (WINDOW_WIDTH // 2 - 100, 200)
 
         self.current_session_name = None
         self.players_characters = {
@@ -372,6 +330,16 @@ class Menu:
         )
         if self.exit_button.draw(self.screen):
             self.menu_state = "main"
+
+    def draw_center_preview(self, char_index):
+        try:
+            i = int(char_index)
+        except Exception:
+            i = 0
+        if i and 1 <= i <= len(self.image_ch):
+            self._update_IDLE_p()
+            px, py = self.preview_center_pos
+            self._blit_largeChar(i, px, py, scale_factor=10)
 
     def update_sessions_from_server(self, sessions_json):
         try:
@@ -531,12 +499,13 @@ class Menu:
         size = max(pixel_size, 1)
         return pyg.transform.scale(frame, (size, size))
 
-    def _blit_largeChar(self, char_num, pos_x, pos_y, scale_factor=10):
+    def _blit_largeChar(self, char_num, pos_x, pos_y, scale_factor=5):
         if not (1 <= char_num <= len(self.image_ch)):
             return
         icon = self.image_ch[char_num - 1]
         target_w = int(icon.get_width() * scale_factor)
         target_h = int(icon.get_height() * scale_factor)
+
         if 1 <= char_num <= 9 and char_num in self._idle_preview_frames:
             frame = self._get_IDLe_p__frame(char_num, target_h)
             if frame:
@@ -584,19 +553,6 @@ class Menu:
             (self.character_3_button, 3),
             (self.character_4_button, 4),
             (self.character_5_button, 5),
-            (self.character_6_button, 6),
-            (self.character_7_button, 7),
-            (self.character_8_button, 8),
-            (self.character_9_button, 9),
-            (self.character_10_button, 10),
-            (self.character_11_button, 11),
-            (self.character_12_button, 12),
-            (self.character_13_button, 13),
-            (self.character_14_button, 14),
-            (self.character_15_button, 15),
-            (self.character_16_button, 16),
-            (self.character_17_button, 17),
-            (self.character_18_button, 18),
         ]
 
         for button_obj, char_num in character_buttons:
@@ -624,19 +580,6 @@ class Menu:
             (self.character_3_button, 3),
             (self.character_4_button, 4),
             (self.character_5_button, 5),
-            (self.character_6_button, 6),
-            (self.character_7_button, 7),
-            (self.character_8_button, 8),
-            (self.character_9_button, 9),
-            (self.character_10_button, 10),
-            (self.character_11_button, 11),
-            (self.character_12_button, 12),
-            (self.character_13_button, 13),
-            (self.character_14_button, 14),
-            (self.character_15_button, 15),
-            (self.character_16_button, 16),
-            (self.character_17_button, 17),
-            (self.character_18_button, 18),
         ]
 
         for button_obj, char_num in character_buttons:
@@ -659,19 +602,6 @@ class Menu:
             (self.character_3_button, 3),
             (self.character_4_button, 4),
             (self.character_5_button, 5),
-            (self.character_6_button, 6),
-            (self.character_7_button, 7),
-            (self.character_8_button, 8),
-            (self.character_9_button, 9),
-            (self.character_10_button, 10),
-            (self.character_11_button, 11),
-            (self.character_12_button, 12),
-            (self.character_13_button, 13),
-            (self.character_14_button, 14),
-            (self.character_15_button, 15),
-            (self.character_16_button, 16),
-            (self.character_17_button, 17),
-            (self.character_18_button, 18),
         ]
 
         for button_obj, char_num in character_buttons:
@@ -698,19 +628,6 @@ class Menu:
             (self.character_3_button, 3),
             (self.character_4_button, 4),
             (self.character_5_button, 5),
-            (self.character_6_button, 6),
-            (self.character_7_button, 7),
-            (self.character_8_button, 8),
-            (self.character_9_button, 9),
-            (self.character_10_button, 10),
-            (self.character_11_button, 11),
-            (self.character_12_button, 12),
-            (self.character_13_button, 13),
-            (self.character_14_button, 14),
-            (self.character_15_button, 15),
-            (self.character_16_button, 16),
-            (self.character_17_button, 17),
-            (self.character_18_button, 18),
         ]
 
         for button_obj, char_num in character_buttons:
@@ -741,19 +658,6 @@ class Menu:
             (self.character_3_button, 3),
             (self.character_4_button, 4),
             (self.character_5_button, 5),
-            (self.character_6_button, 6),
-            (self.character_7_button, 7),
-            (self.character_8_button, 8),
-            (self.character_9_button, 9),
-            (self.character_10_button, 10),
-            (self.character_11_button, 11),
-            (self.character_12_button, 12),
-            (self.character_13_button, 13),
-            (self.character_14_button, 14),
-            (self.character_15_button, 15),
-            (self.character_16_button, 16),
-            (self.character_17_button, 17),
-            (self.character_18_button, 18),
         ]
 
         if self.Back_selection_character.draw(self.screen):
@@ -812,7 +716,7 @@ class Menu:
 
             if char_3 and 1 <= char_3 <= len(self.image_ch):
                 # character_3 in large at slot position
-                self._blit_largeChar(char_3, pos_x, pos_y, scale_factor=10)
+                self._blit_largeChar(char_3, pos_x, pos_y, scale_factor=2.5)
 
                 # character_2 in small preview below
                 if char_2 and 1 <= char_2 <= len(self.image_ch):
@@ -829,7 +733,7 @@ class Menu:
 
             elif char_2 and 1 <= char_2 <= len(self.image_ch):
                 # character_2 in large at slot position
-                self._blit_largeChar(char_2, pos_x, pos_y, scale_factor=10)
+                self._blit_largeChar(char_2, pos_x, pos_y, scale_factor=2.5)
 
                 # character_1 in small preview
                 if char_1 and 1 <= char_1 <= len(self.image_ch):
@@ -840,7 +744,7 @@ class Menu:
 
             elif char_1 and 1 <= char_1 <= len(self.image_ch):
                 # character_1 in large at slot position
-                self._blit_largeChar(char_1, pos_x, pos_y, scale_factor=10)
+                self._blit_largeChar(char_1, pos_x, pos_y, scale_factor=2.5)
 
             if (
                 just_clicked
