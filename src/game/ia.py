@@ -318,7 +318,6 @@ class Bot:
     # Update method a appelé dans la bocuel principale pour updates les bots present dzns lz session
 
     def update(self, dt):
-        # --- Mort ou hurt : immobile ---
         if self.char.is_dead or self.char.is_hurt:
             self.char.update_animation(dt, False)
             self.char.position = self.current_position
