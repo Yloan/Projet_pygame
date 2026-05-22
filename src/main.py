@@ -747,7 +747,7 @@ class Game:
                     f"[CreateSession]:{json.dumps(self.Menu.sessionPending)}"
                 )
                 self.current_joined_session = self.Menu.sessionPending["titre"]
-                # self.send_to_server(f"[JoinedSession]:{self.current_joined_session}")
+                self.send_to_server(f"[JoinedSession]:{self.current_joined_session}")
                 self.Menu.sessionPending = None
 
                 # self.Menu.menu_state = "waiting_player_id"
