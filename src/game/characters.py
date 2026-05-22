@@ -30,7 +30,7 @@ DEFAULT_STATS = {"speed": 2, "health": 100, "color": (128, 128, 128)}
 COLLISION_THICKNESS = 10
 TMP__GET_SURFACE_HITBOX_ATTACKS_ = False
 DIMENS = {
-    1: {"MOVE": (40, 40), "S1": (80, 60), "S2": (7, 50), "S3": (121, 60)},
+    1: {"MOVE": (40, 40), "HURT": (50, 50), "S1": (80, 60), "S2": (105, 50), "S3": (120, 60)},
     2: {
         "MOVE": (FRAME_SIZE, FRAME_SIZE),
         "S1": (168, 40),
@@ -223,7 +223,7 @@ _DEFAULT_HITBOX = {"offset": (36, -8), "size": (40, 36), "damage": 10}
 PROJECTILES_INFOS = {
     5: {
         "s1": {
-            "path": "assets/sprites/Character-5/6-PROJECTILE-1-1-Sheet.png",
+            "path": "assets/sprites/Character-5/PROJECTILE-1-1-Sheet.png",
             "frames": 4,
             "loops": 3,
             "stops": True,
@@ -232,15 +232,15 @@ PROJECTILES_INFOS = {
             "height": 20,
             "spawn_frame": 5,
             "sub": {
-                "path": "assets/sprites/Character-5/6-PROJECTILE-1-2-Sheet.png",
+                "path": "assets/sprites/Character-5/PROJECTILE-1-2-Sheet.png",
                 "frames": 1,
-                "frame_duration": 150,
-                "width": 20,
-                "height": 20,
+                "frame_duration": 200,
+                "width": 40,
+                "height": 40,
             },
         },
         "s2": {
-            "path": "assets/sprites/Character-5/6-PROJECTILE-2-1-Sheet.png",
+            "path": "assets/sprites/Character-5/PROJECTILE-2-1-Sheet.png",
             "frames": 4,
             "loops": 3,
             "stops": True,
@@ -249,11 +249,11 @@ PROJECTILES_INFOS = {
             "height": 20,
             "spawn_frame": 5,
             "sub": {
-                "path": "assets/sprites/Character-5/6-PROJECTILE-2-2-Sheet.png",
+                "path": "assets/sprites/Character-5/PROJECTILE-2-2-Sheet.png",
                 "frames": 1,
-                "frame_duration": 150,
-                "width": 20,
-                "height": 20,
+                "frame_duration": 200,
+                "width": 40,
+                "height": 40,
             },
         },
     },
@@ -486,6 +486,7 @@ class Character:
         self.frames_S3_2_left = self._flip(s3_2)
 
         mw, mh = self._dims("MOVE")
+        htw, hth = self._dims("HURT")
         s1w, s1h = self._dims("S1")
         s2w, s2h = self._dims("S2")
         s3w, s3h = self._dims("S3")
@@ -501,7 +502,7 @@ class Character:
 
         idle = raw_idle or self._blank()
         move = self._load_sheet("MOVE-Sheet.png", mw, mh) or self._blank(w=mw, h=mh)
-        hurt = self._load_sheet("HURT-Sheet.png") or idle
+        hurt = self._load_sheet("HURT-Sheet.png", htw, hth) or idle
         dead = self._load_sheet("DEAD-Sheet.png") or self._blank((80, 0, 0))
         s1 = (
             self._load_sheet("S1-Sheet.png", s1w, s1h)
