@@ -880,11 +880,11 @@ class Game:
                 self.send_to_server(
                     f"[CreateSession]:{json.dumps(self.Menu.sessionPending)}"
                 )
+                # Le serveur enregistre le créateur automatiquement lors du CreateSession
+                # → pas de JoinedSession supplémentaire (sinon le créateur est compté 2×
+                #   et devient joueur 2 au lieu de joueur 1)
                 self.current_joined_session = self.Menu.sessionPending["titre"]
-                self.send_to_server(f"[JoinedSession]:{self.current_joined_session}")
                 self.Menu.sessionPending = None
-
-                # self.Menu.menu_state = "waiting_player_id"
 
             if self.Menu.p_join_session is not None:
                 self.current_joined_session = self.Menu.p_join_session
