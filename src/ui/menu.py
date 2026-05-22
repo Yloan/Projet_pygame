@@ -22,7 +22,7 @@ BUTTON_SCALE = 2
 
 TMP_NUBER_OF_ASSETS_VARIABLES_HERE = 5
 
-MAPS_NOT_IMPLEMENTED_YET = {2, 3, 4, 5, 6}
+MAPS_NOT_IMPLEMENTED_YET = {5, 6}
 
 
 class Menu:
@@ -316,7 +316,7 @@ class Menu:
 
         try:
             _bg_raw = pyg.image.load(
-                os.path.join(_base, "assets", "Menus_assets", "Maps_selection_interface.png")
+                os.path.join(_base, "assets", "wallpapers", "map.png")
             )
             self.maps_selection_bg = pyg.transform.scale(_bg_raw, (self.width, self.height))
         except Exception:
@@ -324,12 +324,14 @@ class Menu:
 
         self.map_slot_previews = {}
         try:
-            _m1 = pyg.image.load(
-                os.path.join(_base, "assets", "maps", "map_1", "FOREST-WHOLE.png")
+            _forest = pyg.image.load(
+                os.path.join(_base, "assets", "maps", "FOREST-WHOLE.png")
             )
-            self.map_slot_previews[1] = pyg.transform.scale(
-                _m1, (self.width_slots_map, self.height_slots_map)
+            _forest_scaled = pyg.transform.scale(
+                _forest, (self.width_slots_map, self.height_slots_map)
             )
+            for _slot in (1, 2, 3, 4):
+                self.map_slot_previews[_slot] = _forest_scaled
         except Exception:
             pass
 
@@ -886,7 +888,6 @@ class Menu:
 
     def maps_selection(self):
         self.screen.blit(self.maps_selection_bg, (0, 0))
-        self.draw_text_center("Vote for a map", self.font, self.TEXT_COL, 50)
 
         for i in range(1, 7):
             if i in self.maps_not_implemented_yet:

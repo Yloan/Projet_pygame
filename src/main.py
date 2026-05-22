@@ -648,10 +648,6 @@ class Game:
                 screen.blit(self.wallpaper, (0, 0))
 
                 self.Menu.method_menu()
-                if self.Menu.menu_state == "maps_selection" and not self.current_joined_session:
-                    if not self.game_started:
-                        self.game_started = True
-
                 if self.game_started and not self._game_initialized:
                     self._init_game_characters()
                     self._game_initialized = True
@@ -714,18 +710,31 @@ class Game:
                         if event.button == 5:
                             self.Menu.scroll_y += 30
                         if event.button == 1 and self.Menu.menu_state == "maps_selection":
-                            if self.choose_map:
-                                self.send_to_server(f"[UnchooseMap]:{self.map_choosen}")
-                                self.Menu.map_player_votes.pop(self.Menu.CurrentPlayer_id, None)
-                                self.choose_map = False
-                                self.map_choosen = None
                             for num_map, slot_map in self.Menu.rects_img_maps.items():
-                                if slot_map.collidepoint(event.pos):
+                                if not slot_map.collidepoint(event.pos):
+                                    continue
+                                if self.current_joined_session:
+                                    # Multijoueur : vote serveur
+                                    if self.choose_map:
+                                        self.send_to_server(f"[UnchooseMap]:{self.map_choosen}")
+                                        self.Menu.map_player_votes.pop(self.Menu.CurrentPlayer_id, None)
+                                        self.choose_map = False
+                                        self.map_choosen = None
                                     self.send_to_server(f"[ChooseMap]:{num_map}")
                                     self.Menu.map_player_votes[self.Menu.CurrentPlayer_id] = num_map
                                     self.map_choosen = num_map
                                     self.choose_map = True
-                                    break
+                                else:
+                                    # Solo : charger la map et démarrer
+                                    try:
+                                        map_loader = MapLoader(None, num_map)
+                                        background, foreground = map_loader.load_map()
+                                        self.map_back = pyg.transform.scale(background, (self.width, self.height))
+                                        self.map_front = pyg.transform.scale(foreground, (self.width, self.height))
+                                    except Exception as e:
+                                        print_error(f"Erreur chargement map {num_map}: {e}")
+                                    self.game_started = True
+                                break
 
                     if self.Menu.menu_state == "creation_parameters_session_menu":
                         self.Menu.input_box.handle_event(event)
@@ -767,7 +776,8 @@ class Game:
 
                 self.Menu.update_player_ready(self.Menu.CurrentPlayer_id)
                 if self._all_players_ready():
-                    self.game_started = True
+                    if self.Menu.menu_state not in ("maps_selection", "start game"):
+                        self.Menu.menu_state = "maps_selection"
 
             if self.Menu.p_leave_session is not None:
                 self.send_to_server(f"[LeaveSession]:{self.Menu.p_leave_session}")
@@ -933,6 +943,11 @@ class Game:
                     bot_chars = [bot.char for bot in self.bots]
                     for i, bot in enumerate(self.bots):
                         if bot.char.is_dead:
+                            sprite = bot.char.get_current_sprite()
+                            if sprite:
+                                dx, dy = bot.char.get_blit_offset(sprite)
+                                pos = bot.current_position
+                                self.screen.blit(sprite, (pos[0] + dx, pos[1] + dy))
                             continue
 
                         bot.update_player_position(

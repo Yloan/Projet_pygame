@@ -400,12 +400,9 @@ class HUD:
         barStart = self.currentHealth - (self.currentHealth % 6)
         chunksInBar = (self.currentHealth % 6) + 1
         for i in range(chunksInBar):
-            j = barStart + i
             if i == chunksInBar - 1 and self.healthPartial > 0:
-                partialSprite = self._getPartialHealthSprite()
-                if partialSprite:
-                    surface.blit(partialSprite, (x + tx + i * step, y + ty))
-                    continue
+                continue  # chunk partiel → rien (image pleine ou rien)
+            j = barStart + i
             surface.blit(self.health[j], (x + tx + i * step, y + ty))
 
     def _drawCooldowns(self, surface, x, y):

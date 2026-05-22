@@ -503,7 +503,7 @@ class Character:
         idle = raw_idle or self._blank()
         move = self._load_sheet("MOVE-Sheet.png", mw, mh) or self._blank(w=mw, h=mh)
         hurt = self._load_sheet("HURT-Sheet.png", htw, hth) or idle
-        dead = self._load_sheet("DEAD-Sheet.png") or self._blank((80, 0, 0))
+        dead = self._load_sheet("DEAD-Sheet.png") or [hurt[-1]]
         s1 = (
             self._load_sheet("S1-Sheet.png", s1w, s1h)
             or self._load_sheet("S1-1-Sheet.png", s1w, s1h)
