@@ -65,7 +65,6 @@ class Game:
         self.height = height
         self.fullscreen = fullscreen
         self.etat = "menu"
-        self.etat = "game"
         self.game_started = False
         self.dev_display_ = False
         self.delta_time_sessions_send = 0
@@ -153,6 +152,9 @@ class Game:
 
         self.bots = []
 
+        self.choose_map = False
+        self.map_choosen = None
+
     def switch_music(self, i=None):
         if i is not None:
             self.current_music = i
@@ -178,13 +180,18 @@ class Game:
             (s for s in self.Menu.sessions if s.titre == self.current_joined_session),
             None,
         )
-        if not session_info:
+        max_humans = 4 - (session_info.nb_bots if session_info else 0)
+
+        human_present = {self.Menu.CurrentPlayer_id}
+        for p_id in range(1, max_humans + 1):
+            if any(c is not None for c in self.Menu.players_characters[p_id]):
+                human_present.add(p_id)
+
+        if not human_present:
             return False
-        max_humans = 4 - session_info.nb_bots
-        if session_info.nb_players < max_humans:
-            return False
-        ready_count = sum(1 for v in self.Menu.players_ready.values() if v)
-        return ready_count >= max_humans
+
+        ready_count = sum(1 for p_id in human_present if self.Menu.players_ready[p_id])
+        return ready_count == len(human_present) and ready_count > 0
 
     def _process_network_messages(self):
         while not self._r_queue.empty():
@@ -240,9 +247,32 @@ class Game:
                     data = json.loads(message.split(":", 1)[1])
                     self.Menu.update_player_ready(data["player_id"])
                     if self._all_players_ready():
-                        self.game_started = True
+                        if self.Menu.menu_state not in ("maps_selection", "start game"):
+                            self.Menu.menu_state = "maps_selection"
                 except Exception as e:
                     print_error(f"Erreur PlayerReady: {e}")
+
+            elif message.startswith("[MapVotesUpdate]:"):
+                try:
+                    votes = json.loads(message.split(":", 1)[1])
+                    self.Menu.update_map_votes(votes)
+                except Exception as e:
+                    print_error(f"Erreur MapVotesUpdate: {e}")
+
+            elif message.startswith("[StartGame]:"):
+                try:
+                    self.Menu.map_player_votes = {}
+                    self.choose_map = False
+                    self.map_choosen = None
+                    map_index = int(message.split(":", 1)[1])
+                    map_loader = MapLoader(None, map_index)
+                    background, foreground = map_loader.load_map()
+                    self.map_back = pyg.transform.scale(background, (self.width, self.height))
+                    self.map_front = pyg.transform.scale(foreground, (self.width, self.height))
+                    self.game_started = True
+                except Exception as e:
+                    print_error(f"Erreur StartGame: {e}")
+                    self.game_started = True
 
             elif message.startswith("[PlayerUnready]:"):
                 try:
@@ -618,6 +648,10 @@ class Game:
                 screen.blit(self.wallpaper, (0, 0))
 
                 self.Menu.method_menu()
+                if self.Menu.menu_state == "maps_selection" and not self.current_joined_session:
+                    if not self.game_started:
+                        self.game_started = True
+
                 if self.game_started and not self._game_initialized:
                     self._init_game_characters()
                     self._game_initialized = True
@@ -675,10 +709,23 @@ class Game:
                         if event.key == pyg.K_F2:
                             self.dev_display_ = not self.dev_display_
                     elif event.type == pyg.MOUSEBUTTONDOWN:
-                        if event.button == 4:  # MOUSE UP
+                        if event.button == 4:
                             self.Menu.scroll_y = max(0, self.Menu.scroll_y - 30)
-                        if event.button == 5:  # MOUSE down
+                        if event.button == 5:
                             self.Menu.scroll_y += 30
+                        if event.button == 1 and self.Menu.menu_state == "maps_selection":
+                            if self.choose_map:
+                                self.send_to_server(f"[UnchooseMap]:{self.map_choosen}")
+                                self.Menu.map_player_votes.pop(self.Menu.CurrentPlayer_id, None)
+                                self.choose_map = False
+                                self.map_choosen = None
+                            for num_map, slot_map in self.Menu.rects_img_maps.items():
+                                if slot_map.collidepoint(event.pos):
+                                    self.send_to_server(f"[ChooseMap]:{num_map}")
+                                    self.Menu.map_player_votes[self.Menu.CurrentPlayer_id] = num_map
+                                    self.map_choosen = num_map
+                                    self.choose_map = True
+                                    break
 
                     if self.Menu.menu_state == "creation_parameters_session_menu":
                         self.Menu.input_box.handle_event(event)
@@ -746,6 +793,8 @@ class Game:
                             self.dev_display_ = not self.dev_display_
 
                         keys_now = pyg.key.get_pressed()
+                        if self.active_char.is_dead:
+                            continue
                         if event.key == pyg.K_q:
                             if keys_now[pyg.K_e]:
                                 if (
@@ -825,23 +874,24 @@ class Game:
                 # draw background
                 self.screen.blit(self.map_back, (0, 0))
 
-                # movement
                 keys_pressed = pyg.key.get_pressed()
-                is_moving = (
-                    keys_pressed[pyg.K_RIGHT]
-                    or keys_pressed[pyg.K_LEFT]
-                    or keys_pressed[pyg.K_UP]
-                    or keys_pressed[pyg.K_DOWN]
-                )
+                is_moving = False
 
-                if keys_pressed[pyg.K_UP]:
-                    self.active_char.move("up")
-                if keys_pressed[pyg.K_DOWN]:
-                    self.active_char.move("down")
-                if keys_pressed[pyg.K_LEFT]:
-                    self.active_char.move("left")
-                if keys_pressed[pyg.K_RIGHT]:
-                    self.active_char.move("right")
+                if not self.active_char.is_dead:
+                    is_moving = (
+                        keys_pressed[pyg.K_RIGHT]
+                        or keys_pressed[pyg.K_LEFT]
+                        or keys_pressed[pyg.K_UP]
+                        or keys_pressed[pyg.K_DOWN]
+                    )
+                    if keys_pressed[pyg.K_UP]:
+                        self.active_char.move("up")
+                    if keys_pressed[pyg.K_DOWN]:
+                        self.active_char.move("down")
+                    if keys_pressed[pyg.K_LEFT]:
+                        self.active_char.move("left")
+                    if keys_pressed[pyg.K_RIGHT]:
+                        self.active_char.move("right")
 
                 self.active_char.update_animation(delta_time, is_moving)
 
@@ -873,14 +923,18 @@ class Game:
                     char.bubble_effect.y = char.position[1]
                     char.bubble_effect.draw(self.screen)
 
-                targets = list(self.remote_players.values())
-                self.active_char.update_projectiles(delta_time, targets)
-                self.active_char.check_hits(targets)
-                self.active_char.draw_projectiles(self.screen)
+                if not BOTS_ENABLED:
+                    targets = [rc for rc in self.remote_players.values() if not rc.is_dead]
+                    self.active_char.update_projectiles(delta_time, targets)
+                    self.active_char.check_hits(targets)
+                    self.active_char.draw_projectiles(self.screen)
 
                 if BOTS_ENABLED:
                     bot_chars = [bot.char for bot in self.bots]
-                    for bot in self.bots:
+                    for i, bot in enumerate(self.bots):
+                        if bot.char.is_dead:
+                            continue
+
                         bot.update_player_position(
                             self.Menu.CurrentPlayer_id, list(self.active_char.position)
                         )
@@ -895,7 +949,6 @@ class Game:
                         for pid, remote_char in self.remote_players.items():
                             bot.update_player_position(pid, list(remote_char.position))
 
-                        # les autres bots sont aussi des cibles
                         for j, other_bot in enumerate(self.bots):
                             if j != i:
                                 bot.update_player_position(
@@ -904,27 +957,56 @@ class Game:
                                 )
 
                         bot.update(delta_time)
-                        bot.char.check_hits([self.active_char])
+
+                        if not self.active_char.is_dead:
+                            bot.char.check_hits([self.active_char])
+
+                        live_targets = [self.active_char] + [
+                            rc for rc in self.remote_players.values() if not rc.is_dead
+                        ]
+                        bot.char.update_projectiles(delta_time, live_targets)
+                        bot.char.draw_projectiles(self.screen)
 
                         sprite = bot.char.get_current_sprite()
-                        print_debug(
-                            f"Bot sprite: {sprite}, pos: {bot.current_position}"
-                        )
                         if sprite:
                             dx, dy = bot.char.get_blit_offset(sprite)
                             pos = bot.current_position
                             self.screen.blit(sprite, (pos[0] + dx, pos[1] + dy))
 
-                    targets = list(self.remote_players.values()) + bot_chars
-                    self.active_char.update_projectiles(delta_time, targets)
-                    self.active_char.check_hits(targets)
+                    live_targets = list(self.remote_players.values()) + [
+                        b.char for b in self.bots if not b.char.is_dead
+                    ]
+                    self.active_char.update_projectiles(delta_time, live_targets)
+                    self.active_char.check_hits(live_targets)
                     self.active_char.draw_projectiles(self.screen)
+
+                if self.active_char.is_dead:
+                    if not self.support_1.is_dead:
+                        current_pos = list(self.active_char.position)
+                        self.active_char, self.support_1 = self.support_1, self.active_char
+                        self.active_char.position = current_pos
+                        self.player = self.active_char
+                        self._last_char_health = self.active_char.health
+                        if self.hud:
+                            pct = self.active_char.health / max(1, self.active_char.max_health)
+                            self.hud.setHealth(round(pct * 17))
+                    elif not self.support_2.is_dead:
+                        current_pos = list(self.active_char.position)
+                        self.active_char, self.support_2 = self.support_2, self.active_char
+                        self.active_char.position = current_pos
+                        self.player = self.active_char
+                        self._last_char_health = self.active_char.health
+                        if self.hud:
+                            pct = self.active_char.health / max(1, self.active_char.max_health)
+                            self.hud.setHealth(round(pct * 17))
 
                 if self.hud and self.active_char:
                     delta = self._last_char_health - self.active_char.health
                     if delta > 0:
                         hud_dmg = max(1, round(delta * 54 / 100))
                         self.hud.DealsDamage(hud_dmg)
+                    if self.active_char.health <= 0 and self.hud.currentHealth > 0:
+                        self.hud.setHealth(0)
                     self._last_char_health = self.active_char.health
 
                 # DRaw remote player

@@ -73,6 +73,7 @@ HITBOX_DATA = {
             "damage": 15,
             "frame_start": 2,
             "frame_end": 99,
+            "status_applied": lambda atk, tgt: tgt.status.apply_burn(),
         },
         2: {
             "offset": (25, -22),
@@ -80,6 +81,7 @@ HITBOX_DATA = {
             "damage": 25,
             "frame_start": 0,
             "frame_end": 8,
+            "status_applied": lambda atk, tgt: tgt.status.apply_burn(),
         },
         3: {
             "offset": (48, -12),
@@ -87,6 +89,7 @@ HITBOX_DATA = {
             "damage": 40,
             "frame_start": 0,
             "frame_end": 99,
+            "status_applied": lambda atk, tgt: tgt.status.apply_burn(),
         },
     },
     2: {
@@ -312,6 +315,8 @@ SPRITE_OFFSETS = {
 }
 
 # En haut du fichier, ajustable
+SKILL_DMG_MULTIPLIERS = {1: 0.5, 2: 1.0, 3: 1.5}
+
 CHAR6_CANS_HUD_POSITIONS = {
     1: (300, 12),
     2: (1143, 12),
@@ -533,6 +538,8 @@ class Character:
             return
         if self.is_attacking_s1 or self.is_attacking_s2 or self.is_attacking_s3:
             return
+        if self.status.is_stunned or self.status.is_grabbed or self.status.is_disabled:
+            return
 
         x, y = self.position
         nx, ny = 0, 0
@@ -652,7 +659,14 @@ class Character:
                 self._pending_projectiles.pop(1, None)
 
     def update_animation(self, dt, is_moving):
+        if self.is_dead:
+            return
+
         self.status.update(dt)
+
+        burn_dmg = self.status.get_burn_damage()
+        if burn_dmg > 0:
+            self.take_damage(burn_dmg)
 
         if hasattr(self, "bubble_effect") and self.bubble_effect:
             self.bubble_effect.update(dt)
@@ -843,7 +857,9 @@ class Character:
             return
 
         hitbox = self.get_attack_hitbox()
-        dmg = HITBOX_DATA.get(self.char_num, {}).get(skill, _DEFAULT_HITBOX)["damage"]
+        base_dmg = HITBOX_DATA.get(self.char_num, {}).get(skill, _DEFAULT_HITBOX)["damage"]
+        dmg = round(base_dmg * SKILL_DMG_MULTIPLIERS.get(skill, 1.0))
+        _is_fire = self.char_num == 1
 
         for target in targets:
             if target is self or target.is_dead:
@@ -867,7 +883,8 @@ class Character:
             if tid in self._hit_this_swing:
                 continue
             if hitbox.colliderect(target.get_body_rect()):
-                target.take_damage(dmg)
+                final_dmg = round(dmg * 1.5) if _is_fire and target.status.is_wet else dmg
+                target.take_damage(final_dmg)
                 self._apply_status_on_hit(target, skill)
                 self._hit_this_swing.add(tid)
 
@@ -988,10 +1005,10 @@ class Water(Character):
         full_w = data["size"][0]
 
         frm = self.frame_S3
-        if frm <= 5:
+        if frm <= 6:
             return None
 
-        ratio = min(1.0, (frm - 5) / 11.0)
+        ratio = min(1.0, (frm - 6) / 10.0)
         sw = int(full_w * ratio)
         if sw <= 0:
             return None
@@ -1032,6 +1049,9 @@ CHAR3_S1_DAMAGE_NORMAL = 25
 CHAR3_S1_DAMAGE_PARRY = 55
 
 
+CHAR3_S3_TICK_INTERVAL = 150
+
+
 class Character3(Character):
     def __init__(self):
         self.s1_phase = 1
@@ -1046,6 +1066,7 @@ class Character3(Character):
         self.frames_S1_1_left = []
         self.frames_S1_2_anim_left = []
         self.frames_S1_3_left = []
+        self._s3_cont_timers = {}
         super().__init__(3)
 
     def _load_animations(self):
@@ -1088,6 +1109,8 @@ class Character3(Character):
             self.timer_S1_3 = 0
             self._hit_this_swing = set()
             return True
+        if skill_num == 3:
+            self._s3_cont_timers = {}
         return super().use_skill(skill_num)
 
     def take_damage(self, amount):
@@ -1166,6 +1189,23 @@ class Character3(Character):
         return super().get_attack_hitbox()
 
     def check_hits(self, targets):
+        if self.is_attacking_s3:
+            hitbox = self.get_attack_hitbox()
+            if hitbox is None:
+                return
+            dmg = round(HITBOX_DATA.get(3, {}).get(3, _DEFAULT_HITBOX)["damage"] * SKILL_DMG_MULTIPLIERS.get(3, 1.0))
+            now = pyg.time.get_ticks()
+            for target in targets:
+                if target is self or target.is_dead:
+                    continue
+                tid = id(target)
+                if now - self._s3_cont_timers.get(tid, 0) < CHAR3_S3_TICK_INTERVAL:
+                    continue
+                if hitbox.colliderect(target.get_body_rect()):
+                    target.take_damage(dmg)
+                    self._s3_cont_timers[tid] = now
+            return
+
         if self.is_attacking_s1:
             if self.s1_phase != 3:
                 return
@@ -1177,9 +1217,8 @@ class Character3(Character):
                 px = FRAME_SIZE - px - sw
             hitbox = pyg.Rect(x + px, y + py, sw, sh)
 
-            damage = (
-                CHAR3_S1_DAMAGE_PARRY if self.s1_parried else CHAR3_S1_DAMAGE_NORMAL
-            )
+            base = CHAR3_S1_DAMAGE_PARRY if self.s1_parried else CHAR3_S1_DAMAGE_NORMAL
+            damage = round(base * SKILL_DMG_MULTIPLIERS.get(1, 1.0))
 
             for target in targets:
                 if target is self or target.is_dead:
@@ -1190,11 +1229,9 @@ class Character3(Character):
                 if hitbox.colliderect(target.get_body_rect()):
                     target.take_damage(damage)
                     self._hit_this_swing.add(tid)
-        else:
-            print_debug(
-                f"char3 check_hits fallback | s3={self.is_attacking_s3} | s3_hit={self.s3_hit} | hitbox={self.get_attack_hitbox()}"
-            )
-            super().check_hits(targets)
+            return
+
+        super().check_hits(targets)
 
 
 def make_character(char_num):
@@ -1231,9 +1268,8 @@ class Projectile:
         self.sub_projectiles = []
         self.skill_num = skill_num
 
-        self.damage = HITBOX_DATA.get(char_num, {}).get(skill_num, _DEFAULT_HITBOX)[
-            "damage"
-        ]
+        raw_dmg = HITBOX_DATA.get(char_num, {}).get(skill_num, _DEFAULT_HITBOX)["damage"]
+        self.damage = round(raw_dmg * SKILL_DMG_MULTIPLIERS.get(skill_num, 1.0))
 
         sheet = pyg.image.load(_resolve_path(data["path"])).convert_alpha()
         n = max(1, sheet.get_width() // self.width)
@@ -1598,7 +1634,7 @@ class Character4(Character):
             hbx = self.get_attack_hitbox()
             if hbx is None:
                 return
-            dmg = HITBOX_DATA.get(self.char_num, {}).get(1, _DEFAULT_HITBOX)["damage"]
+            dmg = round(HITBOX_DATA.get(self.char_num, {}).get(1, _DEFAULT_HITBOX)["damage"] * SKILL_DMG_MULTIPLIERS.get(1, 1.0))
             for tgt in targets:
                 if tgt is self or tgt.is_dead:
                     continue
@@ -1620,7 +1656,7 @@ class Character4(Character):
             hbx = self.get_attack_hitbox()
             if hbx is None:
                 return
-            dmg = HITBOX_DATA.get(self.char_num, {}).get(2, _DEFAULT_HITBOX)["damage"]
+            dmg = round(HITBOX_DATA.get(self.char_num, {}).get(2, _DEFAULT_HITBOX)["damage"] * SKILL_DMG_MULTIPLIERS.get(2, 1.0))
             for tgt in targets:
                 if tgt is self or tgt.is_dead:
                     continue
@@ -1636,7 +1672,7 @@ class Character4(Character):
             hbx = self.get_attack_hitbox()
             if hbx is None:
                 return
-            dmg = HITBOX_DATA.get(self.char_num, {}).get(3, _DEFAULT_HITBOX)["damage"]
+            dmg = round(HITBOX_DATA.get(self.char_num, {}).get(3, _DEFAULT_HITBOX)["damage"] * SKILL_DMG_MULTIPLIERS.get(3, 1.0))
             stun_dur = self._s3_chrgs_spnt * 2000
             for tgt in targets:
                 if tgt is self or tgt.is_dead:
@@ -1811,7 +1847,7 @@ class Character5(Character):
             if self.direction == "left":
                 px = FRAME_SIZE - px - sw
             hbx = pyg.Rect(x + px, y + py, sw, sh)
-            dmg = data["damage"]
+            dmg = round(data["damage"] * SKILL_DMG_MULTIPLIERS.get(2, 1.0))
             dmg_hited = False
             for tgt in targets:
                 if tgt is self or tgt.is_dead:

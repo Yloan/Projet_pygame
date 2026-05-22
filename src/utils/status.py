@@ -27,6 +27,9 @@ BUBBLE_DRIFT = 0.5
 OILED_DURATION = 4000
 GRAB_MAX_SPD = 18
 GRAB_GRWTH = 1.09
+BURN_DURATION = 3000
+BURN_TICK_INTERVAL = 500
+BURN_TICK_DAMAGE = 4
 
 
 class StatusEffect:
@@ -96,6 +99,26 @@ class OiledStatus(StatusEffect):
         return self.drft_x, self.drft_y
 
 
+class BurnStatus(StatusEffect):
+    def __init__(self):
+        super().__init__(BURN_DURATION)
+        self.tick_timer = 0
+        self.pending_damage = 0
+
+    def update(self, dt):
+        super().update(dt)
+        if self.is_active:
+            self.tick_timer += dt
+            while self.tick_timer >= BURN_TICK_INTERVAL:
+                self.tick_timer -= BURN_TICK_INTERVAL
+                self.pending_damage += BURN_TICK_DAMAGE
+
+    def consume_damage(self):
+        dmg = self.pending_damage
+        self.pending_damage = 0
+        return dmg
+
+
 class GrabStatus(StatusEffect):
     def __init__(self, src_char):
         super().__init__(60000)
@@ -138,6 +161,13 @@ class StatusManager:
     def apply_grabbed(self, src_char):
         self.effects["grabbed"] = GrabStatus(src_char)
 
+    def apply_burn(self):
+        existing = self.effects.get("burn")
+        if existing and existing.is_active:
+            existing.timer = 0
+        else:
+            self.effects["burn"] = BurnStatus()
+
     def update(self, dt):
         for key, effect in list(self.effects.items()):
             effect.update(dt)
@@ -173,6 +203,15 @@ class StatusManager:
     def is_grabbed(self):
         e = self.effects.get("grabbed")
         return e is not None and e.is_active
+
+    @property
+    def is_burning(self):
+        e = self.effects.get("burn")
+        return e is not None and e.is_active
+
+    def get_burn_damage(self):
+        b = self.effects.get("burn")
+        return b.consume_damage() if b and b.is_active else 0
 
     @property
     def bubble_offset(self):

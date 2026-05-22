@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 
 import pygame as pyg
@@ -20,6 +21,8 @@ WINDOW_HEIGHT = 720
 BUTTON_SCALE = 2
 
 TMP_NUBER_OF_ASSETS_VARIABLES_HERE = 5
+
+MAPS_NOT_IMPLEMENTED_YET = {2, 3, 4, 5, 6}
 
 
 class Menu:
@@ -298,6 +301,55 @@ class Menu:
         self.p_join_session = None
 
         self.__mouse_prev = False
+
+        _base = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        self.slot_maps_selection = {
+            1: (366, 198),
+            2: (564, 198),
+            3: (762, 198),
+            4: (366, 403),
+            5: (564, 403),
+            6: (762, 403),
+        }
+        self.width_slots_map = 144
+        self.height_slots_map = 124
+        self.maps_not_implemented_yet = MAPS_NOT_IMPLEMENTED_YET
+
+        try:
+            _bg_raw = pyg.image.load(
+                os.path.join(_base, "assets", "Menus_assets", "Maps_selection_interface.png")
+            )
+            self.maps_selection_bg = pyg.transform.scale(_bg_raw, (self.width, self.height))
+        except Exception:
+            self.maps_selection_bg = self.choice_chracters
+
+        self.map_slot_previews = {}
+        try:
+            _m1 = pyg.image.load(
+                os.path.join(_base, "assets", "maps", "map_1", "FOREST-WHOLE.png")
+            )
+            self.map_slot_previews[1] = pyg.transform.scale(
+                _m1, (self.width_slots_map, self.height_slots_map)
+            )
+        except Exception:
+            pass
+
+        self.rects_img_maps = {
+            i: pyg.Rect(
+                self.slot_maps_selection[i],
+                (self.width_slots_map, self.height_slots_map),
+            )
+            for i in range(1, 7)
+            if i not in self.maps_not_implemented_yet
+        }
+
+        self.map_player_votes = {}
+        self.PLAYER_COLORS = {
+            1: (220, 60, 60),
+            2: (60, 100, 220),
+            3: (60, 200, 60),
+            4: (220, 200, 40),
+        }
 
     def handle_session_menu(self):
         # Gère l'état du menu des sessions
@@ -844,10 +896,36 @@ class Menu:
             if any(c is not None for c in self.players_characters[p_id]):
                 human_present.add(p_id)
 
-        # ready_count = sum(1 for p_id in human_present if self.players_ready[p_id])
-        # if ready_count == len(human_present) and ready_count > 0:
-        #     self.menu_state = "start game"
-        #     self.etat = "game"
+        ready_count = sum(1 for p_id in human_present if self.players_ready[p_id])
+        if ready_count == len(human_present) and ready_count > 0:
+            self.menu_state = "maps_selection"
+
+    def maps_selection(self):
+        self.screen.blit(self.maps_selection_bg, (0, 0))
+        self.draw_text_center("Vote for a map", self.font, self.TEXT_COL, 50)
+
+        for i in range(1, 7):
+            if i in self.maps_not_implemented_yet:
+                continue
+            if i in self.map_slot_previews:
+                self.screen.blit(self.map_slot_previews[i], self.slot_maps_selection[i])
+
+        voters_per_map = {}
+        for player_id, map_id in self.map_player_votes.items():
+            voters_per_map.setdefault(map_id, []).append(player_id)
+
+        sq = 14
+        gap = 2
+        for map_id, voter_ids in voters_per_map.items():
+            if map_id not in self.slot_maps_selection:
+                continue
+            sx, sy = self.slot_maps_selection[map_id]
+            for idx, pid in enumerate(sorted(voter_ids)):
+                color = self.PLAYER_COLORS.get(pid, (200, 200, 200))
+                pyg.draw.rect(self.screen, color, (sx + idx * (sq + gap), sy, sq, sq))
+
+    def update_map_votes(self, votes):
+        self.map_player_votes = {int(k): v for k, v in votes.items()}
 
     def method_menu(self):
         # MAIN METHOD FOR THE MENU
@@ -907,6 +985,8 @@ class Menu:
             print_debug("Enter, laoding for the session's connexion")
         elif self.menu_state == "character_selection_final":
             self.handle_character_selection_final()
+        elif self.menu_state == "maps_selection":
+            self.maps_selection()
         elif self.menu_state == "start game":
             self.etat = "game"
             print_warning("start of the game!!!")
