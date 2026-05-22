@@ -1037,7 +1037,19 @@ class Water(Character):
                 "path": "assets/sprites/Character-2/effect-2-S1-Sheet.png",
                 "frames": 2,
                 "frame_duration": 150,
-                "width": 160,
+                "width": 80,   # 2 frames de 80x48 dans la sheet de 160px
+                "height": 48,
+            }
+            self.projectiles.append(
+                SubProjectile(target.position[0], target.position[1], effect_data)
+            )
+
+        elif skill == 2:
+            effect_data = {
+                "path": "assets/sprites/Character-2/effect-2-S1-Sheet.png",
+                "frames": 2,
+                "frame_duration": 150,
+                "width": 80,
                 "height": 48,
             }
             self.projectiles.append(

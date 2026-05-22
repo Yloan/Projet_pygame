@@ -155,6 +155,10 @@ class Game:
         self.choose_map = False
         self.map_choosen = None
 
+        # Game-over state
+        self._game_over_timer = 0
+        self._game_over_result = None  # None | "win" | "lose"
+
     def switch_music(self, i=None):
         if i is not None:
             self.current_music = i
@@ -595,6 +599,121 @@ class Game:
         }
         self.send_to_server(f"[HUDUpdate]:{json.dumps(payload)}")
 
+    # ── Status icons ──────────────────────────────────────────────────────────
+    # Map effect name → icon file(s) inside assets/status/
+    _STATUS_ICON_FILES = {
+        "burn":     "status-icone-1.png",
+        "grabbed":  "status-icone-2.png",
+        "disabled": "status-icone-3.png",
+        "wet":      "status-icone-4.png",
+        "oiled":    "status-icone-6.png",
+        "pushed":   {"right": "status-icone-7-1.png", "left": "status-icone-7-2.png"},
+        "stun":     "status-icone-13.png",
+    }
+    _ICON_SIZE = 24  # display size (px)
+
+    def _load_status_icons(self):
+        """Load & cache all status icon images (called once, lazily)."""
+        self._status_icon_imgs = {}
+        sz = self._ICON_SIZE
+        base = "assets/status/"
+        for key, val in self._STATUS_ICON_FILES.items():
+            if isinstance(val, dict):
+                self._status_icon_imgs[key] = {
+                    d: pyg.transform.scale(
+                        pyg.image.load(base + fname).convert_alpha(), (sz, sz)
+                    )
+                    for d, fname in val.items()
+                }
+            else:
+                self._status_icon_imgs[key] = pyg.transform.scale(
+                    pyg.image.load(base + val).convert_alpha(), (sz, sz)
+                )
+
+    def _draw_status_icons(self, surface, status_manager, hud_x, hud_y, player_id):
+        """Draw status-effect icons next to a HUD using sprites from assets/status/."""
+        if not hasattr(self, "_status_icon_imgs"):
+            self._load_status_icons()
+
+        active = []
+        for key in self._STATUS_ICON_FILES:
+            eff = status_manager.effects.get(key)
+            if eff and eff.is_active:
+                imgs = self._status_icon_imgs[key]
+                if isinstance(imgs, dict):
+                    direction = getattr(eff, "direction", "right")
+                    img = imgs.get(direction, next(iter(imgs.values())))
+                else:
+                    img = imgs
+                active.append(img)
+
+        if not active:
+            return
+
+        sz  = self._ICON_SIZE
+        gap = 3
+        hud_h = 192  # scaled HUD height (96 × 2)
+
+        if player_id in (1, 2):
+            ix = hud_x
+            iy = hud_y + hud_h + 4
+        else:
+            ix = hud_x
+            iy = hud_y - sz - 4
+
+        for idx, img in enumerate(active):
+            surface.blit(img, (ix + idx * (sz + gap), iy))
+
+    # ── Game-over overlay ──────────────────────────────────────────────────────
+    def _draw_game_over_overlay(self, surface, result):
+        """Draw a semi-transparent overlay with win / lose message."""
+        overlay = pyg.Surface((self.width, self.height), pyg.SRCALPHA)
+        overlay.fill((0, 0, 0, 130))
+        surface.blit(overlay, (0, 0))
+
+        if result == "win":
+            text = "Victoire !"
+            color = (80, 255, 80)
+        else:
+            text = "Défaite..."
+            color = (255, 60, 60)
+
+        big_font = pyg.font.SysFont("arialblack", 72)
+        img = big_font.render(text, True, color)
+        cx = (self.width  - img.get_width())  // 2
+        cy = (self.height - img.get_height()) // 2
+        surface.blit(img, (cx, cy))
+
+    # ── Return to menu ─────────────────────────────────────────────────────────
+    def _reset_to_menu(self):
+        """Leave the current session / game and return to the main menu."""
+        if self.current_joined_session:
+            self.send_to_server(f"[LeaveSession]:{self.current_joined_session}")
+            self.current_joined_session = None
+
+        # Reset game state
+        self.game_started = False
+        self._game_initialized = False
+        self._game_over_result = None
+        self._game_over_timer = 0
+        self.bots = []
+        self.active_char = None
+        self.support_1 = None
+        self.support_2 = None
+        self.player = None
+        self.hud = None
+        self.other_huds = {}
+        self.remote_players = {}
+        self.choose_map = False
+        self.map_choosen = None
+
+        # Reset menu state
+        self.etat = "menu"
+        self.Menu.etat = "menu"
+        self.Menu.menu_state = "main"
+        self.Menu.players_ready = {1: False, 2: False, 3: False, 4: False}
+        self.Menu.map_player_votes = {}
+
     # MAIN GAME LOOP
 
     def _send_skill(self, skill_num):
@@ -714,7 +833,7 @@ class Game:
                                 if not slot_map.collidepoint(event.pos):
                                     continue
                                 if self.current_joined_session:
-                                    # Multijoueur : vote serveur
+                                    # Session : envoyer le vote au serveur
                                     if self.choose_map:
                                         self.send_to_server(f"[UnchooseMap]:{self.map_choosen}")
                                         self.Menu.map_player_votes.pop(self.Menu.CurrentPlayer_id, None)
@@ -724,8 +843,23 @@ class Game:
                                     self.Menu.map_player_votes[self.Menu.CurrentPlayer_id] = num_map
                                     self.map_choosen = num_map
                                     self.choose_map = True
+
+                                    # Si seul humain dans la session (solo + bots) →
+                                    # démarrer directement sans attendre le serveur
+                                    human_ready = [
+                                        pid for pid, rdy in self.Menu.players_ready.items() if rdy
+                                    ]
+                                    if len(human_ready) <= 1:
+                                        try:
+                                            map_loader = MapLoader(None, num_map)
+                                            background, foreground = map_loader.load_map()
+                                            self.map_back = pyg.transform.scale(background, (self.width, self.height))
+                                            self.map_front = pyg.transform.scale(foreground, (self.width, self.height))
+                                        except Exception as e:
+                                            print_error(f"Erreur chargement map {num_map}: {e}")
+                                        self.game_started = True
                                 else:
-                                    # Solo : charger la map et démarrer
+                                    # Solo sans session : charger la map et démarrer
                                     try:
                                         map_loader = MapLoader(None, num_map)
                                         background, foreground = map_loader.load_map()
@@ -803,7 +937,7 @@ class Game:
                             self.dev_display_ = not self.dev_display_
 
                         keys_now = pyg.key.get_pressed()
-                        if self.active_char.is_dead:
+                        if self.active_char.is_dead or self._game_over_result is not None:
                             continue
                         if event.key == pyg.K_q:
                             if keys_now[pyg.K_e]:
@@ -887,7 +1021,7 @@ class Game:
                 keys_pressed = pyg.key.get_pressed()
                 is_moving = False
 
-                if not self.active_char.is_dead:
+                if self._game_over_result is None and not self.active_char.is_dead:
                     is_moving = (
                         keys_pressed[pyg.K_RIGHT]
                         or keys_pressed[pyg.K_LEFT]
@@ -971,9 +1105,10 @@ class Game:
                                     list(other_bot.current_position),
                                 )
 
-                        bot.update(delta_time)
+                        if self._game_over_result is None:
+                            bot.update(delta_time)
 
-                        if not self.active_char.is_dead:
+                        if self._game_over_result is None and not self.active_char.is_dead:
                             bot.char.check_hits([self.active_char])
 
                         live_targets = [self.active_char] + [
@@ -987,6 +1122,11 @@ class Game:
                             dx, dy = bot.char.get_blit_offset(sprite)
                             pos = bot.current_position
                             self.screen.blit(sprite, (pos[0] + dx, pos[1] + dy))
+
+                        if hasattr(bot.char, "bubble_effect") and bot.char.bubble_effect:
+                            bot.char.bubble_effect.x = bot.current_position[0]
+                            bot.char.bubble_effect.y = bot.current_position[1]
+                            bot.char.bubble_effect.draw(self.screen)
 
                     live_targets = list(self.remote_players.values()) + [
                         b.char for b in self.bots if not b.char.is_dead
@@ -1023,6 +1163,32 @@ class Game:
                     if self.active_char.health <= 0 and self.hud.currentHealth > 0:
                         self.hud.setHealth(0)
                     self._last_char_health = self.active_char.health
+
+                # ── Game-over detection ───────────────────────────────────────
+                if self._game_over_result is None:
+                    all_bots_dead = (
+                        BOTS_ENABLED
+                        and bool(self.bots)
+                        and all(b.char.is_dead for b in self.bots)
+                    )
+                    all_players_dead = (
+                        self.active_char.is_dead
+                        and self.support_1.is_dead
+                        and self.support_2.is_dead
+                    )
+                    if all_bots_dead:
+                        self._game_over_result = "win"
+                        self._game_over_timer = 0
+                    elif all_players_dead:
+                        self._game_over_result = "lose"
+                        self._game_over_timer = 0
+
+                # ── Game-over countdown → return to menu ─────────────────────
+                if self._game_over_result is not None:
+                    self._game_over_timer += delta_time
+                    if self._game_over_timer >= 3000:
+                        self._reset_to_menu()
+                        continue  # skip the rest of the draw pipeline
 
                 # DRaw remote player
                 for pid, remote_char in self.remote_players.items():
@@ -1129,6 +1295,26 @@ class Game:
                     other_hud.update(dt)
                     ox, oy = HUD_POSITIONS.get(pid, (10, 10))
                     other_hud.draw(self.screen, ox, oy)
+
+                # ── Status icons ─────────────────────────────────────────────
+                if self.active_char and hasattr(self.active_char, "status"):
+                    hx, hy = HUD_POSITIONS.get(self.Menu.CurrentPlayer_id, (10, 10))
+                    self._draw_status_icons(
+                        self.screen, self.active_char.status, hx, hy,
+                        self.Menu.CurrentPlayer_id
+                    )
+
+                if BOTS_ENABLED:
+                    for bot in self.bots:
+                        if hasattr(bot, "bot_id") and hasattr(bot.char, "status"):
+                            bx, by = HUD_POSITIONS.get(bot.bot_id, (10, 10))
+                            self._draw_status_icons(
+                                self.screen, bot.char.status, bx, by, bot.bot_id
+                            )
+
+                # ── Game-over overlay ─────────────────────────────────────────
+                if self._game_over_result is not None:
+                    self._draw_game_over_overlay(self.screen, self._game_over_result)
 
             if self.dev_display_:
                 try:
