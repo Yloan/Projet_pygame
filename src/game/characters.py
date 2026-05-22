@@ -30,7 +30,7 @@ DEFAULT_STATS = {"speed": 2, "health": 100, "color": (128, 128, 128)}
 COLLISION_THICKNESS = 10
 TMP__GET_SURFACE_HITBOX_ATTACKS_ = False
 DIMENS = {
-    1: {"MOVE": (40, 40), "HURT": (50, 50), "S1": (80, 60), "S2": (105, 50), "S3": (120, 60)},
+    1: {"MOVE": (40, 40), "S1": (80, 60), "S2": (7, 50), "S3": (121, 60)},
     2: {
         "MOVE": (FRAME_SIZE, FRAME_SIZE),
         "S1": (168, 40),
@@ -81,7 +81,7 @@ HITBOX_DATA = {
             "damage": 25,
             "frame_start": 0,
             "frame_end": 8,
-            "status_applied": lambda atk, tgt: tgt.status.apply_burn(),
+            "status_applied": lambda atk, tgt: tgt.status.apply_oiled(),
         },
         3: {
             "offset": (48, -12),
@@ -89,7 +89,6 @@ HITBOX_DATA = {
             "damage": 40,
             "frame_start": 0,
             "frame_end": 99,
-            "status_applied": lambda atk, tgt: tgt.status.apply_burn(),
         },
     },
     2: {
@@ -131,10 +130,11 @@ HITBOX_DATA = {
         },
         2: {
             "offset": (30, 15),
-            "size": (20, 40),
+            "size": (40, 40),
             "damage": 28,
-            "frame_start": 0,
+            "frame_start": 7,
             "frame_end": 10,
+            "status_applied": lambda atk, tgt: tgt.status.apply_pushed(atk.direction),
         },
         3: {
             "offset": (15, 3),
@@ -192,29 +192,6 @@ HITBOX_DATA = {
             "frame_end": 99,
         },
     },
-    6: {
-        1: {
-            "offset": (36, -8),
-            "size": (38, 34),
-            "damage": 14,
-            "frame_start": 0,
-            "frame_end": 10,
-        },
-        2: {
-            "offset": (24, -22),
-            "size": (55, 55),
-            "damage": 22,
-            "frame_start": 0,
-            "frame_end": 10,
-        },
-        3: {
-            "offset": (44, -12),
-            "size": (72, 44),
-            "damage": 36,
-            "frame_start": 0,
-            "frame_end": 10,
-        },
-    },
 }
 _DEFAULT_HITBOX = {"offset": (36, -8), "size": (40, 36), "damage": 10}
 
@@ -234,9 +211,9 @@ PROJECTILES_INFOS = {
             "sub": {
                 "path": "assets/sprites/Character-5/PROJECTILE-1-2-Sheet.png",
                 "frames": 1,
-                "frame_duration": 200,
-                "width": 40,
-                "height": 40,
+                "frame_duration": 150,
+                "width": 20,
+                "height": 20,
             },
         },
         "s2": {
@@ -251,9 +228,9 @@ PROJECTILES_INFOS = {
             "sub": {
                 "path": "assets/sprites/Character-5/PROJECTILE-2-2-Sheet.png",
                 "frames": 1,
-                "frame_duration": 200,
-                "width": 40,
-                "height": 40,
+                "frame_duration": 150,
+                "width": 20,
+                "height": 20,
             },
         },
     },
@@ -313,9 +290,6 @@ SPRITE_OFFSETS = {
         "s3": (0, 0),
     },
 }
-
-# En haut du fichier, ajustable
-SKILL_DMG_MULTIPLIERS = {1: 0.5, 2: 1.0, 3: 1.5}
 
 CHAR6_CANS_HUD_POSITIONS = {
     1: (300, 12),
@@ -486,7 +460,6 @@ class Character:
         self.frames_S3_2_left = self._flip(s3_2)
 
         mw, mh = self._dims("MOVE")
-        htw, hth = self._dims("HURT")
         s1w, s1h = self._dims("S1")
         s2w, s2h = self._dims("S2")
         s3w, s3h = self._dims("S3")
@@ -502,8 +475,8 @@ class Character:
 
         idle = raw_idle or self._blank()
         move = self._load_sheet("MOVE-Sheet.png", mw, mh) or self._blank(w=mw, h=mh)
-        hurt = self._load_sheet("HURT-Sheet.png", htw, hth) or idle
-        dead = self._load_sheet("DEAD-Sheet.png") or [hurt[-1]]
+        hurt = self._load_sheet("HURT-Sheet.png") or idle
+        dead = self._load_sheet("DEAD-Sheet.png") or self._blank((80, 0, 0))
         s1 = (
             self._load_sheet("S1-Sheet.png", s1w, s1h)
             or self._load_sheet("S1-1-Sheet.png", s1w, s1h)
@@ -538,8 +511,6 @@ class Character:
         if self.is_dead or self.is_hurt:
             return
         if self.is_attacking_s1 or self.is_attacking_s2 or self.is_attacking_s3:
-            return
-        if self.status.is_stunned or self.status.is_grabbed or self.status.is_disabled:
             return
 
         x, y = self.position
@@ -660,14 +631,7 @@ class Character:
                 self._pending_projectiles.pop(1, None)
 
     def update_animation(self, dt, is_moving):
-        if self.is_dead:
-            return
-
         self.status.update(dt)
-
-        burn_dmg = self.status.get_burn_damage()
-        if burn_dmg > 0:
-            self.take_damage(burn_dmg)
 
         if hasattr(self, "bubble_effect") and self.bubble_effect:
             self.bubble_effect.update(dt)
@@ -858,9 +822,7 @@ class Character:
             return
 
         hitbox = self.get_attack_hitbox()
-        base_dmg = HITBOX_DATA.get(self.char_num, {}).get(skill, _DEFAULT_HITBOX)["damage"]
-        dmg = round(base_dmg * SKILL_DMG_MULTIPLIERS.get(skill, 1.0))
-        _is_fire = self.char_num == 1
+        dmg = HITBOX_DATA.get(self.char_num, {}).get(skill, _DEFAULT_HITBOX)["damage"]
 
         for target in targets:
             if target is self or target.is_dead:
@@ -884,8 +846,7 @@ class Character:
             if tid in self._hit_this_swing:
                 continue
             if hitbox.colliderect(target.get_body_rect()):
-                final_dmg = round(dmg * 1.5) if _is_fire and target.status.is_wet else dmg
-                target.take_damage(final_dmg)
+                target.take_damage(dmg)
                 self._apply_status_on_hit(target, skill)
                 self._hit_this_swing.add(tid)
 
@@ -982,8 +943,13 @@ class Character:
 
     def _apply_status_on_hit(self, target, skill):
         data = HITBOX_DATA.get(self.char_num, {}).get(skill, {})
+
+        fs = data.get("frame_start")
+        fe = data.get("frame_end")
+        current_frame = self._current_skill_frame()
+
         fn = data.get("status_applied")
-        if fn:
+        if fn and current_frame >= fs and current_frame <= fe:
             fn(self, target)
 
 
@@ -1006,10 +972,10 @@ class Water(Character):
         full_w = data["size"][0]
 
         frm = self.frame_S3
-        if frm <= 6:
+        if frm <= 5:
             return None
 
-        ratio = min(1.0, (frm - 6) / 10.0)
+        ratio = min(1.0, (frm - 5) / 11.0)
         sw = int(full_w * ratio)
         if sw <= 0:
             return None
@@ -1037,19 +1003,7 @@ class Water(Character):
                 "path": "assets/sprites/Character-2/effect-2-S1-Sheet.png",
                 "frames": 2,
                 "frame_duration": 150,
-                "width": 80,   # 2 frames de 80x48 dans la sheet de 160px
-                "height": 48,
-            }
-            self.projectiles.append(
-                SubProjectile(target.position[0], target.position[1], effect_data)
-            )
-
-        elif skill == 2:
-            effect_data = {
-                "path": "assets/sprites/Character-2/effect-2-S1-Sheet.png",
-                "frames": 2,
-                "frame_duration": 150,
-                "width": 80,
+                "width": 160,
                 "height": 48,
             }
             self.projectiles.append(
@@ -1060,9 +1014,6 @@ class Water(Character):
 CHAR3_S1_PHASE3_HITBOX = {"offset": (15, 3), "size": (90, 45)}
 CHAR3_S1_DAMAGE_NORMAL = 25
 CHAR3_S1_DAMAGE_PARRY = 55
-
-
-CHAR3_S3_TICK_INTERVAL = 150
 
 
 class Character3(Character):
@@ -1079,7 +1030,6 @@ class Character3(Character):
         self.frames_S1_1_left = []
         self.frames_S1_2_anim_left = []
         self.frames_S1_3_left = []
-        self._s3_cont_timers = {}
         super().__init__(3)
 
     def _load_animations(self):
@@ -1122,8 +1072,6 @@ class Character3(Character):
             self.timer_S1_3 = 0
             self._hit_this_swing = set()
             return True
-        if skill_num == 3:
-            self._s3_cont_timers = {}
         return super().use_skill(skill_num)
 
     def take_damage(self, amount):
@@ -1202,23 +1150,6 @@ class Character3(Character):
         return super().get_attack_hitbox()
 
     def check_hits(self, targets):
-        if self.is_attacking_s3:
-            hitbox = self.get_attack_hitbox()
-            if hitbox is None:
-                return
-            dmg = round(HITBOX_DATA.get(3, {}).get(3, _DEFAULT_HITBOX)["damage"] * SKILL_DMG_MULTIPLIERS.get(3, 1.0))
-            now = pyg.time.get_ticks()
-            for target in targets:
-                if target is self or target.is_dead:
-                    continue
-                tid = id(target)
-                if now - self._s3_cont_timers.get(tid, 0) < CHAR3_S3_TICK_INTERVAL:
-                    continue
-                if hitbox.colliderect(target.get_body_rect()):
-                    target.take_damage(dmg)
-                    self._s3_cont_timers[tid] = now
-            return
-
         if self.is_attacking_s1:
             if self.s1_phase != 3:
                 return
@@ -1230,8 +1161,9 @@ class Character3(Character):
                 px = FRAME_SIZE - px - sw
             hitbox = pyg.Rect(x + px, y + py, sw, sh)
 
-            base = CHAR3_S1_DAMAGE_PARRY if self.s1_parried else CHAR3_S1_DAMAGE_NORMAL
-            damage = round(base * SKILL_DMG_MULTIPLIERS.get(1, 1.0))
+            damage = (
+                CHAR3_S1_DAMAGE_PARRY if self.s1_parried else CHAR3_S1_DAMAGE_NORMAL
+            )
 
             for target in targets:
                 if target is self or target.is_dead:
@@ -1242,15 +1174,29 @@ class Character3(Character):
                 if hitbox.colliderect(target.get_body_rect()):
                     target.take_damage(damage)
                     self._hit_this_swing.add(tid)
-            return
 
-        super().check_hits(targets)
+        elif self.is_attacking_s3:
+            hitbox = self.get_attack_hitbox()
+            if hitbox is None:
+                return
+            dmg = HITBOX_DATA.get(self.char_num, {}).get(3, _DEFAULT_HITBOX)["damage"]
+            for target in targets:
+                if target is self or target.is_dead:
+                    continue
+                tid = id(target)
+                if tid in self._hit_this_swing:
+                    continue
+                if hitbox.colliderect(target.get_body_rect()):
+                    target.take_damage(dmg)
+                    self._apply_status_on_hit(target, 3)
+                    self._hit_this_swing.add(tid)
+
+        else:
+            super().check_hits(targets)
 
 
 def make_character(char_num):
     _registry = {
-        1: Furnace,
-        2: Water,
         3: Character3,
         4: Character4,
         5: Character5,
@@ -1283,8 +1229,9 @@ class Projectile:
         self.sub_projectiles = []
         self.skill_num = skill_num
 
-        raw_dmg = HITBOX_DATA.get(char_num, {}).get(skill_num, _DEFAULT_HITBOX)["damage"]
-        self.damage = round(raw_dmg * SKILL_DMG_MULTIPLIERS.get(skill_num, 1.0))
+        self.damage = HITBOX_DATA.get(char_num, {}).get(skill_num, _DEFAULT_HITBOX)[
+            "damage"
+        ]
 
         sheet = pyg.image.load(_resolve_path(data["path"])).convert_alpha()
         n = max(1, sheet.get_width() // self.width)
@@ -1649,7 +1596,7 @@ class Character4(Character):
             hbx = self.get_attack_hitbox()
             if hbx is None:
                 return
-            dmg = round(HITBOX_DATA.get(self.char_num, {}).get(1, _DEFAULT_HITBOX)["damage"] * SKILL_DMG_MULTIPLIERS.get(1, 1.0))
+            dmg = HITBOX_DATA.get(self.char_num, {}).get(1, _DEFAULT_HITBOX)["damage"]
             for tgt in targets:
                 if tgt is self or tgt.is_dead:
                     continue
@@ -1671,7 +1618,7 @@ class Character4(Character):
             hbx = self.get_attack_hitbox()
             if hbx is None:
                 return
-            dmg = round(HITBOX_DATA.get(self.char_num, {}).get(2, _DEFAULT_HITBOX)["damage"] * SKILL_DMG_MULTIPLIERS.get(2, 1.0))
+            dmg = HITBOX_DATA.get(self.char_num, {}).get(2, _DEFAULT_HITBOX)["damage"]
             for tgt in targets:
                 if tgt is self or tgt.is_dead:
                     continue
@@ -1687,7 +1634,7 @@ class Character4(Character):
             hbx = self.get_attack_hitbox()
             if hbx is None:
                 return
-            dmg = round(HITBOX_DATA.get(self.char_num, {}).get(3, _DEFAULT_HITBOX)["damage"] * SKILL_DMG_MULTIPLIERS.get(3, 1.0))
+            dmg = HITBOX_DATA.get(self.char_num, {}).get(3, _DEFAULT_HITBOX)["damage"]
             stun_dur = self._s3_chrgs_spnt * 2000
             for tgt in targets:
                 if tgt is self or tgt.is_dead:
@@ -1786,7 +1733,6 @@ class Character5(Character):
             if self.is_attacking_s1 or self.is_attacking_s2:
                 return False
             if self.wtr_cns > 0:
-                self.wtr_cns -= 1
                 self._cns_ctx = "water"
                 self.is_attacking_s1 = True
                 self.frame_S1 = 0
@@ -1802,6 +1748,7 @@ class Character5(Character):
                         self._just_spawned_projectiles.append((1, p))
                     else:
                         self._pending_projectiles[1] = proj_data
+                self.wtr_cns -= 1
             else:
                 self._cns_ctx = "fallback"
                 self.is_attacking_s2 = True
@@ -1814,7 +1761,6 @@ class Character5(Character):
             if self.is_attacking_s1 or self.is_attacking_s2:
                 return False
             if self.sda_cns > 0:
-                self.sda_cns -= 1
                 self._cns_ctx = "soda"
                 self.is_attacking_s1 = True
                 self.frame_S1 = 0
@@ -1831,6 +1777,7 @@ class Character5(Character):
                         self._just_spawned_projectiles.append((2, p))
                     else:
                         self._pending_projectiles[2] = proj_data
+                self.sda_cns -= 1
             else:
                 self._cns_ctx = "fallback"
                 self.is_attacking_s2 = True
@@ -1862,7 +1809,7 @@ class Character5(Character):
             if self.direction == "left":
                 px = FRAME_SIZE - px - sw
             hbx = pyg.Rect(x + px, y + py, sw, sh)
-            dmg = round(data["damage"] * SKILL_DMG_MULTIPLIERS.get(2, 1.0))
+            dmg = data["damage"]
             dmg_hited = False
             for tgt in targets:
                 if tgt is self or tgt.is_dead:

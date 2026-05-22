@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+from email import message
 
 import pygame as pyg
 
@@ -314,7 +315,9 @@ class Menu:
             _bg_raw = pyg.image.load(
                 os.path.join(_base, "assets", "wallpapers", "map.png")
             )
-            self.maps_selection_bg = pyg.transform.scale(_bg_raw, (self.width, self.height))
+            self.maps_selection_bg = pyg.transform.scale(
+                _bg_raw, (self.width, self.height)
+            )
         except Exception:
             self.maps_selection_bg = self.choice_chracters
 
@@ -584,11 +587,11 @@ class Menu:
     # ── Slot character display ───────────────────────────────────────────────
     #  Active char  → animated idle, large, at (pos_x, pos_y)
     #  Previous chars → small static icons in a row just below
-    _SLOT_LARGE_SCALE = 1.8   # animated idle  →  int(107 * 1.8) = 192 px
-    _SLOT_ICON_W      = 80    # small static icon width
-    _SLOT_ICON_H      = 60    # small static icon height
-    _SLOT_ICON_GAP    = 8     # gap between icons
-    _SLOT_ICON_OFFSET = 8     # gap between large preview and icons row
+    _SLOT_LARGE_SCALE = 1.8  # animated idle  →  int(107 * 1.8) = 192 px
+    _SLOT_ICON_W = 80  # small static icon width
+    _SLOT_ICON_H = 60  # small static icon height
+    _SLOT_ICON_GAP = 8  # gap between icons
+    _SLOT_ICON_OFFSET = 8  # gap between large preview and icons row
 
     def _draw_slot_preview(self, pos_x, pos_y, char_1, char_2, char_3):
         """Draw one player slot:
@@ -599,11 +602,8 @@ class Menu:
         if not active:
             return
 
-        # ── large animated idle ──────────────────────────────────────────
-        self._blit_largeChar(active, pos_x, pos_y,
-                             scale_factor=self._SLOT_LARGE_SCALE)
+        self._blit_largeChar(active, pos_x, pos_y, scale_factor=self._SLOT_LARGE_SCALE)
 
-        # ── small static icons below ─────────────────────────────────────
         if char_3:
             small = [c for c in (char_1, char_2) if c and 1 <= c <= len(self.image_ch)]
         elif char_2:
@@ -612,12 +612,14 @@ class Menu:
             small = []
 
         large_h = int(107 * self._SLOT_LARGE_SCALE)
-        icon_y  = pos_y + large_h + self._SLOT_ICON_OFFSET
+        icon_y = pos_y + large_h + self._SLOT_ICON_OFFSET
         for i, c in enumerate(small):
             icon = pyg.transform.scale(
                 self.image_ch[c - 1], (self._SLOT_ICON_W, self._SLOT_ICON_H)
             )
-            self.screen.blit(icon, (pos_x + i * (self._SLOT_ICON_W + self._SLOT_ICON_GAP), icon_y))
+            self.screen.blit(
+                icon, (pos_x + i * (self._SLOT_ICON_W + self._SLOT_ICON_GAP), icon_y)
+            )
 
     def handle_character_selection(self, character_var, next_state, title):
         # Handle the character selection
@@ -723,8 +725,9 @@ class Menu:
                 self.character_3 = char_num
 
         pos_x, pos_y = self.slot_positions.get(self.CurrentPlayer_id, (64, 125))
-        self._draw_slot_preview(pos_x, pos_y,
-                                self.character_1, self.character_2, self.character_3)
+        self._draw_slot_preview(
+            pos_x, pos_y, self.character_1, self.character_2, self.character_3
+        )
 
         if self.character_3 and self.start_button.draw(self.screen):
             self.menu_state = "start game"

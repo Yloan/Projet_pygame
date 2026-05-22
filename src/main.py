@@ -157,7 +157,7 @@ class Game:
 
         # Game-over state
         self._game_over_timer = 0
-        self._game_over_result = None  # None | "win" | "lose"
+        self._game_over_result = None
 
     def switch_music(self, i=None):
         if i is not None:
@@ -271,8 +271,12 @@ class Game:
                     map_index = int(message.split(":", 1)[1])
                     map_loader = MapLoader(None, map_index)
                     background, foreground = map_loader.load_map()
-                    self.map_back = pyg.transform.scale(background, (self.width, self.height))
-                    self.map_front = pyg.transform.scale(foreground, (self.width, self.height))
+                    self.map_back = pyg.transform.scale(
+                        background, (self.width, self.height)
+                    )
+                    self.map_front = pyg.transform.scale(
+                        foreground, (self.width, self.height)
+                    )
                     self.game_started = True
                 except Exception as e:
                     print_error(f"Erreur StartGame: {e}")
@@ -599,21 +603,19 @@ class Game:
         }
         self.send_to_server(f"[HUDUpdate]:{json.dumps(payload)}")
 
-    # ── Status icons ──────────────────────────────────────────────────────────
-    # Map effect name → icon file(s) inside assets/status/
     _STATUS_ICON_FILES = {
-        "burn":     "status-icone-1.png",
-        "grabbed":  "status-icone-2.png",
+        "burn": "status-icone-1.png",
+        "grabbed": "status-icone-2.png",
         "disabled": "status-icone-3.png",
-        "wet":      "status-icone-4.png",
-        "oiled":    "status-icone-6.png",
-        "pushed":   {"right": "status-icone-7-1.png", "left": "status-icone-7-2.png"},
-        "stun":     "status-icone-13.png",
+        "wet": "status-icone-4.png",
+        "oiled": "status-icone-6.png",
+        "pushed": {"right": "status-icone-7-1.png", "left": "status-icone-7-2.png"},
+        "stun": "status-icone-13.png",
     }
-    _ICON_SIZE = 24  # display size (px)
+    _ICON_SIZE = 24  # display size
 
     def _load_status_icons(self):
-        """Load & cache all status icon images (called once, lazily)."""
+        """Load & cache all status icon images"""
         self._status_icon_imgs = {}
         sz = self._ICON_SIZE
         base = "assets/status/"
@@ -631,7 +633,6 @@ class Game:
                 )
 
     def _draw_status_icons(self, surface, status_manager, hud_x, hud_y, player_id):
-        """Draw status-effect icons next to a HUD using sprites from assets/status/."""
         if not hasattr(self, "_status_icon_imgs"):
             self._load_status_icons()
 
@@ -650,7 +651,7 @@ class Game:
         if not active:
             return
 
-        sz  = self._ICON_SIZE
+        sz = self._ICON_SIZE
         gap = 3
         hud_h = 192  # scaled HUD height (96 × 2)
 
@@ -664,29 +665,26 @@ class Game:
         for idx, img in enumerate(active):
             surface.blit(img, (ix + idx * (sz + gap), iy))
 
-    # ── Game-over overlay ──────────────────────────────────────────────────────
     def _draw_game_over_overlay(self, surface, result):
-        """Draw a semi-transparent overlay with win / lose message."""
         overlay = pyg.Surface((self.width, self.height), pyg.SRCALPHA)
         overlay.fill((0, 0, 0, 130))
         surface.blit(overlay, (0, 0))
 
         if result == "win":
-            text = "Victoire !"
+            text = "You won !!"
             color = (80, 255, 80)
         else:
-            text = "Défaite..."
+            text = "You loose..."
             color = (255, 60, 60)
 
         big_font = pyg.font.SysFont("arialblack", 72)
         img = big_font.render(text, True, color)
-        cx = (self.width  - img.get_width())  // 2
+        cx = (self.width - img.get_width()) // 2
         cy = (self.height - img.get_height()) // 2
         surface.blit(img, (cx, cy))
 
-    # ── Return to menu ─────────────────────────────────────────────────────────
     def _reset_to_menu(self):
-        """Leave the current session / game and return to the main menu."""
+        # Leave the current session
         if self.current_joined_session:
             self.send_to_server(f"[LeaveSession]:{self.current_joined_session}")
             self.current_joined_session = None
@@ -828,45 +826,67 @@ class Game:
                             self.Menu.scroll_y = max(0, self.Menu.scroll_y - 30)
                         if event.button == 5:
                             self.Menu.scroll_y += 30
-                        if event.button == 1 and self.Menu.menu_state == "maps_selection":
+                        if (
+                            event.button == 1
+                            and self.Menu.menu_state == "maps_selection"
+                        ):
                             for num_map, slot_map in self.Menu.rects_img_maps.items():
                                 if not slot_map.collidepoint(event.pos):
                                     continue
                                 if self.current_joined_session:
                                     # Session : envoyer le vote au serveur
                                     if self.choose_map:
-                                        self.send_to_server(f"[UnchooseMap]:{self.map_choosen}")
-                                        self.Menu.map_player_votes.pop(self.Menu.CurrentPlayer_id, None)
+                                        self.send_to_server(
+                                            f"[UnchooseMap]:{self.map_choosen}"
+                                        )
+                                        self.Menu.map_player_votes.pop(
+                                            self.Menu.CurrentPlayer_id, None
+                                        )
                                         self.choose_map = False
                                         self.map_choosen = None
                                     self.send_to_server(f"[ChooseMap]:{num_map}")
-                                    self.Menu.map_player_votes[self.Menu.CurrentPlayer_id] = num_map
+                                    self.Menu.map_player_votes[
+                                        self.Menu.CurrentPlayer_id
+                                    ] = num_map
                                     self.map_choosen = num_map
                                     self.choose_map = True
 
-                                    # Si seul humain dans la session (solo + bots) →
-                                    # démarrer directement sans attendre le serveur
                                     human_ready = [
-                                        pid for pid, rdy in self.Menu.players_ready.items() if rdy
+                                        pid
+                                        for pid, rdy in self.Menu.players_ready.items()
+                                        if rdy
                                     ]
                                     if len(human_ready) <= 1:
                                         try:
                                             map_loader = MapLoader(None, num_map)
-                                            background, foreground = map_loader.load_map()
-                                            self.map_back = pyg.transform.scale(background, (self.width, self.height))
-                                            self.map_front = pyg.transform.scale(foreground, (self.width, self.height))
+                                            background, foreground = (
+                                                map_loader.load_map()
+                                            )
+                                            self.map_back = pyg.transform.scale(
+                                                background, (self.width, self.height)
+                                            )
+                                            self.map_front = pyg.transform.scale(
+                                                foreground, (self.width, self.height)
+                                            )
                                         except Exception as e:
-                                            print_error(f"Erreur chargement map {num_map}: {e}")
+                                            print_error(
+                                                f"Erreur chargement map {num_map}: {e}"
+                                            )
                                         self.game_started = True
                                 else:
-                                    # Solo sans session : charger la map et démarrer
                                     try:
                                         map_loader = MapLoader(None, num_map)
                                         background, foreground = map_loader.load_map()
-                                        self.map_back = pyg.transform.scale(background, (self.width, self.height))
-                                        self.map_front = pyg.transform.scale(foreground, (self.width, self.height))
+                                        self.map_back = pyg.transform.scale(
+                                            background, (self.width, self.height)
+                                        )
+                                        self.map_front = pyg.transform.scale(
+                                            foreground, (self.width, self.height)
+                                        )
                                     except Exception as e:
-                                        print_error(f"Erreur chargement map {num_map}: {e}")
+                                        print_error(
+                                            f"Erreur chargement map {num_map}: {e}"
+                                        )
                                     self.game_started = True
                                 break
 
@@ -880,9 +900,6 @@ class Game:
                 self.send_to_server(
                     f"[CreateSession]:{json.dumps(self.Menu.sessionPending)}"
                 )
-                # Le serveur enregistre le créateur automatiquement lors du CreateSession
-                # → pas de JoinedSession supplémentaire (sinon le créateur est compté 2×
-                #   et devient joueur 2 au lieu de joueur 1)
                 self.current_joined_session = self.Menu.sessionPending["titre"]
                 self.Menu.sessionPending = None
 
@@ -937,7 +954,10 @@ class Game:
                             self.dev_display_ = not self.dev_display_
 
                         keys_now = pyg.key.get_pressed()
-                        if self.active_char.is_dead or self._game_over_result is not None:
+                        if (
+                            self.active_char.is_dead
+                            or self._game_over_result is not None
+                        ):
                             continue
                         if event.key == pyg.K_q:
                             if keys_now[pyg.K_e]:
@@ -1068,7 +1088,9 @@ class Game:
                     char.bubble_effect.draw(self.screen)
 
                 if not BOTS_ENABLED:
-                    targets = [rc for rc in self.remote_players.values() if not rc.is_dead]
+                    targets = [
+                        rc for rc in self.remote_players.values() if not rc.is_dead
+                    ]
                     self.active_char.update_projectiles(delta_time, targets)
                     self.active_char.check_hits(targets)
                     self.active_char.draw_projectiles(self.screen)
@@ -1108,7 +1130,10 @@ class Game:
                         if self._game_over_result is None:
                             bot.update(delta_time)
 
-                        if self._game_over_result is None and not self.active_char.is_dead:
+                        if (
+                            self._game_over_result is None
+                            and not self.active_char.is_dead
+                        ):
                             bot.char.check_hits([self.active_char])
 
                         live_targets = [self.active_char] + [
@@ -1123,7 +1148,10 @@ class Game:
                             pos = bot.current_position
                             self.screen.blit(sprite, (pos[0] + dx, pos[1] + dy))
 
-                        if hasattr(bot.char, "bubble_effect") and bot.char.bubble_effect:
+                        if (
+                            hasattr(bot.char, "bubble_effect")
+                            and bot.char.bubble_effect
+                        ):
                             bot.char.bubble_effect.x = bot.current_position[0]
                             bot.char.bubble_effect.y = bot.current_position[1]
                             bot.char.bubble_effect.draw(self.screen)
@@ -1138,21 +1166,31 @@ class Game:
                 if self.active_char.is_dead:
                     if not self.support_1.is_dead:
                         current_pos = list(self.active_char.position)
-                        self.active_char, self.support_1 = self.support_1, self.active_char
+                        self.active_char, self.support_1 = (
+                            self.support_1,
+                            self.active_char,
+                        )
                         self.active_char.position = current_pos
                         self.player = self.active_char
                         self._last_char_health = self.active_char.health
                         if self.hud:
-                            pct = self.active_char.health / max(1, self.active_char.max_health)
+                            pct = self.active_char.health / max(
+                                1, self.active_char.max_health
+                            )
                             self.hud.setHealth(round(pct * 17))
                     elif not self.support_2.is_dead:
                         current_pos = list(self.active_char.position)
-                        self.active_char, self.support_2 = self.support_2, self.active_char
+                        self.active_char, self.support_2 = (
+                            self.support_2,
+                            self.active_char,
+                        )
                         self.active_char.position = current_pos
                         self.player = self.active_char
                         self._last_char_health = self.active_char.health
                         if self.hud:
-                            pct = self.active_char.health / max(1, self.active_char.max_health)
+                            pct = self.active_char.health / max(
+                                1, self.active_char.max_health
+                            )
                             self.hud.setHealth(round(pct * 17))
 
                 if self.hud and self.active_char:
@@ -1164,7 +1202,6 @@ class Game:
                         self.hud.setHealth(0)
                     self._last_char_health = self.active_char.health
 
-                # ── Game-over detection ───────────────────────────────────────
                 if self._game_over_result is None:
                     all_bots_dead = (
                         BOTS_ENABLED
@@ -1183,7 +1220,6 @@ class Game:
                         self._game_over_result = "lose"
                         self._game_over_timer = 0
 
-                # ── Game-over countdown → return to menu ─────────────────────
                 if self._game_over_result is not None:
                     self._game_over_timer += delta_time
                     if self._game_over_timer >= 3000:
@@ -1296,12 +1332,14 @@ class Game:
                     ox, oy = HUD_POSITIONS.get(pid, (10, 10))
                     other_hud.draw(self.screen, ox, oy)
 
-                # ── Status icons ─────────────────────────────────────────────
                 if self.active_char and hasattr(self.active_char, "status"):
                     hx, hy = HUD_POSITIONS.get(self.Menu.CurrentPlayer_id, (10, 10))
                     self._draw_status_icons(
-                        self.screen, self.active_char.status, hx, hy,
-                        self.Menu.CurrentPlayer_id
+                        self.screen,
+                        self.active_char.status,
+                        hx,
+                        hy,
+                        self.Menu.CurrentPlayer_id,
                     )
 
                 if BOTS_ENABLED:
@@ -1312,7 +1350,6 @@ class Game:
                                 self.screen, bot.char.status, bx, by, bot.bot_id
                             )
 
-                # ── Game-over overlay ─────────────────────────────────────────
                 if self._game_over_result is not None:
                     self._draw_game_over_overlay(self.screen, self._game_over_result)
 

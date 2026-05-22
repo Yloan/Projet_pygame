@@ -635,8 +635,9 @@ class Bot:
 
     def update(self, dt):
         if self.char.is_dead or self.char.is_hurt:
-            self.char.update_animation(dt, False)
             self.char.position = self.current_position
+            self.char.update_animation(dt, False)
+            self.current_position = self.char.position
             return
 
         self._update_rage_tracker()
@@ -654,25 +655,33 @@ class Bot:
         if self._post_hit_freeze > 0:
             self._post_hit_freeze -= 1
             self.char.is_moving = False
-            self.char.update_animation(dt, False)
             self.char.position = self.current_position
+            self.char.update_animation(dt, False)
+            self.current_position = self.char.position
             return
 
+        self.char.position = self.current_position
         self.char.is_moving = self.current_action not in ("rest", None)
         self.char.update_animation(dt, self.char.is_moving)
+        self.current_position = self.char.position
 
-        if self.duration_action <= 0:
-            self.current_action = self.pick_action()
+        status = self.char.status
+        ia_can_move = not (status.is_pushed or status.is_grabbed or status.is_stunned)
 
-        if self.current_action is not None:
-            if self.current_action in ("top", "bottom", "right", "left", "rest"):
-                self.actions["random"][self.current_action]()
-            elif self.current_action in self.actions:
-                self.actions[self.current_action]()
+        if ia_can_move:
+            if self.duration_action <= 0:
+                self.current_action = self.pick_action()
+
+            if self.current_action is not None:
+                if self.current_action in ("top", "bottom", "right", "left", "rest"):
+                    self.actions["random"][self.current_action]()
+                elif self.current_action in self.actions:
+                    self.actions[self.current_action]()
+                else:
+                    print_error(f"Action inconnue: {self.current_action}")
             else:
-                print_error(f"Action inconnue: {self.current_action}")
+                print_error("Can't pick action")
         else:
-            print_error("Can't pick action")
+            self.duration_action = 0
 
         self.duration_action -= 1
-        self.char.position = self.current_position

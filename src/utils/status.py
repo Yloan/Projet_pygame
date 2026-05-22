@@ -16,15 +16,15 @@ print(compte.numero)
 This site is very well explain if you guys want to understand it deeply: https://www.docstring.fr/glossaire/propriete/
 
 
-And the super() is in order to avoid retaping the same code as a another class, you can just get it, but I think you guys knew it
+And the super() is in order to avoid retaping the same code as a another class, you can just get it, but I think you guys already knew it
 """
 
 WET_DURATION = 5000
 DISABLED_DURATION = 5000
-PUSH_DURATION = 300
-PUSH_SPEED = 4
+PUSH_DURATION = 500
+PUSH_SPEED = 5
 BUBBLE_DRIFT = 0.5
-OILED_DURATION = 4000
+OILED_DURATION = 10000
 GRAB_MAX_SPD = 18
 GRAB_GRWTH = 1.09
 BURN_DURATION = 3000
@@ -66,13 +66,16 @@ class PushedStatus(StatusEffect):
     def __init__(self, direction):
         super().__init__(PUSH_DURATION)
         self.direction = direction
+        self._accum = 0.0
 
     def get_delta(self, dt):
         if not self.is_active:
             return 0
         ratio = max(0.0, 1.0 - self.timer / self.duration)
-        delta = int(PUSH_SPEED * ratio * (dt / 16))
-        return delta if self.direction == "right" else -delta
+        self._accum += PUSH_SPEED * ratio * (dt / 16.0)
+        px = int(self._accum)
+        self._accum -= px
+        return px if self.direction == "right" else -px
 
 
 class StunStatus(StatusEffect):
