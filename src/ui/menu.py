@@ -22,7 +22,7 @@ BUTTON_SCALE = 2
 
 TMP_NUBER_OF_ASSETS_VARIABLES_HERE = 5
 
-MAPS_NOT_IMPLEMENTED_YET = {5, 6}
+MAPS_NOT_IMPLEMENTED_YET = set()
 
 
 class Menu:
@@ -303,16 +303,12 @@ class Menu:
 
         _base = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
         self.slot_maps_selection = {
-            1: (366, 198),
-            2: (564, 198),
-            3: (762, 198),
-            4: (366, 403),
-            5: (564, 403),
-            6: (762, 403),
+            1: (337, 210),
+            2: (780, 210),
         }
-        self.width_slots_map = 144
-        self.height_slots_map = 124
-        self.maps_not_implemented_yet = MAPS_NOT_IMPLEMENTED_YET
+        self.width_slots_map = 159
+        self.height_slots_map = 135
+        self.maps_not_implemented_yet = set()
 
         try:
             _bg_raw = pyg.image.load(
@@ -330,7 +326,7 @@ class Menu:
             _forest_scaled = pyg.transform.scale(
                 _forest, (self.width_slots_map, self.height_slots_map)
             )
-            for _slot in (1, 2, 3, 4):
+            for _slot in (1, 2):
                 self.map_slot_previews[_slot] = _forest_scaled
         except Exception:
             pass
@@ -340,7 +336,7 @@ class Menu:
                 self.slot_maps_selection[i],
                 (self.width_slots_map, self.height_slots_map),
             )
-            for i in range(1, 7)
+            for i in self.slot_maps_selection
             if i not in self.maps_not_implemented_yet
         }
 
@@ -889,11 +885,9 @@ class Menu:
     def maps_selection(self):
         self.screen.blit(self.maps_selection_bg, (0, 0))
 
-        for i in range(1, 7):
-            if i in self.maps_not_implemented_yet:
-                continue
+        for i, pos in self.slot_maps_selection.items():
             if i in self.map_slot_previews:
-                self.screen.blit(self.map_slot_previews[i], self.slot_maps_selection[i])
+                self.screen.blit(self.map_slot_previews[i], pos)
 
         voters_per_map = {}
         for player_id, map_id in self.map_player_votes.items():
