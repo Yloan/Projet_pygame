@@ -1237,6 +1237,8 @@ class Character3(Character):
 
 def make_character(char_num):
     _registry = {
+        1: Furnace,
+        2: Water,
         3: Character3,
         4: Character4,
         5: Character5,

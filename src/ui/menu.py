@@ -766,54 +766,55 @@ class Menu:
             characters = self.players_characters[player_id]
             char_1, char_2, char_3 = characters
 
-            if char_3 and 1 <= char_3 <= len(self.image_ch):
-                # character_3 in large at slot position
-                self._blit_largeChar(char_3, pos_x, pos_y, scale_factor=2.5)
+            # Compact 3-char slot layout:
+            #   Active char (char_3 → char_2 → char_1) at scale 1.0 (~107 px tall)
+            #   Two support chars side-by-side 8 px below, scale 0.65 (~70 px tall)
+            #   Clickable to swap active ↔ support
+            _MAIN_SCALE = 1.0
+            _SUP_SCALE = 0.65
+            _SUP_SIZE = int(107 * _SUP_SCALE)   # ≈ 70 px
+            _MAIN_SIZE = 107                      # px (height of main frame)
+            _GAP = 8
+            _sup_y = pos_y + _MAIN_SIZE + _GAP
+            _sup2_x = pos_x + _SUP_SIZE + 6      # right support offset
 
-                # character_2 in small preview below
+            main_char = char_3 or char_2 or char_1
+            if main_char and 1 <= main_char <= len(self.image_ch):
+                self._blit_largeChar(main_char, pos_x, pos_y, scale_factor=_MAIN_SCALE)
+
+            if char_3:
+                # active = char_3 → show char_2 and char_1 as supports
                 if char_2 and 1 <= char_2 <= len(self.image_ch):
-                    small_img = self.image_ch[char_2 - 1]
-                    small_x = pos_x - 40
-                    small_y = pos_y + 214
-                    self.screen.blit(small_img, (small_x, small_y))
-
+                    self._blit_largeChar(char_2, pos_x, _sup_y, scale_factor=_SUP_SCALE)
                 if char_1 and 1 <= char_1 <= len(self.image_ch):
-                    small_img = self.image_ch[char_1 - 1]
-                    small_x = pos_x + 196
-                    small_y = pos_y + 214
-                    self.screen.blit(small_img, (small_x, small_y))
-
-            elif char_2 and 1 <= char_2 <= len(self.image_ch):
-                # character_2 in large at slot position
-                self._blit_largeChar(char_2, pos_x, pos_y, scale_factor=2.5)
-
-                # character_1 in small preview
+                    self._blit_largeChar(char_1, _sup2_x, _sup_y, scale_factor=_SUP_SCALE)
+            elif char_2:
+                # active = char_2 → show char_1 as support
                 if char_1 and 1 <= char_1 <= len(self.image_ch):
-                    small_img = self.image_ch[char_1 - 1]
-                    small_x = pos_x - 40
-                    small_y = pos_y + 214
-                    self.screen.blit(small_img, (small_x, small_y))
-
-            elif char_1 and 1 <= char_1 <= len(self.image_ch):
-                # character_1 in large at slot position
-                self._blit_largeChar(char_1, pos_x, pos_y, scale_factor=2.5)
+                    self._blit_largeChar(char_1, pos_x, _sup_y, scale_factor=_SUP_SCALE)
 
             if (
                 just_clicked
                 and player_id == self.CurrentPlayer_id
                 and not self.players_ready[self.CurrentPlayer_id]
             ):
-                rect_char2 = pyg.Rect(pos_x - 40, pos_y + 214, 64, 64)
-                rect_char1 = pyg.Rect(pos_x + 196, pos_y + 214, 64, 64)
-                if char_2 and rect_char2.collidepoint(mouse_pos):
+                rect_char2 = pyg.Rect(pos_x, _sup_y, _SUP_SIZE, _SUP_SIZE)
+                rect_char1 = pyg.Rect(_sup2_x, _sup_y, _SUP_SIZE, _SUP_SIZE)
+                if char_3 and char_2 and rect_char2.collidepoint(mouse_pos):
                     self.character_2, self.character_3 = (
                         self.character_3,
                         self.character_2,
                     )
                     self.p_character_update = True
-                elif char_1 and rect_char1.collidepoint(mouse_pos):
+                elif char_3 and char_1 and rect_char1.collidepoint(mouse_pos):
                     self.character_1, self.character_3 = (
                         self.character_3,
+                        self.character_1,
+                    )
+                    self.p_character_update = True
+                elif not char_3 and char_2 and char_1 and rect_char2.collidepoint(mouse_pos):
+                    self.character_1, self.character_2 = (
+                        self.character_2,
                         self.character_1,
                     )
                     self.p_character_update = True

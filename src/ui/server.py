@@ -1,6 +1,7 @@
 import json
 import socket
 import threading
+from collections import Counter
 
 from console import (
     print_debug,
@@ -37,6 +38,9 @@ class Serveur:
         # Game states
         self.game_states = {}
         self.game_states_lock = threading.Lock()
+
+        # Map votes: {session_name: {player_id: map_num}}
+        self.sessions_map_votes = {}
 
         # GLOBALS VARIABLES
         self.sessions = []
@@ -253,6 +257,50 @@ class Serveur:
                 self._send(client, data)
             # self.broadcast_except(data, exclude_socket=client_socket)
             print_network("PlayerReady diffusé")
+
+        elif data.startswith("[ChooseMap]:"):
+            try:
+                map_num = int(data.split(":", 1)[1])
+                if client_socket in self.socket_player_ids:
+                    session_name, player_id = self.socket_player_ids[client_socket]
+                    if session_name not in self.sessions_map_votes:
+                        self.sessions_map_votes[session_name] = {}
+                    self.sessions_map_votes[session_name][player_id] = map_num
+                    votes = self.sessions_map_votes[session_name]
+                    vote_msg = f"[MapVotesUpdate]:{json.dumps(votes)}"
+                    with self.sessions_lock:
+                        clients_in = list(self.sessions_clients_joined.get(session_name, []))
+                    for c in clients_in:
+                        self._send(c, vote_msg)
+                    # Start game when every human player has voted
+                    all_voted = len(clients_in) > 0 and all(
+                        self.socket_player_ids.get(c, (None, None))[1] in votes
+                        for c in clients_in
+                    )
+                    if all_voted:
+                        winner = Counter(votes.values()).most_common(1)[0][0]
+                        start_msg = f"[StartGame]:{winner}"
+                        for c in clients_in:
+                            self._send(c, start_msg)
+                        self.sessions_map_votes.pop(session_name, None)
+                        print_success(f"StartGame envoyé: map {winner} pour {session_name}")
+            except Exception as e:
+                print_error(f"Erreur ChooseMap: {e}")
+
+        elif data.startswith("[UnchooseMap]:"):
+            try:
+                if client_socket in self.socket_player_ids:
+                    session_name, player_id = self.socket_player_ids[client_socket]
+                    if session_name in self.sessions_map_votes:
+                        self.sessions_map_votes[session_name].pop(player_id, None)
+                    votes = self.sessions_map_votes.get(session_name, {})
+                    vote_msg = f"[MapVotesUpdate]:{json.dumps(votes)}"
+                    with self.sessions_lock:
+                        clients_in = list(self.sessions_clients_joined.get(session_name, []))
+                    for c in clients_in:
+                        self._send(c, vote_msg)
+            except Exception as e:
+                print_error(f"Erreur UnchooseMap: {e}")
 
         elif data.startswith("[ProjectileSpawned]:"):
             self.broadcast_except(data, exclude_socket=client_socket)
