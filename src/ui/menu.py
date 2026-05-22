@@ -130,11 +130,10 @@ class Menu:
 
         # LOAD CHARACTER SELECTION IMAGES
         image_ch = []
-        for i in range(1, 7):
+        for i in range(1, TMP_NUBER_OF_ASSETS_VARIABLES_HERE + 1):
             Img = pyg.image.load(
-                f"assets/characters_selection/Character_{i}.png"
+                get_asset_path("characters_selection", f"Character_{i}.png")
             ).convert_alpha()
-
             Img = pyg.transform.scale(Img, (143, 107))
             image_ch.append(Img)
 
@@ -240,7 +239,7 @@ class Menu:
         self.character_4_button = button.Button(420, 404, image_ch[3], 1)
 
         # Centre bas
-        self.character_5_button = button.Button(713, 404, image_ch[5], 1)
+        self.character_5_button = button.Button(713, 404, image_ch[4], 1)
 
         # character choosen
         character_choosen_img = pyg.image.load(
@@ -584,6 +583,44 @@ class Menu:
             prev_img = self.image_ch[char_index - 1]
             self.screen.blit(prev_img, (self.center_x(prev_img, x_offset), 345))
 
+    # ── Slot character display ───────────────────────────────────────────────
+    #  Active char  → animated idle, large, at (pos_x, pos_y)
+    #  Previous chars → small static icons in a row just below
+    _SLOT_LARGE_SCALE = 1.8   # animated idle  →  int(107 * 1.8) = 192 px
+    _SLOT_ICON_W      = 80    # small static icon width
+    _SLOT_ICON_H      = 60    # small static icon height
+    _SLOT_ICON_GAP    = 8     # gap between icons
+    _SLOT_ICON_OFFSET = 8     # gap between large preview and icons row
+
+    def _draw_slot_preview(self, pos_x, pos_y, char_1, char_2, char_3):
+        """Draw one player slot:
+        - active char (char_3 → char_2 → char_1) as large animated idle
+        - previously confirmed chars as small static icons below
+        """
+        active = char_3 or char_2 or char_1
+        if not active:
+            return
+
+        # ── large animated idle ──────────────────────────────────────────
+        self._blit_largeChar(active, pos_x, pos_y,
+                             scale_factor=self._SLOT_LARGE_SCALE)
+
+        # ── small static icons below ─────────────────────────────────────
+        if char_3:
+            small = [c for c in (char_1, char_2) if c and 1 <= c <= len(self.image_ch)]
+        elif char_2:
+            small = [c for c in (char_1,) if c and 1 <= c <= len(self.image_ch)]
+        else:
+            small = []
+
+        large_h = int(107 * self._SLOT_LARGE_SCALE)
+        icon_y  = pos_y + large_h + self._SLOT_ICON_OFFSET
+        for i, c in enumerate(small):
+            icon = pyg.transform.scale(
+                self.image_ch[c - 1], (self._SLOT_ICON_W, self._SLOT_ICON_H)
+            )
+            self.screen.blit(icon, (pos_x + i * (self._SLOT_ICON_W + self._SLOT_ICON_GAP), icon_y))
+
     def handle_character_selection(self, character_var, next_state, title):
         # Handle the character selection
         self.screen.blit(self.choice_chracters, (0, 0))
@@ -621,6 +658,7 @@ class Menu:
 
     def handle_choice_characters_1(self):
         self.screen.blit(self.choice_chracters, (0, 0))
+        self._update_IDLE_p()
         self.draw_text("Choose three characters", self.font, self.TEXT_COL, 70, 0)
 
         if self.Back_selection_character.draw(self.screen):
@@ -639,10 +677,12 @@ class Menu:
                 self.character_1 = char_num
                 self.menu_state = "choice_characters_2"
 
-        self.draw_character_preview(self.character_1)
+        pos_x, pos_y = self.slot_positions.get(self.CurrentPlayer_id, (64, 125))
+        self._draw_slot_preview(pos_x, pos_y, self.character_1, 0, 0)
 
     def handle_choice_characters_2(self):
         self.screen.blit(self.choice_chracters, (0, 0))
+        self._update_IDLE_p()
         self.draw_text("Choose two characters", self.font, self.TEXT_COL, 70, 0)
 
         if self.Back_selection_character.draw(self.screen):
@@ -661,14 +701,12 @@ class Menu:
                 self.character_2 = char_num
                 self.menu_state = "choice_characters_3"
 
-        if self.character_2:
-            self.draw_character_preview(self.character_2)
-            self.draw_small_character_preview(self.character_1, 50)
-        else:
-            self.draw_character_preview(self.character_1)
+        pos_x, pos_y = self.slot_positions.get(self.CurrentPlayer_id, (64, 125))
+        self._draw_slot_preview(pos_x, pos_y, self.character_1, self.character_2, 0)
 
     def handle_choice_characters_3(self):
         self.screen.blit(self.choice_chracters, (0, 0))
+        self._update_IDLE_p()
         self.draw_text("Choose one character", self.font, self.TEXT_COL, 70, 0)
 
         if self.Back_selection_character.draw(self.screen):
@@ -686,13 +724,9 @@ class Menu:
             if button_obj.draw(self.screen):
                 self.character_3 = char_num
 
-        if self.character_3:
-            self.draw_character_preview(self.character_3)
-            self.draw_small_character_preview(self.character_1, 50)
-            self.draw_small_character_preview(self.character_2, 40)
-        else:
-            self.draw_character_preview(self.character_2)
-            self.draw_small_character_preview(self.character_1, 50)
+        pos_x, pos_y = self.slot_positions.get(self.CurrentPlayer_id, (64, 125))
+        self._draw_slot_preview(pos_x, pos_y,
+                                self.character_1, self.character_2, self.character_3)
 
         if self.character_3 and self.start_button.draw(self.screen):
             self.menu_state = "start game"
@@ -701,9 +735,10 @@ class Menu:
     def handle_character_selection_final(self):
         # Draw background
         self.screen.blit(self.choice_chracters, (0, 0))
+        self._update_IDLE_p()
         self.draw_text_center("Choose three characters", self.font, self.TEXT_COL, 20)
 
-        # Display character selection buttons
+        # ── character buttons ──────────────────────────────────────────────
         character_buttons = [
             (self.character_1_button, 1),
             (self.character_2_button, 2),
@@ -752,8 +787,6 @@ class Menu:
         self.__mouse_prev = cur_mouse
         mouse_pos = pyg.mouse.get_pos()
 
-        self._update_IDLE_p()
-
         for player_id in range(1, 5):
             if player_id > max_human_slot:
                 px, py = self.slot_positions[player_id]
@@ -766,58 +799,8 @@ class Menu:
             characters = self.players_characters[player_id]
             char_1, char_2, char_3 = characters
 
-            # Compact 3-char slot layout:
-            #   Active char (char_3 → char_2 → char_1) at scale 1.0 (~107 px tall)
-            #   Two support chars side-by-side 8 px below, scale 0.65 (~70 px tall)
-            #   Clickable to swap active ↔ support
-            _MAIN_SCALE = 1.0
-            _SUP_SCALE = 0.65
-            _SUP_SIZE = int(107 * _SUP_SCALE)   # ≈ 70 px
-            _MAIN_SIZE = 107                      # px (height of main frame)
-            _GAP = 8
-            _sup_y = pos_y + _MAIN_SIZE + _GAP
-            _sup2_x = pos_x + _SUP_SIZE + 6      # right support offset
-
-            main_char = char_3 or char_2 or char_1
-            if main_char and 1 <= main_char <= len(self.image_ch):
-                self._blit_largeChar(main_char, pos_x, pos_y, scale_factor=_MAIN_SCALE)
-
-            if char_3:
-                # active = char_3 → show char_2 and char_1 as supports
-                if char_2 and 1 <= char_2 <= len(self.image_ch):
-                    self._blit_largeChar(char_2, pos_x, _sup_y, scale_factor=_SUP_SCALE)
-                if char_1 and 1 <= char_1 <= len(self.image_ch):
-                    self._blit_largeChar(char_1, _sup2_x, _sup_y, scale_factor=_SUP_SCALE)
-            elif char_2:
-                # active = char_2 → show char_1 as support
-                if char_1 and 1 <= char_1 <= len(self.image_ch):
-                    self._blit_largeChar(char_1, pos_x, _sup_y, scale_factor=_SUP_SCALE)
-
-            if (
-                just_clicked
-                and player_id == self.CurrentPlayer_id
-                and not self.players_ready[self.CurrentPlayer_id]
-            ):
-                rect_char2 = pyg.Rect(pos_x, _sup_y, _SUP_SIZE, _SUP_SIZE)
-                rect_char1 = pyg.Rect(_sup2_x, _sup_y, _SUP_SIZE, _SUP_SIZE)
-                if char_3 and char_2 and rect_char2.collidepoint(mouse_pos):
-                    self.character_2, self.character_3 = (
-                        self.character_3,
-                        self.character_2,
-                    )
-                    self.p_character_update = True
-                elif char_3 and char_1 and rect_char1.collidepoint(mouse_pos):
-                    self.character_1, self.character_3 = (
-                        self.character_3,
-                        self.character_1,
-                    )
-                    self.p_character_update = True
-                elif not char_3 and char_2 and char_1 and rect_char2.collidepoint(mouse_pos):
-                    self.character_1, self.character_2 = (
-                        self.character_2,
-                        self.character_1,
-                    )
-                    self.p_character_update = True
+            # ── Draw slot: active char large + previous chars as small icons ──
+            self._draw_slot_preview(pos_x, pos_y, char_1, char_2, char_3)
 
             if (
                 just_clicked
