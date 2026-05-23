@@ -1312,6 +1312,7 @@ class Game:
                                 "skill3": self.active_char.frame_S3,
                             },
                             "attack_hitboxes": {},
+                            "char_state": self.active_char.get_network_state(),
                         }
                         payload = {
                             "session": self.current_joined_session,

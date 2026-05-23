@@ -151,7 +151,7 @@ HITBOX_DATA = {
             "offset": (40, -5),
             "size": (42, 30),
             "damage": 10,
-            "frame_start": 5,
+            "frame_start": 2,
             "frame_end": 99,
             "status_applied": lambda atk, tgt: tgt.status.apply_grabbed(atk),
         },
@@ -916,7 +916,14 @@ class Character:
 
         return dx, dy
 
+    def get_network_state(self):
+        return {}
+
+    def apply_extra_network_state(self, extra):
+        pass
+
     def apply_network_state(self, state):
+        self.apply_extra_network_state(state.get("char_state", {}))
         if "pos" in state:
             self.position = tuple(state["pos"])
         if "direction" in state:
@@ -1176,6 +1183,13 @@ class Character3(Character):
         if self.is_attacking_s1:
             return f"s1_{self.s1_phase}"
         return super().get_anim_state()
+
+    def get_network_state(self):
+        return {"s1_phase": self.s1_phase}
+
+    def apply_extra_network_state(self, extra):
+        if "s1_phase" in extra:
+            self.s1_phase = int(extra["s1_phase"])
 
     def get_attack_hitbox(self):
         if self.is_attacking_s1 and self.s1_phase in (1, 2):
@@ -1753,6 +1767,24 @@ class Character4(Character):
                 return self.frm_S1_2
             return self.frm_S1_3
         return super()._current_skill_frame()
+
+    def get_network_state(self):
+        return {
+            "s1_phse": self.s1_phse,
+            "frm_s1_1": self.frm_S1_1,
+            "frm_s1_2": self.frm_S1_2,
+            "frm_s1_3": self.frm_S1_3,
+        }
+
+    def apply_extra_network_state(self, extra):
+        if "s1_phse" in extra:
+            self.s1_phse = int(extra["s1_phse"])
+        if "frm_s1_1" in extra:
+            self.frm_S1_1 = int(extra["frm_s1_1"])
+        if "frm_s1_2" in extra:
+            self.frm_S1_2 = int(extra["frm_s1_2"])
+        if "frm_s1_3" in extra:
+            self.frm_S1_3 = int(extra["frm_s1_3"])
 
     def get_anim_state(self):
         if self.is_attacking_s1:
