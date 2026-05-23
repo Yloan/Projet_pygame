@@ -151,7 +151,7 @@ HITBOX_DATA = {
             "offset": (40, -5),
             "size": (42, 30),
             "damage": 10,
-            "frame_start": 2,
+            "frame_start": 4,
             "frame_end": 99,
             "status_applied": lambda atk, tgt: tgt.status.apply_grabbed(atk),
         },
@@ -159,7 +159,7 @@ HITBOX_DATA = {
             "offset": (-50, 0),
             "size": (160, 80),
             "damage": 30,
-            "frame_start": 12,
+            "frame_start": 8,
             "frame_end": 99,
             "status_applied": lambda atk, tgt: tgt.status.apply_stun(2000),
         },
@@ -1663,12 +1663,11 @@ class Character4(Character):
             return
 
         if self.is_attacking_s2:
-            if self.s2_vrt == 1:
-                return
             hbx = self.get_attack_hitbox()
             if hbx is None:
                 return
-            dmg = HITBOX_DATA.get(self.char_num, {}).get(2, _DEFAULT_HITBOX)["damage"]
+            base_dmg = HITBOX_DATA.get(self.char_num, {}).get(2, _DEFAULT_HITBOX)["damage"]
+            dmg = base_dmg if self.s2_vrt == 2 else max(1, base_dmg // 2)
             for tgt in targets:
                 if tgt is self or tgt.is_dead:
                     continue
@@ -1676,7 +1675,8 @@ class Character4(Character):
                     continue
                 if hbx.colliderect(tgt.get_body_rect()):
                     tgt.take_damage(_calc_damage(dmg, tgt, 2))
-                    tgt.status.apply_stun(2000)
+                    if self.s2_vrt == 2:
+                        tgt.status.apply_stun(2000)
                     self._hit_this_swing.add(id(tgt))
             return
 
@@ -1701,8 +1701,6 @@ class Character4(Character):
         if self.is_attacking_s1:
             if self.s1_phse in (2, 3):
                 return None
-        if self.is_attacking_s2 and self.s2_vrt == 1:
-            return None
         return super().get_attack_hitbox()
 
     def get_current_sprite(self):
