@@ -89,6 +89,7 @@ HITBOX_DATA = {
             "damage": 40,
             "frame_start": 0,
             "frame_end": 99,
+            "status_applied": lambda atk, tgt: tgt.status.apply_burn(),
         },
     },
     2: {
@@ -142,6 +143,7 @@ HITBOX_DATA = {
             "damage": 1,
             "frame_start": 2,
             "frame_end": 10,
+            "status_applied": lambda atk, tgt: tgt.status.apply_weakened(),
         },
     },
     4: {
@@ -194,6 +196,22 @@ HITBOX_DATA = {
     },
 }
 _DEFAULT_HITBOX = {"offset": (36, -8), "size": (40, 36), "damage": 10}
+
+CHARACTER_RESISTANCES = {
+    1: (1.0, 1.0, 1.0),
+    2: (1.3, 1.0, 0.7),
+    3: (1.5, 1.5, 1.5),
+    4: (1.0, 1.0, 1.0),
+    5: (0.6, 0.6, 0.6),
+}
+_DEFAULT_RESISTANCES = (1.0, 1.0, 1.0)
+
+
+def _calc_damage(base_dmg, target, skill):
+    res = CHARACTER_RESISTANCES.get(target.char_num, _DEFAULT_RESISTANCES)[skill - 1]
+    if target.status.is_weakened:
+        res = max(res, 1.5)
+    return max(1, round(base_dmg * res))
 
 
 # All the finfos ab the character's projectiles if there had some
@@ -832,7 +850,9 @@ class Character:
                 if hitbox.colliderect(target.get_body_rect()) and not self.s3_hit:
                     if id(target) in self._hit_this_swing:
                         continue
-                    target.take_damage(dmg)
+                    if hasattr(target, "notify_incoming_hit"):
+                        target.notify_incoming_hit(self.position)
+                    target.take_damage(_calc_damage(dmg, target, skill))
                     self._hit_this_swing.add(id(target))
                     self._apply_status_on_hit(target, skill)
                     if not self.is_remote:
@@ -846,7 +866,9 @@ class Character:
             if tid in self._hit_this_swing:
                 continue
             if hitbox.colliderect(target.get_body_rect()):
-                target.take_damage(dmg)
+                if hasattr(target, "notify_incoming_hit"):
+                    target.notify_incoming_hit(self.position)
+                target.take_damage(_calc_damage(dmg, target, skill))
                 self._apply_status_on_hit(target, skill)
                 self._hit_this_swing.add(tid)
 
@@ -972,10 +994,10 @@ class Water(Character):
         full_w = data["size"][0]
 
         frm = self.frame_S3
-        if frm <= 5:
+        if frm < 6 or frm > 16:
             return None
 
-        ratio = min(1.0, (frm - 5) / 11.0)
+        ratio = (frm - 6) / 10.0
         sw = int(full_w * ratio)
         if sw <= 0:
             return None
@@ -1003,7 +1025,7 @@ class Water(Character):
                 "path": "assets/sprites/Character-2/effect-2-S1-Sheet.png",
                 "frames": 2,
                 "frame_duration": 150,
-                "width": 160,
+                "width": 80,
                 "height": 48,
             }
             self.projectiles.append(
@@ -1020,6 +1042,7 @@ class Character3(Character):
     def __init__(self):
         self.s1_phase = 1
         self.s1_parried = False
+        self._last_hit_by_pos = None
         self.frame_S1_2 = 0
         self.timer_S1_2 = 0
         self.frame_S1_3 = 0
@@ -1031,6 +1054,9 @@ class Character3(Character):
         self.frames_S1_2_anim_left = []
         self.frames_S1_3_left = []
         super().__init__(3)
+
+    def notify_incoming_hit(self, attacker_pos):
+        self._last_hit_by_pos = attacker_pos
 
     def _load_animations(self):
         super()._load_animations()
@@ -1086,6 +1112,11 @@ class Character3(Character):
                 self.s1_phase = 2
                 self.frame_S1_2 = 0
                 self.timer_S1_2 = 0
+                if self._last_hit_by_pos is not None:
+                    ax, ay = self._last_hit_by_pos
+                    offset = -FRAME_SIZE if self.direction == "right" else FRAME_SIZE
+                    self.position = (int(ax) + offset, int(ay))
+                    self._last_hit_by_pos = None
                 return
 
             self.timer_S1 += dt
@@ -1172,7 +1203,7 @@ class Character3(Character):
                 if tid in self._hit_this_swing:
                     continue
                 if hitbox.colliderect(target.get_body_rect()):
-                    target.take_damage(damage)
+                    target.take_damage(_calc_damage(damage, target, 1))
                     self._hit_this_swing.add(tid)
 
         elif self.is_attacking_s3:
@@ -1187,7 +1218,7 @@ class Character3(Character):
                 if tid in self._hit_this_swing:
                     continue
                 if hitbox.colliderect(target.get_body_rect()):
-                    target.take_damage(dmg)
+                    target.take_damage(_calc_damage(dmg, target, 3))
                     self._apply_status_on_hit(target, 3)
                     self._hit_this_swing.add(tid)
 
@@ -1303,7 +1334,7 @@ class Projectile:
                 if count >= 2:
                     continue
                 if rect.colliderect(target.get_body_rect()):
-                    target.take_damage(self.damage)
+                    target.take_damage(_calc_damage(self.damage, target, self.skill_num))
                     self._hit_counts[tid] = count + 1
                     if self._effect_frames:
                         self.effect_sprites.append(
@@ -1325,7 +1356,7 @@ class Projectile:
                 if tid in self._hit_targets:
                     continue
                 if rect.colliderect(target.get_body_rect()):
-                    target.take_damage(self.damage)
+                    target.take_damage(_calc_damage(self.damage, target, self.skill_num))
                     self._hit_targets.add(tid)
                     if self.stops:
                         if self.skill_num == 3:
@@ -1603,7 +1634,9 @@ class Character4(Character):
                 if id(tgt) in self._hit_this_swing:
                     continue
                 if hbx.colliderect(tgt.get_body_rect()):
-                    tgt.take_damage(dmg)
+                    if hasattr(tgt, "notify_incoming_hit"):
+                        tgt.notify_incoming_hit(self.position)
+                    tgt.take_damage(_calc_damage(dmg, tgt, 1))
                     self._hit_this_swing.add(id(tgt))
                     self.s1_htd = True
                     self.chrgs = min(self.MAX_CHRGS, self.chrgs + 2)
@@ -1625,7 +1658,7 @@ class Character4(Character):
                 if id(tgt) in self._hit_this_swing:
                     continue
                 if hbx.colliderect(tgt.get_body_rect()):
-                    tgt.take_damage(dmg)
+                    tgt.take_damage(_calc_damage(dmg, tgt, 2))
                     tgt.status.apply_stun(2000)
                     self._hit_this_swing.add(id(tgt))
             return
@@ -1642,7 +1675,7 @@ class Character4(Character):
                 if id(tgt) in self._hit_this_swing:
                     continue
                 if hbx.colliderect(tgt.get_body_rect()):
-                    tgt.take_damage(dmg)
+                    tgt.take_damage(_calc_damage(dmg, tgt, 3))
                     if stun_dur > 0:
                         tgt.status.apply_stun(stun_dur)
                     self._hit_this_swing.add(id(tgt))
@@ -1817,7 +1850,7 @@ class Character5(Character):
                 if id(tgt) in self._hit_this_swing:
                     continue
                 if hbx.colliderect(tgt.get_body_rect()) and not dmg_hited:
-                    tgt.take_damage(dmg)
+                    tgt.take_damage(_calc_damage(dmg, tgt, 2))
                     dmg_hited = True
                     self._hit_this_swing.add(id(tgt))
             return
@@ -1831,6 +1864,8 @@ class Character5(Character):
                 target.status.apply_wet()
             elif self._cns_ctx == "soda":
                 target.status.apply_oiled()
+        elif skill == 2:
+            target.status.apply_pushed(self.direction)
 
     def _handle_s1_update(self, dt):
         self.timer_S1 += dt

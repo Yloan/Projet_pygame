@@ -140,11 +140,11 @@ class Menu:
             image_ch.append(Img)
 
         # Add the character 3, 4 & 5 which is not at a good index in the file
-        # Character 3
-        i = 7
-        Img = pyg.image.load(
-            get_asset_path("characters_selection", f"Character_{i}.png")
-        ).convert_alpha()
+        _icones_sheet = pyg.image.load(get_asset_path("Menus_assets") + "/SELECT-ICONES-Sheet.png").convert_alpha()
+        _icones_h = _icones_sheet.get_height()
+
+        # Character 3 — frame 6 of SELECT-ICONES-Sheet
+        Img = _icones_sheet.subsurface(6 * 24, 0, 24, _icones_h)
         Img = pyg.transform.scale(Img, (143, 107))
         image_ch.insert(2, Img)
 
@@ -156,11 +156,8 @@ class Menu:
         Img = pyg.transform.scale(Img, (143, 107))
         image_ch.insert(3, Img)
 
-        # Character 5
-        i = 8
-        Img = pyg.image.load(
-            get_asset_path("characters_selection", f"Character_{i}.png")
-        ).convert_alpha()
+        # Character 5 — frame 7 of SELECT-ICONES-Sheet
+        Img = _icones_sheet.subsurface(7 * 24, 0, 24, _icones_h)
         Img = pyg.transform.scale(Img, (143, 107))
         image_ch.insert(4, Img)
 

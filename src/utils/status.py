@@ -30,6 +30,7 @@ GRAB_GRWTH = 1.09
 BURN_DURATION = 3000
 BURN_TICK_INTERVAL = 500
 BURN_TICK_DAMAGE = 4
+WEAKENED_DURATION = 4000
 
 
 class StatusEffect:
@@ -122,6 +123,11 @@ class BurnStatus(StatusEffect):
         return dmg
 
 
+class WeakenedStatus(StatusEffect):
+    def __init__(self):
+        super().__init__(WEAKENED_DURATION)
+
+
 class GrabStatus(StatusEffect):
     def __init__(self, src_char):
         super().__init__(60000)
@@ -171,6 +177,9 @@ class StatusManager:
         else:
             self.effects["burn"] = BurnStatus()
 
+    def apply_weakened(self):
+        self.effects["weakened"] = WeakenedStatus()
+
     def update(self, dt):
         for key, effect in list(self.effects.items()):
             effect.update(dt)
@@ -210,6 +219,11 @@ class StatusManager:
     @property
     def is_burning(self):
         e = self.effects.get("burn")
+        return e is not None and e.is_active
+
+    @property
+    def is_weakened(self):
+        e = self.effects.get("weakened")
         return e is not None and e.is_active
 
     def get_burn_damage(self):

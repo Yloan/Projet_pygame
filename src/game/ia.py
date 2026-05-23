@@ -129,6 +129,8 @@ class Bot:
 
         self._post_hit_freeze = 0
         self._hit_set_size_last = 0
+        self._post_hit_flee_frames = 0
+        self._overlap_frames = 0
 
         self._blocked_directions: set = set()
 
@@ -649,6 +651,7 @@ class Bot:
         current_hit_set_size = len(self.char._hit_this_swing)
         if current_hit_set_size > self._hit_set_size_last:
             self._post_hit_freeze = 45
+            self._post_hit_flee_frames = 90
             self.duration_action = 0
         self._hit_set_size_last = current_hit_set_size
 
@@ -659,6 +662,29 @@ class Bot:
             self.char.update_animation(dt, False)
             self.current_position = self.char.position
             return
+
+        if self._post_hit_flee_frames > 0:
+            self._post_hit_flee_frames -= 1
+            self.flee()
+            self.char.is_moving = True
+            self.char.position = self.current_position
+            self.char.update_animation(dt, True)
+            self.current_position = self.char.position
+            return
+
+        _, closest_pos = self.get_closest_player()
+        dist_to_closest = self._distance_to(closest_pos)
+        if dist_to_closest < 20:
+            self._overlap_frames += 1
+            if self._overlap_frames > 120:
+                self.flee()
+                self.char.is_moving = True
+                self.char.position = self.current_position
+                self.char.update_animation(dt, True)
+                self.current_position = self.char.position
+                return
+        else:
+            self._overlap_frames = 0
 
         self.char.position = self.current_position
         self.char.is_moving = self.current_action not in ("rest", None)
