@@ -131,12 +131,38 @@ class Menu:
 
         # LOAD CHARACTER SELECTION IMAGES
         image_ch = []
-        for i in range(1, TMP_NUBER_OF_ASSETS_VARIABLES_HERE + 1):
-            Img = pyg.image.load(
-                get_asset_path("characters_selection", f"Character_{i}.png")
-            ).convert_alpha()
+        for i in range(5):
+            # 24 * 22 px
+            path = get_asset_path("Menus_assets")
+            Img = pyg.image.load(path + "/SELECT-ICONES-Sheet.png")
+            Img = Img.subsurface(i * 24, 0, 24, 22)
             Img = pyg.transform.scale(Img, (143, 107))
             image_ch.append(Img)
+
+        # Add the character 3, 4 & 5 which is not at a good index in the file
+        # Character 3
+        i = 7
+        Img = pyg.image.load(
+            get_asset_path("characters_selection", f"Character_{i}.png")
+        ).convert_alpha()
+        Img = pyg.transform.scale(Img, (143, 107))
+        image_ch.insert(2, Img)
+
+        # Character 4
+        i = 4
+        Img = pyg.image.load(
+            get_asset_path("characters_selection", f"Character_{i}.png")
+        ).convert_alpha()
+        Img = pyg.transform.scale(Img, (143, 107))
+        image_ch.insert(3, Img)
+
+        # Character 5
+        i = 8
+        Img = pyg.image.load(
+            get_asset_path("characters_selection", f"Character_{i}.png")
+        ).convert_alpha()
+        Img = pyg.transform.scale(Img, (143, 107))
+        image_ch.insert(4, Img)
 
         self.image_ch = image_ch
         self.char_p_scale = 9.5
