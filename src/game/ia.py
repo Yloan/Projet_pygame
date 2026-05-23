@@ -655,6 +655,15 @@ class Bot:
             self.duration_action = 0
         self._hit_set_size_last = current_hit_set_size
 
+        if self.char.status.is_disabled:
+            self.char.is_moving = False
+            self.char.position = self.current_position
+            self.char.update_animation(dt, False)
+            self.current_position = self.char.position
+            self.duration_action = 0
+            self.current_action = None
+            return
+
         if self._post_hit_freeze > 0:
             self._post_hit_freeze -= 1
             self.char.is_moving = False
