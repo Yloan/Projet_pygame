@@ -791,8 +791,7 @@ class Character:
 
     def get_body_rect(self):
         x, y = self.position
-        offset_x = int(self.status.bubble_offset)
-        return pyg.Rect(x + offset_x, y, FRAME_SIZE, FRAME_SIZE)
+        return pyg.Rect(x, y, FRAME_SIZE, FRAME_SIZE)
 
     def _active_skill(self):
         if self.is_attacking_s1:
