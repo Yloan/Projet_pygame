@@ -528,6 +528,8 @@ class Character:
     def move(self, direction):
         if self.is_dead or self.is_hurt:
             return
+        if self.status.is_disabled:
+            return
         if self.is_attacking_s1 or self.is_attacking_s2 or self.is_attacking_s3:
             return
 
@@ -997,7 +999,7 @@ class Water(Character):
         if frm < 6 or frm > 16:
             return None
 
-        ratio = (frm - 6) / 10.0
+        ratio = (frm - 5) / 11.0  # frame 6 → 1/11 ≈ 9%, frame 16 → 100%
         sw = int(full_w * ratio)
         if sw <= 0:
             return None
