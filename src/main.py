@@ -590,7 +590,6 @@ class Game:
         self.draw_text_center(
             f"pos mouse --> X: {x}, Y: {y}", self.font, self.TEXT_COL2, 10
         )
-        Character.switch_TMP__GET_SURFACE_HITBOX_ATTACKS_()
         for wall in MAP1_COLLISIONS:
             pyg.draw.rect(self.screen, (255, 0, 255), wall, 2)
 
@@ -821,6 +820,7 @@ class Game:
                             self.running = False
                         if event.key == pyg.K_F2:
                             self.dev_display_ = not self.dev_display_
+                            Character.switch_TMP__GET_SURFACE_HITBOX_ATTACKS_()
                     elif event.type == pyg.MOUSEBUTTONDOWN:
                         if event.button == 4:
                             self.Menu.scroll_y = max(0, self.Menu.scroll_y - 30)
@@ -952,6 +952,7 @@ class Game:
                             self.send_to_server(message="ESC appuyé")
                         if event.key == pyg.K_F2:
                             self.dev_display_ = not self.dev_display_
+                            Character.switch_TMP__GET_SURFACE_HITBOX_ATTACKS_()
 
                         keys_now = pyg.key.get_pressed()
                         if (
@@ -1361,7 +1362,6 @@ class Game:
                     print(f"Error dev display| Error --> {e}")
 
             # Update display
-            pyg.display.update()
             pyg.display.flip()
 
         # Graceful shutdown

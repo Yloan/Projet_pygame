@@ -30,7 +30,7 @@ DEFAULT_STATS = {"speed": 2, "health": 100, "color": (128, 128, 128)}
 COLLISION_THICKNESS = 10
 TMP__GET_SURFACE_HITBOX_ATTACKS_ = False
 DIMENS = {
-    1: {"MOVE": (40, 40), "S1": (80, 60), "S2": (70, 50), "S3": (121, 60)},
+    1: {"MOVE": (40, 40), "S1": (80, 60), "S2": (120, 50), "S3": (120, 60)},
     2: {
         "MOVE": (FRAME_SIZE, FRAME_SIZE),
         "S1": (168, 40),
@@ -530,6 +530,8 @@ class Character:
             return
         if self.status.is_disabled:
             return
+        if self.status.is_stunned or self.status.is_grabbed:
+            return
         if self.is_attacking_s1 or self.is_attacking_s2 or self.is_attacking_s3:
             return
 
@@ -836,11 +838,6 @@ class Character:
         if hitbox is None:  # out of frame
             return
 
-        skill = self._active_skill()
-        if skill is None:
-            return
-
-        hitbox = self.get_attack_hitbox()
         dmg = HITBOX_DATA.get(self.char_num, {}).get(skill, _DEFAULT_HITBOX)["damage"]
 
         for target in targets:
@@ -1284,7 +1281,7 @@ class Projectile:
         n = max(1, sheet.get_width() // self.width)
         raw_frames = [
             sheet.subsurface((i * self.width, 0, self.width, self.height))
-            for i in range(n - 1, -1, -1)
+            for i in range(n)
         ]
         self.frames_right = raw_frames
         self.frames_left = [pyg.transform.flip(f, True, False) for f in raw_frames]

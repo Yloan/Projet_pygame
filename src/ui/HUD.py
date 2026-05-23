@@ -475,7 +475,7 @@ class HUD:
 
         self.currentHealth = min(self.currentHealth + fu, TOTAL_CHUNK_HEALTH - 1)
 
-        if remainder > 0 and self.healthPartial == 0:
+        if remainder > 0:
             self.healthPartial = max(0, self.healthPartial - remainder)
 
         self.verifyColorBar()
@@ -666,4 +666,5 @@ def _draw_char5_hud(self, surface, player_id):
     sda_idx = max(0, min(SDA_FRAMES - 1, SDA_FRAMES - 1 - sda))
 
     surface.blit(self._wtr_frms[wtr_idx], (x, y))
-    surface.blit(self._sda_frms[sda_idx], (x, y + SDA_ROW_GAP))
+    gap = -SDA_ROW_GAP if player_id in (3, 4) else SDA_ROW_GAP
+    surface.blit(self._sda_frms[sda_idx], (x, y + gap))

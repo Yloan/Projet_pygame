@@ -784,16 +784,30 @@ class Menu:
         # Handle character button clicks for current player's selection
         for button_obj, char_num in character_buttons:
             if button_obj.draw(self.screen):
-                if not self.character_1:
+                if self.players_ready[self.CurrentPlayer_id]:
+                    continue
+                if char_num == self.character_1:
+                    # Désélectionne le slot 1 et décale
+                    self.character_1 = self.character_2
+                    self.character_2 = self.character_3
+                    self.character_3 = 0
+                    self.p_character_update = True
+                elif char_num == self.character_2:
+                    # Désélectionne le slot 2 et décale
+                    self.character_2 = self.character_3
+                    self.character_3 = 0
+                    self.p_character_update = True
+                elif char_num == self.character_3:
+                    # Désélectionne le slot 3
+                    self.character_3 = 0
+                    self.p_character_update = True
+                elif not self.character_1:
                     self.character_1 = char_num
                     self.p_character_update = True
                 elif not self.character_2:
                     self.character_2 = char_num
                     self.p_character_update = True
                 elif not self.character_3:
-                    self.character_3 = char_num
-                    self.p_character_update = True
-                elif not self.players_ready[self.CurrentPlayer_id]:
                     self.character_3 = char_num
                     self.p_character_update = True
 
