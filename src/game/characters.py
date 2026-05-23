@@ -30,7 +30,7 @@ DEFAULT_STATS = {"speed": 2, "health": 100, "color": (128, 128, 128)}
 COLLISION_THICKNESS = 10
 TMP__GET_SURFACE_HITBOX_ATTACKS_ = False
 DIMENS = {
-    1: {"MOVE": (40, 40), "S1": (80, 60), "S2": (7, 50), "S3": (121, 60)},
+    1: {"MOVE": (40, 40), "S1": (80, 60), "S2": (70, 50), "S3": (121, 60)},
     2: {
         "MOVE": (FRAME_SIZE, FRAME_SIZE),
         "S1": (168, 40),
@@ -1741,6 +1741,15 @@ class Character4(Character):
         if frms:
             return frms[self.frame_IDLE % len(frms)]
         return None
+
+    def _current_skill_frame(self):
+        if self.is_attacking_s1:
+            if self.s1_phse == 1:
+                return self.frm_S1_1
+            if self.s1_phse == 2:
+                return self.frm_S1_2
+            return self.frm_S1_3
+        return super()._current_skill_frame()
 
     def get_anim_state(self):
         if self.is_attacking_s1:
