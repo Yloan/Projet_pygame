@@ -325,6 +325,13 @@ class Menu:
 
         self.__mouse_prev = False
 
+        # Arrow animation state (per-player)
+        self._arrow_pos = {}     # {player_id: float} — current arrow centre X
+        self._arrow_target = {}  # {player_id: float} — target arrow centre X
+        self._arrow_bob = 0.0    # global bouncing time (seconds)
+        # Clickable rects of idle animations displayed in each slot (refreshed each frame)
+        self._idle_click_rects = {}  # {player_id: [(char_num, Rect), ...]}
+
         _base = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
         self.slot_maps_selection = {
             1: (337, 210),
@@ -564,6 +571,12 @@ class Menu:
                 self._idle_anim_i[char_num] = (self._idle_anim_i[char_num] + 1) % len(
                     frames
                 )
+        # Arrow smooth lerp (all players)
+        self._arrow_bob += delta / 1000.0
+        for pid in list(self._arrow_target.keys()):
+            if pid in self._arrow_pos:
+                diff = self._arrow_target[pid] - self._arrow_pos[pid]
+                self._arrow_pos[pid] += diff * 0.20  # ~20 % per tick → smooth slide
 
     def _get_IDLe_p__frame(self, char_num, pixel_size):
 
@@ -608,41 +621,90 @@ class Menu:
             self.screen.blit(prev_img, (self.center_x(prev_img, x_offset), 345))
 
     # ── Slot character display ───────────────────────────────────────────────
-    #  Active char  → animated idle, large, at (pos_x, pos_y)
-    #  Previous chars → small static icons in a row just below
-    _SLOT_LARGE_SCALE = 1.8  # animated idle  →  int(107 * 1.8) = 192 px
-    _SLOT_ICON_W = 80  # small static icon width
-    _SLOT_ICON_H = 60  # small static icon height
-    _SLOT_ICON_GAP = 8  # gap between icons
-    _SLOT_ICON_OFFSET = 8  # gap between large preview and icons row
+    # Each entry = list of (dx, dy, size_px) — index 0=oldest/smallest/back,
+    # last index = newest/largest/front (the "active" character).
+    # All chars are shown as animated idle sprites, stacked from back to front.
+    _CHAR_SLOT_LAYOUT = [
+        # 1 char selected
+        [(10, 0, 195)],
+        # 2 chars selected
+        [(0, 32, 92), (52, 0, 168)],
+        # 3 chars selected
+        [(0, 42, 62), (30, 22, 96), (62, 0, 150)],
+    ]
 
-    def _draw_slot_preview(self, pos_x, pos_y, char_1, char_2, char_3):
-        """Draw one player slot:
-        - active char (char_3 → char_2 → char_1) as large animated idle
-        - previously confirmed chars as small static icons below
+    def _draw_slot_preview(self, pos_x, pos_y, char_1, char_2, char_3, player_id=None):
+        """Draw one player slot as a stack of animated idle sprites.
+
+        Returns a list of (char_num, Rect) for each visible character so that
+        callers can do click-to-deselect hit-testing.
+        The oldest/smallest character is drawn first (background), the newest/
+        largest is drawn last (foreground = active).
+        Also updates the smooth arrow target position for *player_id*.
         """
-        active = char_3 or char_2 or char_1
-        if not active:
+        chars = [c for c in (char_1, char_2, char_3) if c]
+        if not chars:
+            return []
+
+        count = len(chars)
+        layout = self._CHAR_SLOT_LAYOUT[count - 1]
+
+        click_rects = []
+        for char, (dx, dy, size) in zip(chars, layout):
+            frame = self._get_IDLe_p__frame(char, size)
+            bx, by = pos_x + dx, pos_y + dy
+            if frame:
+                self.screen.blit(frame, (bx, by))
+            click_rects.append((char, pyg.Rect(bx, by, size, size)))
+
+        # Keep arrow target locked onto the active (front/large) character
+        if player_id is not None:
+            last_dx, _last_dy, last_size = layout[-1]
+            target_x = float(pos_x + last_dx + last_size // 2)
+            self._arrow_target[player_id] = target_x
+            if player_id not in self._arrow_pos:
+                self._arrow_pos[player_id] = target_x  # snap on first appearance
+
+        return click_rects
+
+    def _draw_arrow_indicator(self, player_id, slot_top_y):
+        """Draw a bouncing downward-pointing arrow above the active character."""
+        import math
+        ax = self._arrow_pos.get(player_id)
+        if ax is None:
             return
+        ax = int(ax)
+        bob = int(7 * math.sin(self._arrow_bob * 4.5))
+        ay = slot_top_y - 22 + bob  # float above the slot
 
-        self._blit_largeChar(active, pos_x, pos_y, scale_factor=self._SLOT_LARGE_SCALE)
+        gold   = (255, 210, 30)
+        shadow = (110, 70,   0)
+        # Downward-pointing triangle
+        tip   = (ax,      ay + 16)
+        left  = (ax - 13, ay)
+        right = (ax + 13, ay)
+        pyg.draw.polygon(self.screen, shadow, [tip, left, right], 3)
+        pyg.draw.polygon(self.screen, gold,   [tip, left, right])
+        # Small stem above the triangle
+        pyg.draw.rect(self.screen, gold,   pyg.Rect(ax - 4, ay - 8, 8, 10))
+        pyg.draw.rect(self.screen, shadow, pyg.Rect(ax - 4, ay - 8, 8, 10), 2)
 
-        if char_3:
-            small = [c for c in (char_1, char_2) if c and 1 <= c <= len(self.image_ch)]
-        elif char_2:
-            small = [c for c in (char_1,) if c and 1 <= c <= len(self.image_ch)]
+    def _deselect_char(self, char_num):
+        """Remove *char_num* from the current player's selection and shift the rest."""
+        if char_num == self.character_1:
+            self.character_1 = self.character_2
+            self.character_2 = self.character_3
+            self.character_3 = 0
+        elif char_num == self.character_2:
+            self.character_2 = self.character_3
+            self.character_3 = 0
+        elif char_num == self.character_3:
+            self.character_3 = 0
         else:
-            small = []
-
-        large_h = int(107 * self._SLOT_LARGE_SCALE)
-        icon_y = pos_y + large_h + self._SLOT_ICON_OFFSET
-        for i, c in enumerate(small):
-            icon = pyg.transform.scale(
-                self.image_ch[c - 1], (self._SLOT_ICON_W, self._SLOT_ICON_H)
-            )
-            self.screen.blit(
-                icon, (pos_x + i * (self._SLOT_ICON_W + self._SLOT_ICON_GAP), icon_y)
-            )
+            return  # char not in selection — nothing to do
+        self.p_character_update = True
+        # Reset arrow so it snaps / re-lerps from the new active char's position
+        self._arrow_pos.pop(self.CurrentPlayer_id, None)
 
     def handle_character_selection(self, character_var, next_state, title):
         # Handle the character selection
@@ -701,7 +763,10 @@ class Menu:
                 self.menu_state = "choice_characters_2"
 
         pos_x, pos_y = self.slot_positions.get(self.CurrentPlayer_id, (64, 125))
-        self._draw_slot_preview(pos_x, pos_y, self.character_1, 0, 0)
+        rects = self._draw_slot_preview(pos_x, pos_y, self.character_1, 0, 0, player_id=self.CurrentPlayer_id)
+        self._idle_click_rects[self.CurrentPlayer_id] = rects
+        if self.character_1:
+            self._draw_arrow_indicator(self.CurrentPlayer_id, pos_y)
 
     def handle_choice_characters_2(self):
         self.screen.blit(self.choice_chracters, (0, 0))
@@ -725,7 +790,10 @@ class Menu:
                 self.menu_state = "choice_characters_3"
 
         pos_x, pos_y = self.slot_positions.get(self.CurrentPlayer_id, (64, 125))
-        self._draw_slot_preview(pos_x, pos_y, self.character_1, self.character_2, 0)
+        rects = self._draw_slot_preview(pos_x, pos_y, self.character_1, self.character_2, 0, player_id=self.CurrentPlayer_id)
+        self._idle_click_rects[self.CurrentPlayer_id] = rects
+        if self.character_1 or self.character_2:
+            self._draw_arrow_indicator(self.CurrentPlayer_id, pos_y)
 
     def handle_choice_characters_3(self):
         self.screen.blit(self.choice_chracters, (0, 0))
@@ -748,9 +816,13 @@ class Menu:
                 self.character_3 = char_num
 
         pos_x, pos_y = self.slot_positions.get(self.CurrentPlayer_id, (64, 125))
-        self._draw_slot_preview(
-            pos_x, pos_y, self.character_1, self.character_2, self.character_3
+        rects = self._draw_slot_preview(
+            pos_x, pos_y, self.character_1, self.character_2, self.character_3,
+            player_id=self.CurrentPlayer_id,
         )
+        self._idle_click_rects[self.CurrentPlayer_id] = rects
+        if self.character_1 or self.character_2 or self.character_3:
+            self._draw_arrow_indicator(self.CurrentPlayer_id, pos_y)
 
         if self.character_3 and self.start_button.draw(self.screen):
             self.menu_state = "start game"
@@ -786,21 +858,9 @@ class Menu:
             if button_obj.draw(self.screen):
                 if self.players_ready[self.CurrentPlayer_id]:
                     continue
-                if char_num == self.character_1:
-                    # Désélectionne le slot 1 et décale
-                    self.character_1 = self.character_2
-                    self.character_2 = self.character_3
-                    self.character_3 = 0
-                    self.p_character_update = True
-                elif char_num == self.character_2:
-                    # Désélectionne le slot 2 et décale
-                    self.character_2 = self.character_3
-                    self.character_3 = 0
-                    self.p_character_update = True
-                elif char_num == self.character_3:
-                    # Désélectionne le slot 3
-                    self.character_3 = 0
-                    self.p_character_update = True
+                if char_num in (self.character_1, self.character_2, self.character_3):
+                    # Re-clicking an already-selected char → deselect it
+                    self._deselect_char(char_num)
                 elif not self.character_1:
                     self.character_1 = char_num
                     self.p_character_update = True
@@ -825,6 +885,13 @@ class Menu:
         self.__mouse_prev = cur_mouse
         mouse_pos = pyg.mouse.get_pos()
 
+        # ── Click on idle animations in current player's slot → deselect ──────
+        if just_clicked and not self.players_ready[self.CurrentPlayer_id]:
+            for char_num, rect in self._idle_click_rects.get(self.CurrentPlayer_id, []):
+                if rect.collidepoint(mouse_pos):
+                    self._deselect_char(char_num)
+                    break
+
         for player_id in range(1, 5):
             if player_id > max_human_slot:
                 px, py = self.slot_positions[player_id]
@@ -837,8 +904,13 @@ class Menu:
             characters = self.players_characters[player_id]
             char_1, char_2, char_3 = characters
 
-            # ── Draw slot: active char large + previous chars as small icons ──
-            self._draw_slot_preview(pos_x, pos_y, char_1, char_2, char_3)
+            # ── Draw slot: animated idle stack + arrow indicator ──────────────
+            rects = self._draw_slot_preview(
+                pos_x, pos_y, char_1, char_2, char_3, player_id=player_id
+            )
+            self._idle_click_rects[player_id] = rects
+            if any(c for c in (char_1, char_2, char_3) if c):
+                self._draw_arrow_indicator(player_id, pos_y)
 
             if (
                 just_clicked
