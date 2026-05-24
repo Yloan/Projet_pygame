@@ -234,11 +234,6 @@ class Game:
                         ),
                         None,
                     )
-                    if session_info:
-                        nb_bots = session_info.nb_bots
-                        for i in range(nb_bots):
-                            bot_id = 4 - i
-                            self.other_huds[bot_id] = HUD(bot_id)
 
                 except Exception as e:
                     print_error(f"Erreur player ID: {e}")
@@ -737,6 +732,7 @@ class Game:
         self.hud = None
         self.other_huds = {}
         self.remote_players = {}
+        self.Menu.CurrentPlayer_id = None
         self.choose_map = False
         self.map_choosen = None
 
@@ -830,8 +826,8 @@ class Game:
                             )
                             bot.bot_id = bot_id
                             bot.health = bot.char.health
-                            if bot_id in self.other_huds:
-                                self.other_huds[bot_id].set_portrait(bot.char.char_num)
+                            self.other_huds[bot_id] = HUD(bot_id)
+                            self.other_huds[bot_id].set_portrait(bot.char.char_num)
                             self.bots.append(bot)
 
                 elif self.game_started:

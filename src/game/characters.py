@@ -166,7 +166,7 @@ HITBOX_DATA = {
             "offset": (-50, 0),
             "size": (160, 80),
             "damage": 30,
-            "frame_start": 8,
+            "frame_start": 0,
             "frame_end": 99,
             "status_applied": lambda atk, tgt: tgt.status.apply_stun(2000),
         },
@@ -174,7 +174,7 @@ HITBOX_DATA = {
             "offset": (50, 0),
             "size": (100, 50),
             "damage": 50,
-            "frame_start": 10,
+            "frame_start": 0,
             "frame_end": 99,
         },
     },
@@ -577,6 +577,11 @@ class Character:
             if oild:
                 oild.set_drift(nx, ny, self.speed)
 
+        if self.status.is_wet:
+            wet = self.status.effects.get("wet")
+            if wet:
+                wet.set_drift(nx, ny, self.speed)
+
     def take_damage(self, amount):
         if self.status.is_disabled:
             return
@@ -666,6 +671,12 @@ class Character:
 
     def update_animation(self, dt, is_moving):
         self.status.update(dt)
+
+        burn_dmg = self.status.get_burn_damage()
+        if burn_dmg > 0:
+            if self.status.is_oiled:
+                burn_dmg = int(burn_dmg * 2.0)
+            self.take_damage(burn_dmg)
 
         if hasattr(self, "bubble_effect") and self.bubble_effect:
             self.bubble_effect.update(dt)
@@ -1707,6 +1718,7 @@ class Character4(Character):
                     continue
                 if hbx.colliderect(tgt.get_body_rect()):
                     tgt.take_damage(_calc_damage(dmg, tgt, 3))
+                    tgt.status.apply_burn()
                     if stun_dur > 0:
                         tgt.status.apply_stun(stun_dur)
                     self._hit_this_swing.add(id(tgt))

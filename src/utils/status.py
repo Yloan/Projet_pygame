@@ -45,9 +45,25 @@ class StatusEffect:
             self.is_active = False
 
 
+WET_SLIDE_FACTOR = 0.25  # fraction of speed kept as slide drift
+
 class WetStatus(StatusEffect):
     def __init__(self):
         super().__init__(WET_DURATION)
+        self.drft_x = 0.0
+        self.drft_y = 0.0
+
+    def set_drift(self, nx, ny, spd):
+        self.drft_x = nx * spd * WET_SLIDE_FACTOR
+        self.drft_y = ny * spd * WET_SLIDE_FACTOR
+
+    def get_drift(self, dt):
+        if not self.is_active:
+            return 0.0, 0.0
+        decay = 0.90 ** (dt / 16.0)
+        self.drft_x *= decay
+        self.drft_y *= decay
+        return self.drft_x, self.drft_y
 
 
 class DisabledStatus(StatusEffect):
