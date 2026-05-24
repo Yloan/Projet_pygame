@@ -194,25 +194,16 @@ class Menu:
         # CREATE BUTTON INSTANCES
         self.play_button = animated_button.AnimatedButton(
             self.center_x(self.play_button_frames[0], 1.5),
-            370,
+            390,
             frames_idle      = self.play_button_frames,
             frames_pressed   = self.play_button_frames_pressed,
             frames_unpressed = self.play_button_frames_unpressed,
             scale            = BUTTON_SCALE,
             animation_speed  = 8,
         )
-        self.settings_button = animated_button.AnimatedButton(
-            self.center_x(self.settings_button_frames[0], 1.5),
-            475,
-            frames_idle      = self.settings_button_frames,
-            frames_pressed   = self.settings_button_frames_pressed,
-            frames_unpressed = self.settings_button_frames_unpressed,
-            scale            = 2,
-            animation_speed  = 8,
-        )
         self.exit_button = animated_button.AnimatedButton(
             self.center_x(self.exit_button_frames[0], 1.5),
-            580,
+            510,
             frames_idle      = self.exit_button_frames,
             frames_pressed   = self.exit_button_frames_pressed,
             frames_unpressed = self.exit_button_frames_unpressed,  # empty → no release anim
@@ -514,8 +505,6 @@ class Menu:
         # Then draw animated buttons
         if self.play_button.draw(self.screen):
             self.menu_state = "play"
-        if self.settings_button.draw(self.screen):
-            self.menu_state = "settings"
         if self.exit_button.draw(self.screen):
             pyg.quit()
             sys.exit(0)
@@ -1100,8 +1089,6 @@ class Menu:
 
         if self.menu_state == "main":
             self.handle_main_menu()
-        elif self.menu_state == "settings":
-            self.handle_settings_menu()
         elif self.menu_state == "creation_parameters_session_menu":
             button.Button.blocked_rect = self.input_box.modal_rect
             self.handle_session_menu()

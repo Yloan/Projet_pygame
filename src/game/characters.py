@@ -707,6 +707,14 @@ class Character:
                     x, y = self.position
                     self.position = (x + int(odx), y + int(ody))
 
+        if self.status.is_wet:
+            wet = self.status.effects.get("wet")
+            if wet:
+                wdx, wdy = wet.get_drift(dt)
+                if wdx != 0.0 or wdy != 0.0:
+                    x, y = self.position
+                    self.position = (x + int(wdx), y + int(wdy))
+
         if self.is_attacking_s1:
             self._handle_s1_update(dt)
 
@@ -1007,6 +1015,27 @@ class Furnace(Character):
     def __init__(self):
         super().__init__(1)
 
+    def check_hits(self, targets):
+        skill = self._active_skill()
+        if skill is None:
+            return
+        hitbox = self.get_attack_hitbox()
+        if hitbox is None:
+            return
+        dmg = HITBOX_DATA.get(self.char_num, {}).get(skill, _DEFAULT_HITBOX)["damage"]
+        for target in targets:
+            if target is self or target.is_dead:
+                continue
+            tid = id(target)
+            if tid in self._hit_this_swing:
+                continue
+            if hitbox.colliderect(target.get_body_rect()):
+                if hasattr(target, "notify_incoming_hit"):
+                    target.notify_incoming_hit(self.position)
+                target.take_damage(_calc_damage(dmg, target, skill))
+                self._apply_status_on_hit(target, skill)
+                self._hit_this_swing.add(tid)
+
 
 class Water(Character):
     def __init__(self):
@@ -1227,9 +1256,8 @@ class Character3(Character):
                 px = FRAME_SIZE - px - sw
             hitbox = pyg.Rect(x + px, y + py, sw, sh)
 
-            damage = (
-                CHAR3_S1_DAMAGE_PARRY if self.s1_parried else CHAR3_S1_DAMAGE_NORMAL
-            )
+            if not self.s1_parried:
+                return
 
             for target in targets:
                 if target is self or target.is_dead:
@@ -1238,7 +1266,7 @@ class Character3(Character):
                 if tid in self._hit_this_swing:
                     continue
                 if hitbox.colliderect(target.get_body_rect()):
-                    target.take_damage(_calc_damage(damage, target, 1))
+                    target.take_damage(_calc_damage(CHAR3_S1_DAMAGE_PARRY, target, 1))
                     self._hit_this_swing.add(tid)
 
         elif self.is_attacking_s3:
@@ -1587,7 +1615,7 @@ class Character4(Character):
             self._hit_this_swing = set()
             return True
 
-        if skill_num == 2 and not self.is_attacking_s2:
+        if skill_num == 2 and not self.is_attacking_s2 and not self.is_attacking_s1:
             self.s2_vrt = 1 if self.chrgs < 3 else 2
             if self.s2_vrt == 1:
                 self.chrgs = min(self.MAX_CHRGS, self.chrgs + 1)
@@ -1664,26 +1692,24 @@ class Character4(Character):
 
     def check_hits(self, targets):
         if self.is_attacking_s1:
-            if self.s1_phse != 1:
-                return
-            hbx = self.get_attack_hitbox()
-            if hbx is None:
-                return
-            dmg = HITBOX_DATA.get(self.char_num, {}).get(1, _DEFAULT_HITBOX)["damage"]
-            for tgt in targets:
-                if tgt is self or tgt.is_dead:
-                    continue
-                if id(tgt) in self._hit_this_swing:
-                    continue
-                if hbx.colliderect(tgt.get_body_rect()):
-                    if hasattr(tgt, "notify_incoming_hit"):
-                        tgt.notify_incoming_hit(self.position)
-                    tgt.take_damage(_calc_damage(dmg, tgt, 1))
-                    self._hit_this_swing.add(id(tgt))
-                    self.s1_htd = True
-                    self.chrgs = min(self.MAX_CHRGS, self.chrgs + 2)
-                    tgt.status.apply_grabbed(self)
-                    self.grbd_tgt = tgt
+            if self.s1_phse == 1:
+                hbx = self.get_attack_hitbox()
+                if hbx is not None:
+                    dmg = HITBOX_DATA.get(self.char_num, {}).get(1, _DEFAULT_HITBOX)["damage"]
+                    for tgt in targets:
+                        if tgt is self or tgt.is_dead:
+                            continue
+                        if id(tgt) in self._hit_this_swing:
+                            continue
+                        if hbx.colliderect(tgt.get_body_rect()):
+                            if hasattr(tgt, "notify_incoming_hit"):
+                                tgt.notify_incoming_hit(self.position)
+                            tgt.take_damage(_calc_damage(dmg, tgt, 1))
+                            self._hit_this_swing.add(id(tgt))
+                            self.s1_htd = True
+                            self.chrgs = min(self.MAX_CHRGS, self.chrgs + 2)
+                            tgt.status.apply_grabbed(self)
+                            self.grbd_tgt = tgt
                     return
             return
 

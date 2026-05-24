@@ -23,7 +23,6 @@ class InGameMenu:
 
         # Load button frame sets
         play_obj  = ObjButton.PlayButton()
-        opts_obj  = ObjButton.OptionsButton()
         exit_obj  = ObjButton.ExitButton()
 
         scale = 2
@@ -32,22 +31,14 @@ class InGameMenu:
         cx = screen_w // 2
         btn_x = cx - frame_w // 2
 
-        y_resume   = 260
-        y_settings = 360
-        y_quit     = 460
+        y_resume = 290
+        y_quit   = 430
 
         self._btn_resume = animated_button.AnimatedButton(
             btn_x, y_resume,
             frames_idle=play_obj.play_button_frames,
             frames_pressed=play_obj.play_button_frames_pressed,
             frames_unpressed=play_obj.play_button_frames_unpressed,
-            scale=scale,
-        )
-        self._btn_settings = animated_button.AnimatedButton(
-            btn_x, y_settings,
-            frames_idle=opts_obj.settings_button_frames,
-            frames_pressed=opts_obj.settings_button_frames_pressed,
-            frames_unpressed=opts_obj.settings_button_frames_unpressed,
             scale=scale,
         )
         self._btn_quit = animated_button.AnimatedButton(
@@ -76,8 +67,6 @@ class InGameMenu:
 
         if self._btn_resume.draw(screen):
             return "resume"
-
-        self._btn_settings.draw(screen)  # placeholder — no in-game settings yet
 
         if self._btn_quit.draw(screen):
             return "quit"

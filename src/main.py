@@ -169,6 +169,10 @@ class Game:
         self._game_over_timer = 0
         self._game_over_result = None
 
+        # Camera shake
+        self._shake_timer = 0
+        self._shake_strength = 0
+
     def switch_music(self, i=None):
         if i is not None:
             self.current_music = i
@@ -303,6 +307,8 @@ class Game:
                     print_error(f"Erreur PlayerLeft: {e}")
 
             elif message.startswith("[HUDUpdate]:"):
+                if not self.game_started:
+                    continue
                 data = json.loads(message.split(":", 1)[1])
                 pid = data["player_id"]
                 my_id = self.Menu.CurrentPlayer_id
@@ -578,6 +584,8 @@ class Game:
                 surface.blit(f, (x + i * (fw + gap), y + CHAR6_CANS_GAP))
 
     def _init_game_characters(self):
+        self.other_huds = {}
+
         c1 = self.Menu.character_1 or 1
         c2 = self.Menu.character_2 or 1
         c3 = self.Menu.character_3 or 1
@@ -853,8 +861,8 @@ class Game:
                                 self.send_to_server(
                                     f"[LeaveSession]:{self.current_joined_session}"
                                 )
-                                self.current_joined_session = None
-                            self.running = False
+                            pyg.quit()
+                            import sys; sys.exit(0)
                         if event.key == pyg.K_F2:
                             self.dev_display_ = not self.dev_display_
                             Character.switch_TMP__GET_SURFACE_HITBOX_ATTACKS_()
@@ -974,6 +982,8 @@ class Game:
             if self.Menu.p_unready:
                 self.send_to_server(f"[PlayerUnready]:{self.Menu.CurrentPlayer_id}")
                 self.Menu.p_unready = False
+
+            delta_time = 0
 
             # GAME STATE - Actual gameplay
             if self.etat == "game":
@@ -1275,6 +1285,8 @@ class Game:
                     if delta > 0:
                         hud_dmg = max(1, round(delta * 54 / 100))
                         self.hud.DealsDamage(hud_dmg)
+                        self._shake_timer = 350
+                        self._shake_strength = min(10, 4 + delta // 5)
                     if self.active_char.health <= 0 and self.hud.currentHealth > 0:
                         self.hud.setHealth(0)
                     self._last_char_health = self.active_char.health
@@ -1437,6 +1449,17 @@ class Game:
                 except Exception as e:
                     print(f"Error dev display| Error --> {e}")
 
+            # Camera shake
+            if self._shake_timer > 0 and self.etat == "game":
+                ox = r.randint(-self._shake_strength, self._shake_strength)
+                oy = r.randint(-self._shake_strength, self._shake_strength)
+                frame = self.screen.copy()
+                self.screen.fill((0, 0, 0))
+                self.screen.blit(frame, (ox, oy))
+                self._shake_timer = max(0, self._shake_timer - delta_time)
+                if self._shake_timer == 0:
+                    self._shake_strength = 0
+
             # Update display
             pyg.display.flip()
 
@@ -1446,5 +1469,5 @@ class Game:
 
 if __name__ == "__main__":
     # Initialize and run game with fullscreen enabled
-    game = Game(width=1280, height=720, fullscreen=True)
+    game = Game(width=1280, height=720, fullscreen=False)
     game.run()
