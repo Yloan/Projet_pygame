@@ -13,10 +13,12 @@ import ui.menu as menu
 import ui.Music as music_module
 import utils.paths as __path__
 from game.characters import (
+    BUBBLE_EFFECT_DATA,
     FRAME_SIZE,
     PROJECTILES_INFOS,
     Character,
     Projectile,
+    SubProjectile,
     make_character,
 )
 import game.map_laoder as _map_mod
@@ -350,6 +352,24 @@ class Game:
 
                 except Exception as e:
                     print_error(f"Erreur GameState: {e}")
+
+            elif message.startswith("[BubbleHit]:"):
+                try:
+                    data = json.loads(message.split(":", 1)[1])
+                    if data.get("victim_id") == self.Menu.CurrentPlayer_id and self.active_char:
+                        self.active_char.is_hidden = True
+                        self.active_char.bubble_source_char = data["caster"]
+                        effect_data = BUBBLE_EFFECT_DATA.get(int(data["caster"]))
+                        if effect_data and not self.active_char.bubble_effect:
+                            self.active_char.bubble_effect = SubProjectile(
+                                self.active_char.position[0],
+                                self.active_char.position[1],
+                                effect_data,
+                            )
+                        self.active_char.status.apply_disabled(data.get("direction", "right"))
+                        self.active_char.status.apply_wet()
+                except Exception as e:
+                    print_error(f"Erreur BubbleHit: {e}")
 
             elif message.startswith("[ProjectileSpawned]:"):
                 try:
@@ -1201,7 +1221,20 @@ class Game:
                         b.char for b in self.bots if not b.char.is_dead
                     ]
                     self.active_char.update_projectiles(delta_time, live_targets)
+                    _prev_s3_hit = self.active_char.s3_hit
                     self.active_char.check_hits(live_targets)
+                    if (
+                        not _prev_s3_hit
+                        and self.active_char.s3_hit
+                        and self.active_char.char_num == 2
+                        and self.current_joined_session
+                    ):
+                        for pid, rchar in self.remote_players.items():
+                            if rchar.is_hidden and rchar.bubble_source_char == 2:
+                                self.send_to_server(
+                                    f"[BubbleHit]:{json.dumps({'session': self.current_joined_session, 'victim_id': pid, 'caster': 2, 'direction': self.active_char.direction})}"
+                                )
+                                break
                     self.active_char.draw_projectiles(self.screen)
 
                 if self.active_char.is_dead:

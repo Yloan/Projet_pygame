@@ -130,7 +130,7 @@ class WeakenedStatus(StatusEffect):
 
 class GrabStatus(StatusEffect):
     def __init__(self, src_char):
-        super().__init__(60000)
+        super().__init__(5000)
         self.src = src_char
         self.cur_spd = 1.5
 
