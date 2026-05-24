@@ -55,6 +55,14 @@ HEIGHT_RESIST = 10
 ANIM_SPEED_OK = 0.3
 ANIM_SPEED_ASS = 0.25
 
+PORTRAIT_OFFSETS = {
+    1: (16, 10),
+    2: (230, 10),
+    3: (16, 142),
+    4: (230, 142),
+}
+PORTRAIT_SIZE = 40
+
 OFFSET_HEALTH = (4, 2)
 OFFSET_RESIST = (10, 80)
 OFFSET_ASS = (29, 83)
@@ -310,6 +318,19 @@ class HUD:
         self.scale = SCALE
         self.currentResist = 0
 
+        self._portrait = None
+
+    def set_portrait(self, char_num):
+        try:
+            sheet = pyg.image.load(
+                f"assets/sprites/Character-{char_num}/IDLE-Sheet.png"
+            ).convert_alpha()
+            frame = sheet.subsurface(0, 0, 40, 40)
+            self._portrait = pyg.transform.scale(frame, (PORTRAIT_SIZE, PORTRAIT_SIZE))
+        except Exception as e:
+            print_warning(f"Portrait char {char_num} introuvable: {e}")
+            self._portrait = None
+
     def update(self, dt):
         for skill in ["S1", "S2", "S3"]:
             if self.skillState[skill] == "WAIT":
@@ -387,10 +408,17 @@ class HUD:
     def draw(self, surface, x, y):
         # Dreaw the hud with all teh subfunctions made for it
         surface.blit(self.interface, (x, y))
+        self._drawPortrait(surface, x, y)
         self._drawHealth(surface, x, y)
         self._drawCooldowns(surface, x, y)
         self._drawAss(surface, x, y)
         self._drawResist(surface, x, y)
+
+    def _drawPortrait(self, surface, x, y):
+        if self._portrait is None:
+            return
+        ox, oy = PORTRAIT_OFFSETS[self.id_player]
+        surface.blit(self._portrait, (x + ox, y + oy))
 
     def _drawHealth(self, surface, x, y):
 

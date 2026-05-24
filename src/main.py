@@ -571,6 +571,9 @@ class Game:
         self.support_1 = player_module.make_character(c2)
         self.support_2 = player_module.make_character(c3)
 
+        if self.hud:
+            self.hud.set_portrait(c1)
+
         self.active_char.position = spawn[:]
         self.support_1.position = spawn[:]
         self.support_2.position = spawn[:]
@@ -802,6 +805,8 @@ class Game:
                             )
                             bot.bot_id = bot_id
                             bot.health = bot.char.health
+                            if bot_id in self.other_huds:
+                                self.other_huds[bot_id].set_portrait(bot.char.char_num)
                             self.bots.append(bot)
 
                 elif self.game_started:
@@ -993,6 +998,7 @@ class Game:
                                             self.hud.startAssCooldown(
                                                 RETREAT_COOLDOWN_DURATION
                                             )
+                                            self.hud.set_portrait(self.active_char.char_num)
                                         self.send_to_server(
                                             f"[Retreat]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'slot': 1, 'active_char': self.active_char.char_num})}"
                                         )
@@ -1026,6 +1032,7 @@ class Game:
                                             self.hud.startAssCooldown(
                                                 RETREAT_COOLDOWN_DURATION
                                             )
+                                            self.hud.set_portrait(self.active_char.char_num)
                                         self.send_to_server(
                                             f"[Retreat]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'slot': 2, 'active_char': self.active_char.char_num})}"
                                         )
@@ -1212,6 +1219,7 @@ class Game:
                                 1, self.active_char.max_health
                             )
                             self.hud.setHealth(round(pct * 17))
+                            self.hud.set_portrait(self.active_char.char_num)
                     elif not self.support_2.is_dead:
                         current_pos = list(self.active_char.position)
                         self.active_char, self.support_2 = (
@@ -1226,6 +1234,7 @@ class Game:
                                 1, self.active_char.max_health
                             )
                             self.hud.setHealth(round(pct * 17))
+                            self.hud.set_portrait(self.active_char.char_num)
 
                 if self.hud and self.active_char:
                     delta = self._last_char_health - self.active_char.health
