@@ -67,28 +67,34 @@ DIMENS = {
 # "damage" : c assez evident
 HITBOX_DATA = {
     1: {
+        # S1 : feu — pixels attaque dans le frame à x=[46,79] y=[5,56]
+        # frame dessiné à (body_x, body_y), frame 80×60
         1: {
-            "offset": (38, -5),
-            "size": (44, 32),
+            "offset": (42, 4),
+            "size": (38, 47),
             "damage": 15,
             "frame_start": 2,
-            "frame_end": 99,
+            "frame_end": 9,
             "status_applied": lambda atk, tgt: tgt.status.apply_burn(),
         },
+        # S2 : sphère — n'apparaît qu'aux frames 4-6, x=[55,107] y=[4,41]
+        # frame dessiné à (body_x, body_y), frame 120×50
         2: {
-            "offset": (25, -22),
-            "size": (58, 58),
+            "offset": (50, 3),
+            "size": (58, 38),
             "damage": 25,
-            "frame_start": 0,
-            "frame_end": 8,
+            "frame_start": 4,
+            "frame_end": 6,
             "status_applied": lambda atk, tgt: tgt.status.apply_oiled(),
         },
+        # S3 : lame de feu — attaque dès frame 1 jusqu'au 12, x=[46,105] y=[11,59]
+        # frame dessiné à (body_x, body_y), frame 120×60
         3: {
-            "offset": (48, -12),
-            "size": (75, 42),
+            "offset": (44, 10),
+            "size": (62, 38),
             "damage": 40,
-            "frame_start": 0,
-            "frame_end": 99,
+            "frame_start": 1,
+            "frame_end": 12,
             "status_applied": lambda atk, tgt: tgt.status.apply_burn(),
         },
     },
