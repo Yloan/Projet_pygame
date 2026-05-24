@@ -9,7 +9,8 @@ from utils.paths import get_asset_path
 from utils.status import StatusManager
 
 FRAME_SIZE = 40
-CHARACTER_SCALE = 1.5  # increase to enlarge all character sprites uniformly (hitboxes stay at FRAME_SIZE)
+CHARACTER_SCALE = 1.5
+SCALED_FRAME_SIZE = int(FRAME_SIZE * CHARACTER_SCALE)  # logical cell size after scaling
 IDLE_SPEED = 100
 MOVE_SPEED = 150
 HURT_SPEED = 180
@@ -566,7 +567,7 @@ class Character:
         else:
             return
 
-        player_rect = pyg.Rect(int(new_pos[0]), int(new_pos[1]), FRAME_SIZE, FRAME_SIZE)
+        player_rect = pyg.Rect(int(new_pos[0]), int(new_pos[1]), SCALED_FRAME_SIZE, SCALED_FRAME_SIZE)
         if any(player_rect.colliderect(wall) for wall in _map_mod.ACTIVE_COLLISIONS):
             return
 
@@ -824,7 +825,7 @@ class Character:
 
     def get_body_rect(self):
         x, y = self.position
-        return pyg.Rect(x, y, FRAME_SIZE, FRAME_SIZE)
+        return pyg.Rect(x, y, SCALED_FRAME_SIZE, SCALED_FRAME_SIZE)
 
     def _active_skill(self):
         if self.is_attacking_s1:
@@ -854,9 +855,13 @@ class Character:
 
         px, py = data["offset"]
         sw, sh = data["size"]
+        px = int(px * CHARACTER_SCALE)
+        py = int(py * CHARACTER_SCALE)
+        sw = int(sw * CHARACTER_SCALE)
+        sh = int(sh * CHARACTER_SCALE)
         x, y = self.position
         if self.direction == "left":
-            px = FRAME_SIZE - px - sw
+            px = SCALED_FRAME_SIZE - px - sw
         return pyg.Rect(x + px, y + py, sw, sh)
 
     def check_hits(self, targets):
@@ -935,11 +940,13 @@ class Character:
 
     def get_blit_offset(self, sprite):
         anim = self.get_anim_state()
-        dx, dy = SPRITE_OFFSETS.get(self.char_num, {}).get(anim, (0, 0))
+        raw_dx, raw_dy = SPRITE_OFFSETS.get(self.char_num, {}).get(anim, (0, 0))
+        dx = int(raw_dx * CHARACTER_SCALE)
+        dy = int(raw_dy * CHARACTER_SCALE)
 
         if self.direction == "left":
             frame_w = sprite.get_width()
-            dx = -(frame_w - FRAME_SIZE) - dx
+            dx = -(frame_w - SCALED_FRAME_SIZE) - dx
 
         return dx, dy
 
@@ -1040,9 +1047,13 @@ class Water(Character):
         if sw <= 0:
             return None
 
+        px = int(px * CHARACTER_SCALE)
+        py = int(py * CHARACTER_SCALE)
+        sw = int(sw * CHARACTER_SCALE)
+        sh = int(sh * CHARACTER_SCALE)
         x, y = self.position
         if self.direction == "left":
-            px = FRAME_SIZE - px - sw
+            px = SCALED_FRAME_SIZE - px - sw
 
         return pyg.Rect(x + px, y + py, sw, sh)
 
@@ -1152,7 +1163,7 @@ class Character3(Character):
                 self.timer_S1_2 = 0
                 if self._last_hit_by_pos is not None:
                     ax, ay = self._last_hit_by_pos
-                    offset = -FRAME_SIZE if self.direction == "right" else FRAME_SIZE
+                    offset = -SCALED_FRAME_SIZE if self.direction == "right" else SCALED_FRAME_SIZE
                     self.position = (int(ax) + offset, int(ay))
                     self._last_hit_by_pos = None
                 return
@@ -1232,9 +1243,13 @@ class Character3(Character):
 
             px, py = CHAR3_S1_PHASE3_HITBOX["offset"]
             sw, sh = CHAR3_S1_PHASE3_HITBOX["size"]
+            px = int(px * CHARACTER_SCALE)
+            py = int(py * CHARACTER_SCALE)
+            sw = int(sw * CHARACTER_SCALE)
+            sh = int(sh * CHARACTER_SCALE)
             x, y = self.position
             if self.direction == "left":
-                px = FRAME_SIZE - px - sw
+                px = SCALED_FRAME_SIZE - px - sw
             hitbox = pyg.Rect(x + px, y + py, sw, sh)
 
             if not self.s1_parried:
@@ -1293,8 +1308,10 @@ class Projectile:
         self.direction = direction
         self.speed = data["speed"]
         self.stops = data["stops"]
-        self.width = data["width"]
-        self.height = data["height"]
+        raw_w = data["width"]
+        raw_h = data["height"]
+        self.width = int(raw_w * CHARACTER_SCALE)
+        self.height = int(raw_h * CHARACTER_SCALE)
         self.total_frames = data["frames"] * data["loops"]
         self.frames_per_loop = data["frames"]
         self.current_frame = 0
@@ -1310,11 +1327,13 @@ class Projectile:
         ]
 
         sheet = pyg.image.load(_resolve_path(data["path"])).convert_alpha()
-        n = max(1, sheet.get_width() // self.width)
+        n = max(1, sheet.get_width() // raw_w)
         raw_frames = [
-            sheet.subsurface((i * self.width, 0, self.width, self.height))
+            sheet.subsurface((i * raw_w, 0, raw_w, raw_h))
             for i in range(n)
         ]
+        if CHARACTER_SCALE != 1.0:
+            raw_frames = [pyg.transform.scale(f, (self.width, self.height)) for f in raw_frames]
         self.frames_right = raw_frames
         self.frames_left = [pyg.transform.flip(f, True, False) for f in raw_frames]
         self.double_hit = data.get("double_hit", False)
@@ -1327,9 +1346,13 @@ class Projectile:
 
         if self.effect_data:
             sheet = pyg.image.load(self.effect_data["path"]).convert_alpha()
-            w, h = self.effect_data["width"], self.effect_data["height"]
-            n = max(1, sheet.get_width() // w)
-            self._effect_frames = [sheet.subsurface((i * w, 0, w, h)) for i in range(n)]
+            ew, eh = self.effect_data["width"], self.effect_data["height"]
+            n = max(1, sheet.get_width() // ew)
+            eff_frames = [sheet.subsurface((i * ew, 0, ew, eh)) for i in range(n)]
+            if CHARACTER_SCALE != 1.0:
+                sew, seh = int(ew * CHARACTER_SCALE), int(eh * CHARACTER_SCALE)
+                eff_frames = [pyg.transform.scale(f, (sew, seh)) for f in eff_frames]
+            self._effect_frames = eff_frames
         else:
             self._effect_frames = []
 
@@ -1350,7 +1373,7 @@ class Projectile:
                 ):
                     t = sub.release_target
                     t.is_hidden = False
-                    offset = 40 if self.direction == "right" else -40
+                    offset = SCALED_FRAME_SIZE if self.direction == "right" else -SCALED_FRAME_SIZE
                     x, y = (
                         self.position if hasattr(self, "position") else (sub.x, sub.y)
                     )
@@ -1459,17 +1482,21 @@ class SubProjectile:
         self.x = x
         self.y = y
         self.direction = direction
-        self.width = data["width"]
-        self.height = data["height"]
+        raw_w = data["width"]
+        raw_h = data["height"]
+        self.width = int(raw_w * CHARACTER_SCALE)
+        self.height = int(raw_h * CHARACTER_SCALE)
         self.frame_duration = data["frame_duration"]
         self.loop = data.get("loop", False)
 
         sheet = pyg.image.load(_resolve_path(data["path"])).convert_alpha()
-        n = max(1, sheet.get_width() // self.width)
+        n = max(1, sheet.get_width() // raw_w)
         raw_frames = [
-            sheet.subsurface((i * self.width, 0, self.width, self.height))
+            sheet.subsurface((i * raw_w, 0, raw_w, raw_h))
             for i in range(n)
         ]
+        if CHARACTER_SCALE != 1.0:
+            raw_frames = [pyg.transform.scale(f, (self.width, self.height)) for f in raw_frames]
         self.frames_right = raw_frames
         self.frames_left  = [pyg.transform.flip(f, True, False) for f in raw_frames]
         # backward-compat alias
@@ -1913,9 +1940,13 @@ class Character5(Character):
             data = HITBOX_DATA[5][2]
             px, py = data["offset"]
             sw, sh = data["size"]
+            px = int(px * CHARACTER_SCALE)
+            py = int(py * CHARACTER_SCALE)
+            sw = int(sw * CHARACTER_SCALE)
+            sh = int(sh * CHARACTER_SCALE)
             x, y = self.position
             if self.direction == "left":
-                px = FRAME_SIZE - px - sw
+                px = SCALED_FRAME_SIZE - px - sw
             hbx = pyg.Rect(x + px, y + py, sw, sh)
             dmg = data["damage"]
             dmg_hited = False
