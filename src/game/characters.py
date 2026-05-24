@@ -9,7 +9,7 @@ from utils.paths import get_asset_path
 from utils.status import StatusManager
 
 FRAME_SIZE = 40
-CHARACTER_SCALE = 2.0  # increase to enlarge all character sprites uniformly (hitboxes stay at FRAME_SIZE)
+CHARACTER_SCALE = 1.5  # increase to enlarge all character sprites uniformly (hitboxes stay at FRAME_SIZE)
 IDLE_SPEED = 100
 MOVE_SPEED = 150
 HURT_SPEED = 180
@@ -582,7 +582,7 @@ class Character:
             if wet:
                 wet.set_drift(nx, ny, self.speed)
 
-    def take_damage(self, amount):
+    def take_damage(self, amount, trigger_hurt=True):
         if self.status.is_disabled:
             return
 
@@ -590,7 +590,7 @@ class Character:
         if self.health == 0:
             self.is_dead = True
             self.status.apply_disabled("right")
-        else:
+        elif trigger_hurt:
             self.is_hurt = True
             self.frame_HURT = 0
             self.timer_HURT = 0
@@ -676,7 +676,7 @@ class Character:
         if burn_dmg > 0:
             if self.status.is_oiled:
                 burn_dmg = int(burn_dmg * 2.0)
-            self.take_damage(burn_dmg)
+            self.take_damage(burn_dmg, trigger_hurt=False)
 
         if hasattr(self, "bubble_effect") and self.bubble_effect:
             self.bubble_effect.update(dt)
@@ -1138,11 +1138,11 @@ class Character3(Character):
             return True
         return super().use_skill(skill_num)
 
-    def take_damage(self, amount):
+    def take_damage(self, amount, trigger_hurt=True):
         if self.is_attacking_s1 and self.s1_phase == 1:
             self.s1_parried = True
             return
-        super().take_damage(amount)
+        super().take_damage(amount, trigger_hurt=trigger_hurt)
 
     def _handle_s1_update(self, dt):
         if self.s1_phase == 1:

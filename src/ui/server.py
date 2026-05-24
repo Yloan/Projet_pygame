@@ -69,14 +69,44 @@ class Serveur:
             # self.start_game()
 
     def _send(self, client_socket, message):
-        client_socket.send((message + DELIMITEURMESSAGE).encode("utf-8"))
-        print_debug(message + DELIMITEURMESSAGE)
+        try:
+            client_socket.send((message + DELIMITEURMESSAGE).encode("utf-8"))
+            print_debug(message + DELIMITEURMESSAGE)
+        except (BrokenPipeError, OSError):
+            self._remove_dead_client(client_socket)
+            raise
+
+    def _remove_dead_client(self, client_socket):
+        if client_socket in self.clients:
+            self.clients.remove(client_socket)
+        self.recv_buffers.pop(client_socket, None)
+        if client_socket in self.socket_player_ids:
+            left_session, left_pid = self.socket_player_ids.pop(client_socket)
+            with self.sessions_lock:
+                if left_session in self.sessions_clients_joined:
+                    if client_socket in self.sessions_clients_joined[left_session]:
+                        self.sessions_clients_joined[left_session].remove(client_socket)
+                for s in self.sessions:
+                    if s["titre"] == left_session:
+                        s["nb_players"] = max(0, s.get("nb_players", 1) - 1)
+                        break
+                if left_session in self.sessions_characters:
+                    self.sessions_characters[left_session].pop(left_pid, None)
+            self.broadcast_except(f"[PlayerLeft]:{left_pid}", exclude_socket=client_socket)
+            self.broadcast_sessions()
+        try:
+            client_socket.close()
+        except Exception:
+            pass
 
     def broadcast_except(self, message, exclude_socket=None):
         # Diffuse un message brut à tous les autres clients que le excluded
-        for client in self.clients:
+        for client in list(self.clients):
             if client != exclude_socket:
-                self._send(client, message)
+                try:
+                    self._send(client, message)
+                except (BrokenPipeError, OSError):
+                    pass
 
     def handle_client(self, client_socket):
         while 1:
@@ -360,10 +390,8 @@ class Serveur:
             for client in list(self.clients):
                 try:
                     self._send(client, message)
-                except Exception as e:
-                    print_error(f"Erreur envoie sessions: {e}")
-                    client.close()
-                    self.clients.remove(client)
+                except (BrokenPipeError, OSError):
+                    pass  # _send already called _remove_dead_client
 
         except Exception as e:
             print_error(f"Erreur broadcast sessions: {e}")
