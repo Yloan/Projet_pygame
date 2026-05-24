@@ -283,17 +283,19 @@ class Menu:
             self.center_x(character_choosen_img, -11), 100, character_choosen_img, 10
         )
 
-        # start button
-        # start_img = pyg.image.load("assets/buttons/start_button.png").convert_alpha()
-        self.start_button = animated_button.AnimatedButton(
-            self.center_x(self.play_button_frames[0], 1.3),
-            600,
-            frames_idle      = self.play_button_frames,
-            frames_pressed   = self.play_button_frames_pressed,
-            frames_unpressed = self.play_button_frames_unpressed,
-            scale            = BUTTON_SCALE,
-            animation_speed  = 8,
+        # start button — pixel-art Play button (scaled ×5 for crisp rendering)
+        _play_raw = pyg.image.load(
+            get_asset_path("characters_selection", "Button_Play.png")
+        ).convert_alpha()
+        _play_scale = 4
+        _play_img = pyg.transform.scale(
+            _play_raw,
+            (_play_raw.get_width() * _play_scale, _play_raw.get_height() * _play_scale),
         )
+        # Centred in the bottom-centre square, lowered to sit inside it properly.
+        _play_x = (self.width - _play_img.get_width()) // 2
+        _play_y = 596
+        self.start_button = button.Button(_play_x, _play_y, _play_img, scale=1)
         # VARIABLES SESSIONS
         self.sessions = []
         self.scroll_y = 0
