@@ -168,17 +168,17 @@ class HUD:
         self.all_picture = {
             "HUD-PLAYER-INTERFACE-Sheet": pyg.image.load(
                 "assets/HUD/HUD-PLAYER-INTERFACE-Sheet.png"
-            ).convert_alpha(),
-            "HUD-ASS-OK-Sheet": pyg.image.load("assets/HUD/HUD-ASS-OK-Sheet.png").convert_alpha(),
-            "HUD-ASS-WAIT-Sheet": pyg.image.load("assets/HUD/HUD-ASS-WAIT-Sheet.png").convert_alpha(),
-            "HUD-HP-CORE-Sheet": pyg.image.load("assets/HUD/HUD-HP-CORE-Sheet.png").convert_alpha(),
-            "HUD-RESIST-Sheet": pyg.image.load("assets/HUD/HUD-RESIST-Sheet.png").convert_alpha(),
-            "HUD-S1-OK-Sheet": pyg.image.load("assets/HUD/HUD-S1-OK-Sheet.png").convert_alpha(),
-            "HUD-S1-WAIT-Sheet": pyg.image.load("assets/HUD/HUD-S1-WAIT-Sheet.png").convert_alpha(),
-            "HUD-S2-OK-Sheet": pyg.image.load("assets/HUD/HUD-S2-OK-Sheet.png").convert_alpha(),
-            "HUD-S2-WAIT-Sheet": pyg.image.load("assets/HUD/HUD-S2-WAIT-Sheet.png").convert_alpha(),
-            "HUD-S3-OK-Sheet": pyg.image.load("assets/HUD/HUD-S3-OK-Sheet.png").convert_alpha(),
-            "HUD-S3-WAIT-Sheet": pyg.image.load("assets/HUD/HUD-S3-WAIT-Sheet.png").convert_alpha(),
+            ),
+            "HUD-ASS-OK-Sheet": pyg.image.load("assets/HUD/HUD-ASS-OK-Sheet.png"),
+            "HUD-ASS-WAIT-Sheet": pyg.image.load("assets/HUD/HUD-ASS-WAIT-Sheet.png"),
+            "HUD-HP-CORE-Sheet": pyg.image.load("assets/HUD/HUD-HP-CORE-Sheet.png"),
+            "HUD-RESIST-Sheet": pyg.image.load("assets/HUD/HUD-RESIST-Sheet.png"),
+            "HUD-S1-OK-Sheet": pyg.image.load("assets/HUD/HUD-S1-OK-Sheet.png"),
+            "HUD-S1-WAIT-Sheet": pyg.image.load("assets/HUD/HUD-S1-WAIT-Sheet.png"),
+            "HUD-S2-OK-Sheet": pyg.image.load("assets/HUD/HUD-S2-OK-Sheet.png"),
+            "HUD-S2-WAIT-Sheet": pyg.image.load("assets/HUD/HUD-S2-WAIT-Sheet.png"),
+            "HUD-S3-OK-Sheet": pyg.image.load("assets/HUD/HUD-S3-OK-Sheet.png"),
+            "HUD-S3-WAIT-Sheet": pyg.image.load("assets/HUD/HUD-S3-WAIT-Sheet.png"),
         }
 
         self.interface = _subFunctionREALLYusefull(
@@ -234,13 +234,6 @@ class HUD:
         self.id_player = id_player
         self.scaled_w = int(144 * SCALE)
         self.scaled_h = int(96 * SCALE)
-
-        # Pre-compose the interface with a dark fill so that the transparent
-        # areas in the PNG (around cooldown/assist slots) show a consistent
-        # dark background instead of whatever map colour is behind the HUD.
-        self._filled_interface = pyg.Surface((self.scaled_w, self.scaled_h))
-        self._filled_interface.fill((20, 12, 38))
-        self._filled_interface.blit(self.interface, (0, 0))
 
         for k in [6, 3, 0]:
             for j in range(6):
@@ -392,7 +385,8 @@ class HUD:
         return None
 
     def draw(self, surface, x, y):
-        surface.blit(self._filled_interface, (x, y))
+        # Dreaw the hud with all teh subfunctions made for it
+        surface.blit(self.interface, (x, y))
         self._drawHealth(surface, x, y)
         self._drawCooldowns(surface, x, y)
         self._drawAss(surface, x, y)
