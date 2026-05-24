@@ -19,7 +19,9 @@ from game.characters import (
     Projectile,
     make_character,
 )
-from game.map_laoder import MAP1_COLLISIONS, MapLoader
+import game.map_laoder as _map_mod
+from game.map_laoder import MapLoader
+from ui.menu_in_game import InGameMenu
 from ui.console import (
     print_debug,
     print_error,
@@ -56,6 +58,39 @@ SKILL_COOLDOWNS = {
 RETREAT_COOLDOWN_DURATION = 4  # secs aussi
 
 BOTS_ENABLED: bool = True
+
+
+class CameraShake:
+    """Applies a decaying random offset to the game surface on skill use."""
+
+    def __init__(self):
+        self._intensity = 0.0
+        self._duration  = 0
+        self._elapsed   = 0
+
+    def trigger(self, intensity: float = 5.0, duration: int = 180):
+        """Start (or restart) a shake.  intensity = max pixel offset."""
+        self._intensity = intensity
+        self._duration  = duration
+        self._elapsed   = 0
+
+    def update(self, dt: int):
+        if self._elapsed < self._duration:
+            self._elapsed = min(self._elapsed + dt, self._duration)
+
+    def get_offset(self):
+        if self._elapsed >= self._duration:
+            return 0, 0
+        progress = self._elapsed / self._duration          # 0 → 1
+        amp = self._intensity * (1.0 - progress)           # decays to 0
+        import random
+        ox = int(random.uniform(-amp, amp))
+        oy = int(random.uniform(-amp, amp))
+        return ox, oy
+
+    @property
+    def active(self):
+        return self._elapsed < self._duration
 
 
 class Game:
@@ -106,6 +141,17 @@ class Game:
         self._game_initialized = False
         self._retreat_cooldown = 0
         self.running = False
+
+        # Camera shake
+        self._shake = CameraShake()
+        self._game_surf = pyg.Surface((self.width, self.height))
+        self._prev_s1 = False
+        self._prev_s2 = False
+        self._prev_s3 = False
+
+        # In-game pause menu
+        self._paused = False
+        self._in_game_menu = InGameMenu(self.width, self.height)
 
         # NETWORK CONFIGURATION
         # self.host = "127.0.0.1"
@@ -590,7 +636,7 @@ class Game:
         self.draw_text_center(
             f"pos mouse --> X: {x}, Y: {y}", self.font, self.TEXT_COL2, 10
         )
-        for wall in MAP1_COLLISIONS:
+        for wall in _map_mod.ACTIVE_COLLISIONS:
             pyg.draw.rect(self.screen, (255, 0, 255), wall, 2)
 
     def _broadcast_hud_state(self):
@@ -703,6 +749,9 @@ class Game:
         self.remote_players = {}
         self.choose_map = False
         self.map_choosen = None
+
+        # Reset pause state
+        self._paused = False
 
         # Reset menu state
         self.etat = "menu"
@@ -948,8 +997,7 @@ class Game:
                         self.running = False
                     elif event.type == pyg.KEYDOWN:
                         if event.key == pyg.K_ESCAPE:
-                            self.running = False
-                            self.send_to_server(message="ESC appuyé")
+                            self._paused = not self._paused
                         if event.key == pyg.K_F2:
                             self.dev_display_ = not self.dev_display_
                             Character.switch_TMP__GET_SURFACE_HITBOX_ATTACKS_()
@@ -1036,8 +1084,32 @@ class Game:
                 if self._retreat_cooldown > 0:
                     self._retreat_cooldown -= 1
 
-                # draw background
-                self.screen.blit(self.map_back, (0, 0))
+                # ── In-game pause menu ────────────────────────────────────
+                if self._paused:
+                    # Blit the last-rendered game frame (frozen) then overlay
+                    shake_ox, shake_oy = self._shake.get_offset()
+                    self.screen.blit(self._game_surf, (shake_ox, shake_oy))
+                    # Redraw HUDs on top of the frozen frame
+                    if self.hud:
+                        hx, hy = HUD_POSITIONS.get(self.Menu.CurrentPlayer_id, (10, 10))
+                        self.hud.draw(self.screen, hx, hy)
+                    for pid, other_hud in self.other_huds.items():
+                        ox, oy = HUD_POSITIONS.get(pid, (10, 10))
+                        other_hud.draw(self.screen, ox, oy)
+                    pause_action = self._in_game_menu.draw(self.screen)
+                    if pause_action == "resume":
+                        self._paused = False
+                    elif pause_action == "quit":
+                        self._paused = False
+                        self._reset_to_menu()
+                    pyg.display.flip()
+                    continue
+
+                # ── Camera shake update ───────────────────────────────────
+                self._shake.update(delta_time)
+
+                # draw background (onto intermediate surface for shake)
+                self._game_surf.blit(self.map_back, (0, 0))
 
                 keys_pressed = pyg.key.get_pressed()
                 is_moving = False
@@ -1060,6 +1132,18 @@ class Game:
 
                 self.active_char.update_animation(delta_time, is_moving)
 
+                # ── Trigger camera shake on skill start ───────────────────
+                s1 = self.active_char.is_attacking_s1
+                s2 = self.active_char.is_attacking_s2
+                s3 = self.active_char.is_attacking_s3
+                if s1 and not self._prev_s1:
+                    self._shake.trigger(intensity=4, duration=150)
+                elif s2 and not self._prev_s2:
+                    self._shake.trigger(intensity=6, duration=200)
+                elif s3 and not self._prev_s3:
+                    self._shake.trigger(intensity=9, duration=280)
+                self._prev_s1, self._prev_s2, self._prev_s3 = s1, s2, s3
+
                 for skill_num, proj in self.active_char._just_spawned_projectiles:
                     base = {
                         "player_id": self.Menu.CurrentPlayer_id,
@@ -1078,7 +1162,7 @@ class Game:
                 player_pos = self.active_char.position
                 if current_sprite is not None:
                     dx, dy = self.active_char.get_blit_offset(current_sprite)
-                    self.screen.blit(
+                    self._game_surf.blit(
                         current_sprite, (player_pos[0] + dx, player_pos[1] + dy)
                     )
 
@@ -1086,7 +1170,7 @@ class Game:
                 if hasattr(char, "bubble_effect") and char.bubble_effect:
                     char.bubble_effect.x = char.position[0]
                     char.bubble_effect.y = char.position[1]
-                    char.bubble_effect.draw(self.screen)
+                    char.bubble_effect.draw(self._game_surf)
 
                 if not BOTS_ENABLED:
                     targets = [
@@ -1094,7 +1178,7 @@ class Game:
                     ]
                     self.active_char.update_projectiles(delta_time, targets)
                     self.active_char.check_hits(targets)
-                    self.active_char.draw_projectiles(self.screen)
+                    self.active_char.draw_projectiles(self._game_surf)
 
                 if BOTS_ENABLED:
                     bot_chars = [bot.char for bot in self.bots]
@@ -1104,7 +1188,7 @@ class Game:
                             if sprite:
                                 dx, dy = bot.char.get_blit_offset(sprite)
                                 pos = bot.current_position
-                                self.screen.blit(sprite, (pos[0] + dx, pos[1] + dy))
+                                self._game_surf.blit(sprite, (pos[0] + dx, pos[1] + dy))
                             continue
 
                         bot.update_player_position(
@@ -1141,13 +1225,13 @@ class Game:
                             rc for rc in self.remote_players.values() if not rc.is_dead
                         ]
                         bot.char.update_projectiles(delta_time, live_targets)
-                        bot.char.draw_projectiles(self.screen)
+                        bot.char.draw_projectiles(self._game_surf)
 
                         sprite = bot.char.get_current_sprite()
                         if sprite:
                             dx, dy = bot.char.get_blit_offset(sprite)
                             pos = bot.current_position
-                            self.screen.blit(sprite, (pos[0] + dx, pos[1] + dy))
+                            self._game_surf.blit(sprite, (pos[0] + dx, pos[1] + dy))
 
                         if (
                             hasattr(bot.char, "bubble_effect")
@@ -1155,14 +1239,14 @@ class Game:
                         ):
                             bot.char.bubble_effect.x = bot.current_position[0]
                             bot.char.bubble_effect.y = bot.current_position[1]
-                            bot.char.bubble_effect.draw(self.screen)
+                            bot.char.bubble_effect.draw(self._game_surf)
 
                     live_targets = list(self.remote_players.values()) + [
                         b.char for b in self.bots if not b.char.is_dead
                     ]
                     self.active_char.update_projectiles(delta_time, live_targets)
                     self.active_char.check_hits(live_targets)
-                    self.active_char.draw_projectiles(self.screen)
+                    self.active_char.draw_projectiles(self._game_surf)
 
                 if self.active_char.is_dead:
                     if not self.support_1.is_dead:
@@ -1233,13 +1317,13 @@ class Game:
                         [self.active_char]
                     )  # Probablement un bug reste a voir apres
                     remote_char.update_projectiles(delta_time, [self.active_char])
-                    remote_char.draw_projectiles(self.screen)
+                    remote_char.draw_projectiles(self._game_surf)
 
                     remote_sprite = remote_char.get_current_sprite()
                     if remote_sprite:
                         dx, dy = remote_char.get_blit_offset(remote_sprite)
                         rpos = remote_char.position
-                        self.screen.blit(remote_sprite, (rpos[0] + dx, rpos[1] + dy))
+                        self._game_surf.blit(remote_sprite, (rpos[0] + dx, rpos[1] + dy))
 
                     if (
                         hasattr(remote_char, "bubble_effect")
@@ -1248,7 +1332,7 @@ class Game:
                         remote_char.bubble_effect.x = remote_char.position[0]
                         remote_char.bubble_effect.y = remote_char.position[1]
                         remote_char.bubble_effect.update(delta_time)
-                        remote_char.bubble_effect.draw(self.screen)
+                        remote_char.bubble_effect.draw(self._game_surf)
                         if not remote_char.status.is_disabled:
                             remote_char.bubble_effect = None
                             remote_char.is_hidden = False
@@ -1261,10 +1345,14 @@ class Game:
                             ex += FRAME_SIZE
                         else:
                             ex -= FRAME_SIZE
-                        self.screen.blit(effect_sprite, (ex, ey))
+                        self._game_surf.blit(effect_sprite, (ex, ey))
 
                 # Foreground
-                self.screen.blit(self.map_front, (0, 0))
+                self._game_surf.blit(self.map_front, (0, 0))
+
+                # ── Apply camera shake and blit game surface to screen ────
+                shake_ox, shake_oy = self._shake.get_offset()
+                self.screen.blit(self._game_surf, (shake_ox, shake_oy))
 
                 # Broadcast HUD
                 self._broadcast_hud_state()

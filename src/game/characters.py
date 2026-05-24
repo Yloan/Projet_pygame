@@ -1,6 +1,6 @@
 import pygame as pyg
 
-from game.map_laoder import MAP1_COLLISIONS
+import game.map_laoder as _map_mod  # use _map_mod.ACTIVE_COLLISIONS for per-map collisions
 from ui.console import (
     print_debug,
     print_warning,
@@ -561,7 +561,7 @@ class Character:
             return
 
         player_rect = pyg.Rect(int(new_pos[0]), int(new_pos[1]), FRAME_SIZE, FRAME_SIZE)
-        if any(player_rect.colliderect(wall) for wall in MAP1_COLLISIONS):
+        if any(player_rect.colliderect(wall) for wall in _map_mod.ACTIVE_COLLISIONS):
             return
 
         self.position = new_pos
