@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import sys
 from email import message
@@ -325,12 +326,23 @@ class Menu:
 
         self.__mouse_prev = False
 
-        # Arrow animation state (per-player)
-        self._arrow_pos = {}     # {player_id: float} — current arrow centre X
+        # Arrow / cursor animation state (per-player)
+        # cursor slot: 'main' | 'support1' | 'support2'
+        self._arrow_cursor = {1: 'main', 2: 'main', 3: 'main', 4: 'main'}
+        self._arrow_pos = {}     # {player_id: float} — current arrow centre X (lerped)
         self._arrow_target = {}  # {player_id: float} — target arrow centre X
         self._arrow_bob = 0.0    # global bouncing time (seconds)
         # Clickable rects of idle animations displayed in each slot (refreshed each frame)
         self._idle_click_rects = {}  # {player_id: [(char_num, Rect), ...]}
+
+        # Selection cursor image
+        try:
+            _csr_raw = pyg.image.load(
+                get_asset_path("Menus_assets", "SELECT-CURSOR.png")
+            ).convert_alpha()
+            self._select_cursor_img = pyg.transform.scale(_csr_raw, (44, 34))
+        except Exception:
+            self._select_cursor_img = None
 
         _base = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
         self.slot_maps_selection = {
@@ -621,90 +633,113 @@ class Menu:
             self.screen.blit(prev_img, (self.center_x(prev_img, x_offset), 345))
 
     # ── Slot character display ───────────────────────────────────────────────
-    # Each entry = list of (dx, dy, size_px) — index 0=oldest/smallest/back,
-    # last index = newest/largest/front (the "active" character).
-    # All chars are shown as animated idle sprites, stacked from back to front.
-    _CHAR_SLOT_LAYOUT = [
-        # 1 char selected
-        [(10, 0, 195)],
-        # 2 chars selected
-        [(0, 32, 92), (52, 0, 168)],
-        # 3 chars selected
-        [(0, 42, 62), (30, 22, 96), (62, 0, 150)],
-    ]
+    # Fixed role positions within a slot: (dx from slot_x, size_px, dy from slot_y)
+    # Visual layout:  [SUPPORT1 left]  [MAIN centre]  [SUPPORT2 right]
+    #   char_1 = main      → centre, largest
+    #   char_2 = support 1 → left,   smaller
+    #   char_3 = support 2 → right,  smaller
+    # Layout: support1 starts before slot_x (negative dx), group shifted left.
+    #   support=72px  gap=5px  main=130px
+    #   support1 dx = -40
+    #   main     dx = -40+72+5 = 37
+    #   support2 dx = 37+130+5 = 172
+    #   dy: supports are vertically centred on the main (not bottom-aligned with it)
+    #       main centre  = 72 + 65 = 137
+    #       support dy   = 137 - 36 = 101   (both supports identical → always aligned)
+    _SLOT_ROLE_LAYOUT = {
+        #             dx    size   dy
+        'support1': (-40,   72,  101),   # left,   small, centred on main
+        'main':     ( 37,  130,   72),   # centre, large
+        'support2': (172,   72,  101),   # right,  small, centred on main
+    }
 
     def _draw_slot_preview(self, pos_x, pos_y, char_1, char_2, char_3, player_id=None):
-        """Draw one player slot as a stack of animated idle sprites.
+        """Draw one player slot with fixed role positions.
 
-        Returns a list of (char_num, Rect) for each visible character so that
-        callers can do click-to-deselect hit-testing.
-        The oldest/smallest character is drawn first (background), the newest/
-        largest is drawn last (foreground = active).
-        Also updates the smooth arrow target position for *player_id*.
+        char_1 (main) → centre large; char_2 (support1) → left small;
+        char_3 (support2) → right small.
+        Returns [(char_num, Rect), ...] for click hit-testing.
         """
-        chars = [c for c in (char_1, char_2, char_3) if c]
-        if not chars:
-            return []
-
-        count = len(chars)
-        layout = self._CHAR_SLOT_LAYOUT[count - 1]
-
+        rl = self._SLOT_ROLE_LAYOUT
+        # Draw order: support1 & support2 first, then main on top
+        draw_pairs = [
+            (char_2, 'support1'),
+            (char_3, 'support2'),
+            (char_1, 'main'),
+        ]
         click_rects = []
-        for char, (dx, dy, size) in zip(chars, layout):
+        for char, role in draw_pairs:
+            if not char:
+                continue
+            dx, size, dy = rl[role]
             frame = self._get_IDLe_p__frame(char, size)
             bx, by = pos_x + dx, pos_y + dy
             if frame:
                 self.screen.blit(frame, (bx, by))
             click_rects.append((char, pyg.Rect(bx, by, size, size)))
-
-        # Keep arrow target locked onto the active (front/large) character
-        if player_id is not None:
-            last_dx, _last_dy, last_size = layout[-1]
-            target_x = float(pos_x + last_dx + last_size // 2)
-            self._arrow_target[player_id] = target_x
-            if player_id not in self._arrow_pos:
-                self._arrow_pos[player_id] = target_x  # snap on first appearance
-
         return click_rects
 
     def _draw_arrow_indicator(self, player_id, slot_top_y):
-        """Draw a bouncing downward-pointing arrow above the active character."""
-        import math
-        ax = self._arrow_pos.get(player_id)
-        if ax is None:
-            return
-        ax = int(ax)
-        bob = int(7 * math.sin(self._arrow_bob * 4.5))
-        ay = slot_top_y - 22 + bob  # float above the slot
+        """Draw the selection cursor arrow above the current cursor slot.
 
-        gold   = (255, 210, 30)
-        shadow = (110, 70,   0)
-        # Downward-pointing triangle
-        tip   = (ax,      ay + 16)
-        left  = (ax - 13, ay)
-        right = (ax + 13, ay)
-        pyg.draw.polygon(self.screen, shadow, [tip, left, right], 3)
-        pyg.draw.polygon(self.screen, gold,   [tip, left, right])
-        # Small stem above the triangle
-        pyg.draw.rect(self.screen, gold,   pyg.Rect(ax - 4, ay - 8, 8, 10))
-        pyg.draw.rect(self.screen, shadow, pyg.Rect(ax - 4, ay - 8, 8, 10), 2)
+        The arrow always points to the NEXT slot to fill:
+          - 'main'     → centre  (choosing main)
+          - 'support1' → left    (choosing support 1)
+          - 'support2' → right   (choosing support 2)
+        """
+        cursor = self._arrow_cursor.get(player_id, 'main')
+        pos_x, _ = self.slot_positions.get(player_id, (64, 125))
+        dx, size, dy = self._SLOT_ROLE_LAYOUT[cursor]
+        target_x = float(pos_x + dx + size // 2)
+
+        # Update smooth lerp target and snap on first appearance
+        self._arrow_target[player_id] = target_x
+        if player_id not in self._arrow_pos:
+            self._arrow_pos[player_id] = target_x
+
+        ax  = int(self._arrow_pos[player_id])
+        bob = int(5 * math.sin(self._arrow_bob * 4.5))  # ±5 px vertical bounce
+        # Arrow always sits at the TOP of the slot (y fixed, only x varies)
+        img_top_y = slot_top_y + 6 + bob   # 6 px below slot top → always inside
+
+        if self._select_cursor_img:
+            img = self._select_cursor_img
+            self.screen.blit(img, (ax - img.get_width() // 2, img_top_y))
+        else:
+            # Fallback: simple gold triangle (tip at bottom of arrow area)
+            tip_y = img_top_y + 30
+            tip   = (ax,      tip_y)
+            left  = (ax - 13, tip_y - 18)
+            right = (ax + 13, tip_y - 18)
+            pyg.draw.polygon(self.screen, (110, 70, 0),   [tip, left, right], 3)
+            pyg.draw.polygon(self.screen, (255, 210, 30),  [tip, left, right])
 
     def _deselect_char(self, char_num):
-        """Remove *char_num* from the current player's selection and shift the rest."""
+        """Remove *char_num* from the current player's selection.
+
+        Each role slot is independent — no shifting.
+        After removal the cursor always jumps to the EARLIEST empty slot
+        (main → support1 → support2) to prevent ever getting stuck when
+        multiple characters are deselected in sequence.
+        """
+        pid = self.CurrentPlayer_id
         if char_num == self.character_1:
-            self.character_1 = self.character_2
-            self.character_2 = self.character_3
-            self.character_3 = 0
+            self.character_1 = 0
         elif char_num == self.character_2:
-            self.character_2 = self.character_3
-            self.character_3 = 0
+            self.character_2 = 0
         elif char_num == self.character_3:
             self.character_3 = 0
         else:
             return  # char not in selection — nothing to do
         self.p_character_update = True
-        # Reset arrow so it snaps / re-lerps from the new active char's position
-        self._arrow_pos.pop(self.CurrentPlayer_id, None)
+        # Always point to the first empty slot so the player is never stuck
+        if not self.character_1:
+            self._arrow_cursor[pid] = 'main'
+        elif not self.character_2:
+            self._arrow_cursor[pid] = 'support1'
+        else:
+            self._arrow_cursor[pid] = 'support2'
+        self._arrow_pos.pop(pid, None)
 
     def handle_character_selection(self, character_var, next_state, title):
         # Handle the character selection
@@ -848,6 +883,9 @@ class Menu:
             self.character_1 = 0
             self.character_2 = 0
             self.character_3 = 0
+            # Reset arrow cursor to initial state
+            self._arrow_cursor[self.CurrentPlayer_id] = 'main'
+            self._arrow_pos.pop(self.CurrentPlayer_id, None)
             # Signal for the [LeaveSession] message to the serveur
             if self.current_session_name:
                 self.p_leave_session = self.current_session_name
@@ -861,15 +899,30 @@ class Menu:
                 if char_num in (self.character_1, self.character_2, self.character_3):
                     # Re-clicking an already-selected char → deselect it
                     self._deselect_char(char_num)
-                elif not self.character_1:
-                    self.character_1 = char_num
-                    self.p_character_update = True
-                elif not self.character_2:
-                    self.character_2 = char_num
-                    self.p_character_update = True
-                elif not self.character_3:
-                    self.character_3 = char_num
-                    self.p_character_update = True
+                else:
+                    # Place char in the cursor's slot, then advance unless all 3 are filled
+                    pid = self.CurrentPlayer_id
+                    cursor = self._arrow_cursor.get(pid, 'main')
+                    filled = False
+                    if cursor == 'main' and not self.character_1:
+                        self.character_1 = char_num
+                        filled = True
+                    elif cursor == 'support1' and not self.character_2:
+                        self.character_2 = char_num
+                        filled = True
+                    elif cursor == 'support2' and not self.character_3:
+                        self.character_3 = char_num
+                        filled = True
+                    if filled:
+                        self.p_character_update = True
+                        # Advance to first empty slot; if all filled keep current position
+                        if not self.character_1:
+                            self._arrow_cursor[pid] = 'main'
+                        elif not self.character_2:
+                            self._arrow_cursor[pid] = 'support1'
+                        elif not self.character_3:
+                            self._arrow_cursor[pid] = 'support2'
+                        # else all 3 filled → cursor stays wherever it is
 
         self.players_characters[self.CurrentPlayer_id] = [
             self.character_1 or None,
@@ -909,7 +962,8 @@ class Menu:
                 pos_x, pos_y, char_1, char_2, char_3, player_id=player_id
             )
             self._idle_click_rects[player_id] = rects
-            if any(c for c in (char_1, char_2, char_3) if c):
+            # Arrow only shown for the local player (other players have no cursor)
+            if player_id == self.CurrentPlayer_id and not self.players_ready[player_id]:
                 self._draw_arrow_indicator(player_id, pos_y)
 
             if (
