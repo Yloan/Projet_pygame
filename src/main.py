@@ -310,7 +310,8 @@ class Game:
             elif message.startswith("[HUDUpdate]:"):
                 data = json.loads(message.split(":", 1)[1])
                 pid = data["player_id"]
-                if pid != self.Menu.CurrentPlayer_id:
+                my_id = self.Menu.CurrentPlayer_id
+                if my_id is not None and pid != my_id:
                     if pid not in self.other_huds:
                         self.other_huds[pid] = HUD(pid)
                     self.other_huds[pid].updateFromServer(data["hud"])

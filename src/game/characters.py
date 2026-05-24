@@ -9,6 +9,7 @@ from utils.paths import get_asset_path
 from utils.status import StatusManager
 
 FRAME_SIZE = 40
+CHARACTER_SCALE = 1.0  # increase to enlarge all character sprites uniformly (hitboxes stay at FRAME_SIZE)
 IDLE_SPEED = 100
 MOVE_SPEED = 150
 HURT_SPEED = 180
@@ -459,7 +460,12 @@ class Character:
             frames = []
             for i in range(n):
                 if (i + 1) * w <= sheet.get_width() and h <= sheet.get_height():
-                    frames.append(sheet.subsurface((i * w, 0, w, h)))
+                    frame = sheet.subsurface((i * w, 0, w, h))
+                    if CHARACTER_SCALE != 1.0:
+                        sw = int(w * CHARACTER_SCALE)
+                        sh = int(h * CHARACTER_SCALE)
+                        frame = pyg.transform.scale(frame, (sw, sh))
+                    frames.append(frame)
             if not frames:
                 print_warning(
                     f"[LOAD] {filename} trouvé mais 0 frames extraites (sheet={sheet.get_size()}, w={w}, h={h})"
