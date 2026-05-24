@@ -9,7 +9,7 @@ from utils.paths import get_asset_path
 from utils.status import StatusManager
 
 FRAME_SIZE = 40
-CHARACTER_SCALE = 1.0  # increase to enlarge all character sprites uniformly (hitboxes stay at FRAME_SIZE)
+CHARACTER_SCALE = 2.0  # increase to enlarge all character sprites uniformly (hitboxes stay at FRAME_SIZE)
 IDLE_SPEED = 100
 MOVE_SPEED = 150
 HURT_SPEED = 180
@@ -1629,6 +1629,7 @@ class Character4(Character):
             if self.timr_S1_1 >= SKILL_SPEED:
                 self.timr_S1_1 = 0
                 self.frm_S1_1 += 1
+                self.frame_S1 = self.frm_S1_1  # keep base frame_S1 in sync for hitbox
                 if self.frm_S1_1 >= len(self.frms_S1_1):
                     if self.s1_htd:
                         self.s1_phse = 2
@@ -1717,7 +1718,7 @@ class Character4(Character):
             if hbx is None:
                 return
             dmg = HITBOX_DATA.get(self.char_num, {}).get(3, _DEFAULT_HITBOX)["damage"]
-            stun_dur = self._s3_chrgs_spnt * 2000
+            stun_dur = max(1000, self._s3_chrgs_spnt * 2000)
             for tgt in targets:
                 if tgt is self or tgt.is_dead:
                     continue
@@ -1726,8 +1727,7 @@ class Character4(Character):
                 if hbx.colliderect(tgt.get_body_rect()):
                     tgt.take_damage(_calc_damage(dmg, tgt, 3))
                     tgt.status.apply_burn()
-                    if stun_dur > 0:
-                        tgt.status.apply_stun(stun_dur)
+                    tgt.status.apply_stun(stun_dur)
                     self._hit_this_swing.add(id(tgt))
 
     def get_attack_hitbox(self):

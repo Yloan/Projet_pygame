@@ -303,6 +303,11 @@ class Game:
                     player_id = int(message.split(":", 1)[1])
                     self.Menu.players_characters[player_id] = [None, None, None]
                     self.Menu.players_ready[player_id] = False
+                    if self.game_started and self._game_over_result is None:
+                        self.remote_players.pop(player_id, None)
+                        if len(self.remote_players) == 0:
+                            self._game_over_result = "win"
+                            self._game_over_timer = 0
                 except Exception as e:
                     print_error(f"Erreur PlayerLeft: {e}")
 
@@ -1302,7 +1307,12 @@ class Game:
                         and self.support_1.is_dead
                         and self.support_2.is_dead
                     )
-                    if all_bots_dead:
+                    all_remotes_dead = (
+                        not BOTS_ENABLED
+                        and bool(self.remote_players)
+                        and all(rc.is_dead for rc in self.remote_players.values())
+                    )
+                    if all_bots_dead or all_remotes_dead:
                         self._game_over_result = "win"
                         self._game_over_timer = 0
                     elif all_players_dead:
