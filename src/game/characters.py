@@ -585,7 +585,7 @@ class Character:
 
     def take_damage(self, amount, trigger_hurt=True):
         if self.status.is_disabled:
-            return
+            return False
 
         self.health = max(0, self.health - amount)
         if self.health == 0:
@@ -595,6 +595,7 @@ class Character:
             self.is_hurt = True
             self.frame_HURT = 0
             self.timer_HURT = 0
+        return True
 
     def heal(self, amount):
         self.health = min(self.max_health, self.health + amount)
@@ -886,9 +887,10 @@ class Character:
                         continue
                     if hasattr(target, "notify_incoming_hit"):
                         target.notify_incoming_hit(self.position)
-                    target.take_damage(_calc_damage(dmg, target, skill))
+                    hit = target.take_damage(_calc_damage(dmg, target, skill))
                     self._hit_this_swing.add(id(target))
-                    self._apply_status_on_hit(target, skill)
+                    if hit:
+                        self._apply_status_on_hit(target, skill)
                     if not self.is_remote and getattr(self, '_s3_stops_on_hit', True):
                         self.s3_hit = True
                         self.frame_S3_2 = 0
@@ -902,8 +904,9 @@ class Character:
             if hitbox.colliderect(target.get_body_rect()):
                 if hasattr(target, "notify_incoming_hit"):
                     target.notify_incoming_hit(self.position)
-                target.take_damage(_calc_damage(dmg, target, skill))
-                self._apply_status_on_hit(target, skill)
+                hit = target.take_damage(_calc_damage(dmg, target, skill))
+                if hit:
+                    self._apply_status_on_hit(target, skill)
                 self._hit_this_swing.add(tid)
 
     def draw_hitbox(self, surface):
@@ -1159,8 +1162,8 @@ class Character3(Character):
     def take_damage(self, amount, trigger_hurt=True):
         if self.is_attacking_s1 and self.s1_phase == 1:
             self.s1_parried = True
-            return
-        super().take_damage(amount, trigger_hurt=trigger_hurt)
+            return False
+        return super().take_damage(amount, trigger_hurt=trigger_hurt)
 
     def _handle_s1_update(self, dt):
         if self.s1_phase == 1:

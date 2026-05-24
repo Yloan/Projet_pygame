@@ -1150,19 +1150,21 @@ class Game:
                 self.active_char._just_spawned_projectiles.clear()
 
                 # Draw active character
-                current_sprite = self.active_char.get_current_sprite()
-                player_pos = self.active_char.position
-                if current_sprite is not None:
-                    dx, dy = self.active_char.get_blit_offset(current_sprite)
-                    self.screen.blit(
-                        current_sprite, (player_pos[0] + dx, player_pos[1] + dy)
-                    )
+                if self._game_over_result is None:
+                    current_sprite = self.active_char.get_current_sprite()
+                    player_pos = self.active_char.position
+                    if current_sprite is not None:
+                        dx, dy = self.active_char.get_blit_offset(current_sprite)
+                        self.screen.blit(
+                            current_sprite, (player_pos[0] + dx, player_pos[1] + dy)
+                        )
 
-                char = self.active_char
-                if hasattr(char, "bubble_effect") and char.bubble_effect:
-                    char.bubble_effect.x = char.position[0]
-                    char.bubble_effect.y = char.position[1]
-                    char.bubble_effect.draw(self.screen)
+                if self._game_over_result is None:
+                    char = self.active_char
+                    if hasattr(char, "bubble_effect") and char.bubble_effect:
+                        char.bubble_effect.x = char.position[0]
+                        char.bubble_effect.y = char.position[1]
+                        char.bubble_effect.draw(self.screen)
 
                 if not BOTS_ENABLED:
                     targets = [
@@ -1308,8 +1310,7 @@ class Game:
                         and self.support_2.is_dead
                     )
                     all_remotes_dead = (
-                        not BOTS_ENABLED
-                        and bool(self.remote_players)
+                        bool(self.remote_players)
                         and all(rc.is_dead for rc in self.remote_players.values())
                     )
                     if all_bots_dead or all_remotes_dead:
@@ -1326,40 +1327,41 @@ class Game:
                         continue  # skip the rest of the draw pipeline
 
                 # DRaw remote player
-                for pid, remote_char in self.remote_players.items():
-                    remote_char.check_hits(
-                        [self.active_char]
-                    )  # Probablement un bug reste a voir apres
-                    remote_char.update_projectiles(delta_time, [self.active_char])
-                    remote_char.draw_projectiles(self.screen)
+                if self._game_over_result is None:
+                    for pid, remote_char in self.remote_players.items():
+                        remote_char.check_hits(
+                            [self.active_char]
+                        )  # Probablement un bug reste a voir apres
+                        remote_char.update_projectiles(delta_time, [self.active_char])
+                        remote_char.draw_projectiles(self.screen)
 
-                    remote_sprite = remote_char.get_current_sprite()
-                    if remote_sprite:
-                        dx, dy = remote_char.get_blit_offset(remote_sprite)
-                        rpos = remote_char.position
-                        self.screen.blit(remote_sprite, (rpos[0] + dx, rpos[1] + dy))
+                        remote_sprite = remote_char.get_current_sprite()
+                        if remote_sprite:
+                            dx, dy = remote_char.get_blit_offset(remote_sprite)
+                            rpos = remote_char.position
+                            self.screen.blit(remote_sprite, (rpos[0] + dx, rpos[1] + dy))
 
-                    if (
-                        hasattr(remote_char, "bubble_effect")
-                        and remote_char.bubble_effect
-                    ):
-                        remote_char.bubble_effect.x = remote_char.position[0]
-                        remote_char.bubble_effect.y = remote_char.position[1]
-                        remote_char.bubble_effect.update(delta_time)
-                        remote_char.bubble_effect.draw(self.screen)
-                        if not remote_char.status.is_disabled:
-                            remote_char.bubble_effect = None
-                            remote_char.is_hidden = False
+                        if (
+                            hasattr(remote_char, "bubble_effect")
+                            and remote_char.bubble_effect
+                        ):
+                            remote_char.bubble_effect.x = remote_char.position[0]
+                            remote_char.bubble_effect.y = remote_char.position[1]
+                            remote_char.bubble_effect.update(delta_time)
+                            remote_char.bubble_effect.draw(self.screen)
+                            if not remote_char.status.is_disabled:
+                                remote_char.bubble_effect = None
+                                remote_char.is_hidden = False
 
-                    effect_sprite = remote_char.get_effect_sprite()
-                    if effect_sprite:
-                        ex = remote_char.position[0]
-                        ey = remote_char.position[1]
-                        if remote_char.direction == "right":
-                            ex += FRAME_SIZE
-                        else:
-                            ex -= FRAME_SIZE
-                        self.screen.blit(effect_sprite, (ex, ey))
+                        effect_sprite = remote_char.get_effect_sprite()
+                        if effect_sprite:
+                            ex = remote_char.position[0]
+                            ey = remote_char.position[1]
+                            if remote_char.direction == "right":
+                                ex += FRAME_SIZE
+                            else:
+                                ex -= FRAME_SIZE
+                            self.screen.blit(effect_sprite, (ex, ey))
 
                 # Foreground
                 self.screen.blit(self.map_front, (0, 0))
@@ -1449,6 +1451,11 @@ class Game:
                             self._draw_status_icons(
                                 self.screen, bot.char.status, bx, by, bot.bot_id
                             )
+
+                for pid, rchar in self.remote_players.items():
+                    if hasattr(rchar, "status"):
+                        rx, ry = HUD_POSITIONS.get(pid, (10, 10))
+                        self._draw_status_icons(self.screen, rchar.status, rx, ry, pid)
 
                 if self._game_over_result is not None:
                     self._draw_game_over_overlay(self.screen, self._game_over_result)
