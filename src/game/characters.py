@@ -884,7 +884,7 @@ class Character:
                     target.take_damage(_calc_damage(dmg, target, skill))
                     self._hit_this_swing.add(id(target))
                     self._apply_status_on_hit(target, skill)
-                    if not self.is_remote:
+                    if not self.is_remote and getattr(self, '_s3_stops_on_hit', True):
                         self.s3_hit = True
                         self.frame_S3_2 = 0
                         self.timer_S3_2 = 0
@@ -1012,29 +1012,10 @@ class Character:
 
 
 class Furnace(Character):
+    _s3_stops_on_hit = False  # S3 animation continues even after hitting
+
     def __init__(self):
         super().__init__(1)
-
-    def check_hits(self, targets):
-        skill = self._active_skill()
-        if skill is None:
-            return
-        hitbox = self.get_attack_hitbox()
-        if hitbox is None:
-            return
-        dmg = HITBOX_DATA.get(self.char_num, {}).get(skill, _DEFAULT_HITBOX)["damage"]
-        for target in targets:
-            if target is self or target.is_dead:
-                continue
-            tid = id(target)
-            if tid in self._hit_this_swing:
-                continue
-            if hitbox.colliderect(target.get_body_rect()):
-                if hasattr(target, "notify_incoming_hit"):
-                    target.notify_incoming_hit(self.position)
-                target.take_damage(_calc_damage(dmg, target, skill))
-                self._apply_status_on_hit(target, skill)
-                self._hit_this_swing.add(tid)
 
 
 class Water(Character):
