@@ -330,6 +330,8 @@ class Game:
                         if pid not in self.remote_players:
                             try:
                                 self.remote_players[pid] = make_character(char_num)
+                                if pid in self.other_huds:
+                                    self.other_huds[pid].set_portrait(char_num)
                             except Exception as e:
                                 print_error(
                                     f"Impossible de créer remote Character-{char_num}: {e}"
@@ -342,6 +344,8 @@ class Game:
                                 self.remote_players[pid] = make_character(char_num)
                                 self.remote_players[pid].is_remote = True
                                 self.remote_players[pid].position = old_pos
+                                if pid in self.other_huds:
+                                    self.other_huds[pid].set_portrait(char_num)
                             except Exception as e:
                                 print_error(
                                     f"Impossible de recréer remote Character-{char_num}: {e}"
