@@ -76,27 +76,26 @@ class Menu:
 
         # PLAY BUTTON FRAMES
         play_button = ObjButton.PlayButton()
-        self.play_button_frames = play_button.play_button_frames
+        self.play_button_frames           = play_button.play_button_frames
+        self.play_button_frames_pressed   = play_button.play_button_frames_pressed
+        self.play_button_frames_unpressed = play_button.play_button_frames_unpressed
 
         # SETTINGS BUTTON FRAMES
         settings_button = ObjButton.OptionsButton()
-        self.settings_button_frames = settings_button.settings_button_frames
+        self.settings_button_frames           = settings_button.settings_button_frames
+        self.settings_button_frames_pressed   = settings_button.settings_button_frames_pressed
+        self.settings_button_frames_unpressed = settings_button.settings_button_frames_unpressed
 
         # EXIT BUTTON FRAMES
         exit_button = ObjButton.ExitButton()
-        self.exit_button_frames = exit_button.exit_button_frames
-
-        # Static button images for non-animated buttons
-        settings_img = pyg.image.load(
-            "assets/buttons/button_settings.png"
-        ).convert_alpha()
-        exit_img = pyg.image.load("assets/buttons/button_exit.png").convert_alpha()
+        self.exit_button_frames           = exit_button.exit_button_frames
+        self.exit_button_frames_pressed   = exit_button.exit_button_frames_pressed
+        self.exit_button_frames_unpressed = exit_button.exit_button_frames_unpressed  # empty list
 
         # Settings submenu buttons
         video_img = pyg.image.load("assets/buttons/button_video.png").convert_alpha()
         audio_img = pyg.image.load("assets/buttons/button_audio.png").convert_alpha()
         keys_img = pyg.image.load("assets/buttons/button_keys.png").convert_alpha()
-        back_img = pyg.image.load("assets/buttons/button_back.png").convert_alpha()
 
         # Player count selection buttons
         zero_player_img = pyg.image.load(
@@ -113,9 +112,6 @@ class Menu:
         ).convert_alpha()
         four_players_img = pyg.image.load(
             "assets/buttons/button_four_players.png"
-        ).convert_alpha()
-        Back_selection_character_img = pyg.image.load(
-            "assets/buttons/Back_selection_character.png"
         ).convert_alpha()
         # IMAGES FOR SESSION INTERFACE
         self.bg_session = pyg.image.load(
@@ -195,24 +191,38 @@ class Menu:
         self.play_button = animated_button.AnimatedButton(
             self.center_x(self.play_button_frames[0], 1.5),
             370,
-            self.play_button_frames,
-            BUTTON_SCALE,
-            animation_speed=1,
+            frames_idle      = self.play_button_frames,
+            frames_pressed   = self.play_button_frames_pressed,
+            frames_unpressed = self.play_button_frames_unpressed,
+            scale            = BUTTON_SCALE,
+            animation_speed  = 8,
         )
         self.settings_button = animated_button.AnimatedButton(
             self.center_x(self.settings_button_frames[0], 1.5),
             475,
-            self.settings_button_frames,
-            2,
-            animation_speed=1,
+            frames_idle      = self.settings_button_frames,
+            frames_pressed   = self.settings_button_frames_pressed,
+            frames_unpressed = self.settings_button_frames_unpressed,
+            scale            = 2,
+            animation_speed  = 8,
         )
         self.exit_button = animated_button.AnimatedButton(
             self.center_x(self.exit_button_frames[0], 1.5),
             580,
-            self.exit_button_frames,
-            2,
-            animation_speed=1,
+            frames_idle      = self.exit_button_frames,
+            frames_pressed   = self.exit_button_frames_pressed,
+            frames_unpressed = self.exit_button_frames_unpressed,  # empty → no release anim
+            scale            = 2,
+            animation_speed  = 8,
         )
+        # Each sub-menu gets its OWN back-button instance so their state machines
+        # never interfere with each other or with the main-menu exit button.
+        self.back_btn_settings     = self._make_back_btn()
+        self.back_btn_sessions     = self._make_back_btn()
+        self.back_btn_play_menu    = self._make_back_btn()
+        self.back_btn_one_player   = self._make_back_btn()
+        self.back_btn_two_players  = self._make_back_btn()
+        self.back_btn_three_players = self._make_back_btn()
         self.video_button = button.Button(
             self.center_x(video_img, 1) - 350, 350, video_img, 1
         )
@@ -222,7 +232,6 @@ class Menu:
         self.keys_button = button.Button(
             self.center_x(keys_img, 1) + 330, 350, keys_img, 1
         )
-        self.back_button = button.Button(self.center_x(back_img, 1), 700, back_img, 1)
         self.zero_player_button = button.Button(
             self.center_x(zero_player_img, -0.5) + 150, 350, zero_player_img, 0.3
         )
@@ -239,11 +248,14 @@ class Menu:
         self.four_players_button = button.Button(
             self.center_x(four_players_img, -0.5) + 150, 350, four_players_img, 1
         )
-        Back_selection_character_img = pyg.transform.scale(
-            Back_selection_character_img, (63, 57)
-        )
-        self.Back_selection_character = button.Button(
-            37, 6, Back_selection_character_img, 1
+        # Back button in character selection — same exit animation, smaller scale
+        self.Back_selection_character = animated_button.AnimatedButton(
+            20, 8,
+            frames_idle      = self.exit_button_frames,
+            frames_pressed   = self.exit_button_frames_pressed,
+            frames_unpressed = self.exit_button_frames_unpressed,
+            scale            = 1.3,
+            animation_speed  = 8,
         )
 
         # # Sessions buttons
@@ -279,9 +291,11 @@ class Menu:
         self.start_button = animated_button.AnimatedButton(
             self.center_x(self.play_button_frames[0], 1.3),
             600,
-            self.play_button_frames,
-            BUTTON_SCALE,
-            animation_speed=1,
+            frames_idle      = self.play_button_frames,
+            frames_pressed   = self.play_button_frames_pressed,
+            frames_unpressed = self.play_button_frames_unpressed,
+            scale            = BUTTON_SCALE,
+            animation_speed  = 8,
         )
         # VARIABLES SESSIONS
         self.sessions = []
@@ -422,7 +436,7 @@ class Menu:
         self.draw_text(
             text="Create session", font=self.middle_font, text_col="Black", x=735, y=480
         )
-        if self.exit_button.draw(self.screen):
+        if self.back_btn_sessions.draw(self.screen):
             self.menu_state = "main"
 
     def draw_center_preview(self, char_index):
@@ -482,6 +496,18 @@ class Menu:
         x = (self.width - img.get_width()) // 2
         self.screen.blit(img, (x, y))
 
+    def _make_back_btn(self, y=580):
+        """Return a fresh AnimatedButton using the exit animation, for back/return actions."""
+        return animated_button.AnimatedButton(
+            self.center_x(self.exit_button_frames[0], 1.5),
+            y,
+            frames_idle      = self.exit_button_frames,
+            frames_pressed   = self.exit_button_frames_pressed,
+            frames_unpressed = self.exit_button_frames_unpressed,
+            scale            = 2,
+            animation_speed  = 8,
+        )
+
     def handle_main_menu(self):
         # Gère l'état du menu principal
 
@@ -503,7 +529,7 @@ class Menu:
             print("Audio Settings")
         if self.keys_button.draw(self.screen):
             print("Keys Settings")
-        if self.exit_button.draw(self.screen):
+        if self.back_btn_settings.draw(self.screen):
             self.menu_state = "main"
 
     def handle_play_menu(self):
@@ -524,7 +550,7 @@ class Menu:
         # self.menu_state = f"{tmp[self.number_bot - 1]}{'_player' if self.number_bot == 3 else '_players'}"
         # print_debug(self.menu_state)
         self.menu_state = "choice_characters_1"
-        if self.exit_button.draw(self.screen):
+        if self.back_btn_play_menu.draw(self.screen):
             self.menu_state = "play"
 
     def handle_one_player_menu(self):
@@ -540,7 +566,7 @@ class Menu:
         if self.three_players_button.draw(self.screen):
             self.menu_state = "choice_characters_1"
             self.number_bot = 3
-        if self.exit_button.draw(self.screen):
+        if self.back_btn_one_player.draw(self.screen):
             self.menu_state = "play"
 
     def handle_two_players_menu(self):
@@ -556,7 +582,7 @@ class Menu:
         if self.two_players_button.draw(self.screen):
             self.menu_state = "choice_characters_1"
             self.number_bot = 2
-        if self.exit_button.draw(self.screen):
+        if self.back_btn_two_players.draw(self.screen):
             self.menu_state = "play"
 
     def handle_three_players_menu(self):
@@ -569,7 +595,7 @@ class Menu:
         if self.one_player_button.draw(self.screen):
             self.menu_state = "choice_characters_1"
             self.number_bot = 1
-        if self.exit_button.draw(self.screen):
+        if self.back_btn_three_players.draw(self.screen):
             self.menu_state = "play"
 
     def _update_IDLE_p(self):
