@@ -991,9 +991,16 @@ class Character:
             self.frame_S3_2 = int(state["frame_s3_2"])
 
         ak = state.get("is_attacking", {})
-        self.is_attacking_s1 = bool(ak.get("1", False))
-        self.is_attacking_s2 = bool(ak.get("2", False))
-        self.is_attacking_s3 = bool(ak.get("3", False))
+        new_s1 = bool(ak.get("1", False))
+        new_s2 = bool(ak.get("2", False))
+        new_s3 = bool(ak.get("3", False))
+        if (new_s1 and not self.is_attacking_s1) or \
+           (new_s2 and not self.is_attacking_s2) or \
+           (new_s3 and not self.is_attacking_s3):
+            self._hit_this_swing = set()
+        self.is_attacking_s1 = new_s1
+        self.is_attacking_s2 = new_s2
+        self.is_attacking_s3 = new_s3
 
         i = state.get("anim_indices", {})
         self.frame_IDLE = int(i.get("idle", self.frame_IDLE))
@@ -1287,6 +1294,7 @@ class Character3(Character):
 
 def make_character(char_num):
     _registry = {
+        1: Furnace,
         2: Water,
         3: Character3,
         4: Character4,
