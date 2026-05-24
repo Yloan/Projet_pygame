@@ -113,6 +113,10 @@ class Menu:
         four_players_img = pyg.image.load(
             "assets/buttons/button_four_players.png"
         ).convert_alpha()
+        back_char_img = pyg.transform.scale(
+            pyg.image.load("assets/buttons/Back_selection_character.png").convert_alpha(),
+            (63, 57)
+        )
         # IMAGES FOR SESSION INTERFACE
         self.bg_session = pyg.image.load(
             "assets/Menus_assets/sessions_section/Browse_Sessions.png"
@@ -248,15 +252,8 @@ class Menu:
         self.four_players_button = button.Button(
             self.center_x(four_players_img, -0.5) + 150, 350, four_players_img, 1
         )
-        # Back button in character selection — same exit animation, smaller scale
-        self.Back_selection_character = animated_button.AnimatedButton(
-            20, 8,
-            frames_idle      = self.exit_button_frames,
-            frames_pressed   = self.exit_button_frames_pressed,
-            frames_unpressed = self.exit_button_frames_unpressed,
-            scale            = 1.3,
-            animation_speed  = 8,
-        )
+        # Back arrow button in character selection screens
+        self.Back_selection_character = button.Button(37, 6, back_char_img, 1)
 
         # # Sessions buttons
         self.join_button = button.Button(
@@ -773,7 +770,6 @@ class Menu:
         self.draw_text(title, self.font, self.TEXT_COL, 70, 0)
 
         if self.Back_selection_character.draw(self.screen):
-            # Déterminer l'état précédent
             if character_var == self.character_1:
                 self.menu_state = "play"
             elif character_var == self.character_2:
@@ -895,6 +891,18 @@ class Menu:
         self._update_IDLE_p()
         self.draw_text_center("Choose three characters", self.font, self.TEXT_COL, 20)
 
+        if self.Back_selection_character.draw(self.screen):
+            self.menu_state = "play"
+            self.character_1 = 0
+            self.character_2 = 0
+            self.character_3 = 0
+            self._arrow_cursor[self.CurrentPlayer_id] = 'main'
+            self._arrow_pos.pop(self.CurrentPlayer_id, None)
+            if self.current_session_name:
+                self.p_leave_session = self.current_session_name
+            self.current_session_name = None
+
+
         # ── character buttons ──────────────────────────────────────────────
         character_buttons = [
             (self.character_1_button, 1),
@@ -903,19 +911,6 @@ class Menu:
             (self.character_4_button, 4),
             (self.character_5_button, 5),
         ]
-
-        if self.Back_selection_character.draw(self.screen):
-            self.menu_state = "play"
-            self.character_1 = 0
-            self.character_2 = 0
-            self.character_3 = 0
-            # Reset arrow cursor to initial state
-            self._arrow_cursor[self.CurrentPlayer_id] = 'main'
-            self._arrow_pos.pop(self.CurrentPlayer_id, None)
-            # Signal for the [LeaveSession] message to the serveur
-            if self.current_session_name:
-                self.p_leave_session = self.current_session_name
-            self.current_session_name = None
 
         # Handle character button clicks for current player's selection
         for button_obj, char_num in character_buttons:

@@ -1040,7 +1040,7 @@ class Water(Character):
                 "height": 48,
             }
             self.projectiles.append(
-                SubProjectile(target.position[0], target.position[1], effect_data)
+                SubProjectile(target.position[0], target.position[1], effect_data, direction=self.direction)
             )
 
 
@@ -1429,9 +1429,10 @@ class Projectile:
 
 
 class SubProjectile:
-    def __init__(self, x, y, data):
+    def __init__(self, x, y, data, direction="right"):
         self.x = x
         self.y = y
+        self.direction = direction
         self.width = data["width"]
         self.height = data["height"]
         self.frame_duration = data["frame_duration"]
@@ -1439,10 +1440,14 @@ class SubProjectile:
 
         sheet = pyg.image.load(_resolve_path(data["path"])).convert_alpha()
         n = max(1, sheet.get_width() // self.width)
-        self.frames = [
+        raw_frames = [
             sheet.subsurface((i * self.width, 0, self.width, self.height))
             for i in range(n)
         ]
+        self.frames_right = raw_frames
+        self.frames_left  = [pyg.transform.flip(f, True, False) for f in raw_frames]
+        # backward-compat alias
+        self.frames = raw_frames
         self.total_frames = data["frames"]
         self.current_frame = 0
         self.timer = 0
@@ -1455,8 +1460,9 @@ class SubProjectile:
     def draw(self, surface):
         if self.is_dead:
             return
-        frame_index = min(self.current_frame, len(self.frames) - 1)
-        surface.blit(self.frames[frame_index], (round(self.x), round(self.y)))
+        frames = self.frames_left if self.direction == "left" else self.frames_right
+        frame_index = min(self.current_frame, len(frames) - 1)
+        surface.blit(frames[frame_index], (round(self.x), round(self.y)))
 
         if TMP__GET_SURFACE_HITBOX_ATTACKS_:
             pyg.draw.rect(surface, (255, 255, 0), self.get_rect(), 2)
