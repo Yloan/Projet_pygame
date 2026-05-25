@@ -1018,13 +1018,8 @@ class Character:
 
     def _apply_status_on_hit(self, target, skill):
         data = HITBOX_DATA.get(self.char_num, {}).get(skill, {})
-
-        fs = data.get("frame_start")
-        fe = data.get("frame_end")
-        current_frame = self._current_skill_frame()
-
         fn = data.get("status_applied")
-        if fn and current_frame >= fs and current_frame <= fe:
+        if fn:
             fn(self, target)
 
 
@@ -1193,9 +1188,11 @@ class Character3(Character):
                 self.timer_S1_2 = 0
                 self.frame_S1_2 += 1
                 if self.frame_S1_2 >= len(self.frames_S1_2_anim):
-                    self.s1_phase = 3
-                    self.frame_S1_3 = 0
-                    self.timer_S1_3 = 0
+                    # Contre-attaque terminée : fin du skill (pas de phase 3)
+                    self.is_attacking_s1 = False
+                    self.s1_phase = 1
+                    self.s1_parried = False
+                    self._hit_this_swing = set()
 
         elif self.s1_phase == 3:
             self.timer_S1_3 += dt
@@ -1248,9 +1245,15 @@ class Character3(Character):
 
     def check_hits(self, targets):
         if self.is_attacking_s1:
-            if self.s1_phase != 3:
+            # Phase 1 : fenêtre de parade — pas de hitbox
+            if self.s1_phase == 1:
                 return
 
+            # Phase 3 : animation ratée (pas de parade) — pas de dégâts
+            if self.s1_phase == 3:
+                return
+
+            # Phase 2 : contre-attaque après parade réussie — touche toujours
             px, py = CHAR3_S1_PHASE3_HITBOX["offset"]
             sw, sh = CHAR3_S1_PHASE3_HITBOX["size"]
             px = int(px * CHARACTER_SCALE)
@@ -1261,9 +1264,6 @@ class Character3(Character):
             if self.direction == "left":
                 px = SCALED_FRAME_SIZE - px - sw
             hitbox = pyg.Rect(x + px, y + py, sw, sh)
-
-            if not self.s1_parried:
-                return
 
             for target in targets:
                 if target is self or target.is_dead:
