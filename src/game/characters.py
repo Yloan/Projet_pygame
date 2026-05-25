@@ -363,6 +363,34 @@ SPRITE_OFFSETS_4_UPDATE = {
     "s3": (-30, -27),
 }
 
+SOUNDS = {
+    1: {
+        "s1": "assets/sounds_effect/SFX1.wav",
+        "s2": "assets/sounds_effect/SFX7.wav",
+        "s3": "assets/sounds_effect/SFX1.wav",
+    },
+    2: {
+        "s1": "assets/sounds_effect/SFX3.wav",
+        "s2": "assets/sounds_effect/SFX7.wav",
+        "s3": "assets/sounds_effect/SFX5.wav",
+    },
+    3: {
+        "s1": "assets/sounds_effect/SFX2.wav",
+        "s2": "assets/sounds_effect/SFX4.wav",
+        "s3": "assets/sounds_effect/SFX6.wav",
+    },
+    4: {
+        "s1": "assets/sounds_effect/SFX2.wav",
+        "s2": "assets/sounds_effect/SFX4.wav",
+        "s3": "assets/sounds_effect/SFX6.wav",
+    },
+    5: {
+        "s1": "assets/sounds_effect/SFX7.wav",
+        "s2": "assets/sounds_effect/SFX7.wav",
+        "s3": "assets/sounds_effect/SFX2.wav",
+    },
+}
+
 COLOR_BODY = (0, 255, 0, 120)
 COLOR_ATTACK = (255, 60, 60, 160)
 
@@ -538,6 +566,20 @@ class Character:
 
         self.is_remote = False
 
+        self._sounds = {}
+        char_sounds = SOUNDS.get(self.char_num, {})
+        for skill_key, path in char_sounds.items():
+            try:
+                snd = pyg.mixer.Sound(
+                    get_asset_path(*path.replace("assets/", "").split("/"))
+                )
+                snd.set_volume(0.6)
+                self._sounds[skill_key] = snd
+            except (FileNotFoundError, pyg.error) as e:
+                print_warning(
+                    f"[SOUND] {path} introuvable pour char {self.char_num}: {e}"
+                )
+
     def move(self, direction):
         if self.is_dead or self.is_hurt:
             return
@@ -567,7 +609,9 @@ class Character:
         else:
             return
 
-        player_rect = pyg.Rect(int(new_pos[0]), int(new_pos[1]), SCALED_FRAME_SIZE, SCALED_FRAME_SIZE)
+        player_rect = pyg.Rect(
+            int(new_pos[0]), int(new_pos[1]), SCALED_FRAME_SIZE, SCALED_FRAME_SIZE
+        )
         if any(player_rect.colliderect(wall) for wall in _map_mod.ACTIVE_COLLISIONS):
             return
 
@@ -637,6 +681,11 @@ class Character:
             self.s3_hit = False
             self.frame_S3_2 = 0
             self.timer_S3_2 = 0
+
+        # Son
+        snd = getattr(self, "_sounds", {}).get(skill_key)
+        if snd:
+            snd.play()
 
         proj_data = PROJECTILES_INFOS.get(self.char_num, {}).get(skill_key)
         if proj_data:
@@ -892,7 +941,7 @@ class Character:
                     self._hit_this_swing.add(id(target))
                     if hit:
                         self._apply_status_on_hit(target, skill)
-                    if not self.is_remote and getattr(self, '_s3_stops_on_hit', True):
+                    if not self.is_remote and getattr(self, "_s3_stops_on_hit", True):
                         self.s3_hit = True
                         self.frame_S3_2 = 0
                         self.timer_S3_2 = 0
@@ -998,9 +1047,11 @@ class Character:
         new_s1 = bool(ak.get("1", False))
         new_s2 = bool(ak.get("2", False))
         new_s3 = bool(ak.get("3", False))
-        if (new_s1 and not self.is_attacking_s1) or \
-           (new_s2 and not self.is_attacking_s2) or \
-           (new_s3 and not self.is_attacking_s3):
+        if (
+            (new_s1 and not self.is_attacking_s1)
+            or (new_s2 and not self.is_attacking_s2)
+            or (new_s3 and not self.is_attacking_s3)
+        ):
             self._hit_this_swing = set()
         self.is_attacking_s1 = new_s1
         self.is_attacking_s2 = new_s2
@@ -1084,7 +1135,12 @@ class Water(Character):
                 "height": 48,
             }
             self.projectiles.append(
-                SubProjectile(target.position[0], target.position[1], effect_data, direction=self.direction)
+                SubProjectile(
+                    target.position[0],
+                    target.position[1],
+                    effect_data,
+                    direction=self.direction,
+                )
             )
 
 
@@ -1144,6 +1200,10 @@ class Character3(Character):
 
     def use_skill(self, skill_num):
         if skill_num == 1 and not self.is_attacking_s1:
+            # Son
+            snd = getattr(self, "_sounds", {}).get("s1")
+            if snd:
+                snd.play()
             self.is_attacking_s1 = True
             self.s1_phase = 1
             self.s1_parried = False
@@ -1159,11 +1219,12 @@ class Character3(Character):
         return super().use_skill(skill_num)
 
     def take_damage(self, amount, trigger_hurt=True, parriable=True):
-        # Seuls les vrais coups ennemis (parriable=True) déclenchent la parade
         if parriable and self.is_attacking_s1 and self.s1_phase == 1:
             self.s1_parried = True
             return False
-        return super().take_damage(amount, trigger_hurt=trigger_hurt, parriable=parriable)
+        return super().take_damage(
+            amount, trigger_hurt=trigger_hurt, parriable=parriable
+        )
 
     def _handle_s1_update(self, dt):
         if self.s1_phase == 1:
@@ -1277,7 +1338,9 @@ class Character3(Character):
             if attacker is not None and not attacker.is_dead:
                 tid = id(attacker)
                 if tid not in self._hit_this_swing:
-                    attacker.take_damage(_calc_damage(CHAR3_S1_DAMAGE_PARRY, attacker, 1))
+                    attacker.take_damage(
+                        _calc_damage(CHAR3_S1_DAMAGE_PARRY, attacker, 1)
+                    )
                     self._hit_this_swing.add(tid)
 
         elif self.is_attacking_s3:
@@ -1344,12 +1407,11 @@ class Projectile:
 
         sheet = pyg.image.load(_resolve_path(data["path"])).convert_alpha()
         n = max(1, sheet.get_width() // raw_w)
-        raw_frames = [
-            sheet.subsurface((i * raw_w, 0, raw_w, raw_h))
-            for i in range(n)
-        ]
+        raw_frames = [sheet.subsurface((i * raw_w, 0, raw_w, raw_h)) for i in range(n)]
         if CHARACTER_SCALE != 1.0:
-            raw_frames = [pyg.transform.scale(f, (self.width, self.height)) for f in raw_frames]
+            raw_frames = [
+                pyg.transform.scale(f, (self.width, self.height)) for f in raw_frames
+            ]
         self.frames_right = raw_frames
         self.frames_left = [pyg.transform.flip(f, True, False) for f in raw_frames]
         self.double_hit = data.get("double_hit", False)
@@ -1389,7 +1451,11 @@ class Projectile:
                 ):
                     t = sub.release_target
                     t.is_hidden = False
-                    offset = SCALED_FRAME_SIZE if self.direction == "right" else -SCALED_FRAME_SIZE
+                    offset = (
+                        SCALED_FRAME_SIZE
+                        if self.direction == "right"
+                        else -SCALED_FRAME_SIZE
+                    )
                     x, y = (
                         self.position if hasattr(self, "position") else (sub.x, sub.y)
                     )
@@ -1418,7 +1484,9 @@ class Projectile:
                 if count >= 2:
                     continue
                 if rect.colliderect(target.get_body_rect()):
-                    target.take_damage(_calc_damage(self.damage, target, self.skill_num))
+                    target.take_damage(
+                        _calc_damage(self.damage, target, self.skill_num)
+                    )
                     self._hit_counts[tid] = count + 1
                     if self._effect_frames:
                         self.effect_sprites.append(
@@ -1440,7 +1508,9 @@ class Projectile:
                 if tid in self._hit_targets:
                     continue
                 if rect.colliderect(target.get_body_rect()):
-                    target.take_damage(_calc_damage(self.damage, target, self.skill_num))
+                    target.take_damage(
+                        _calc_damage(self.damage, target, self.skill_num)
+                    )
                     self._hit_targets.add(tid)
                     if self.stops:
                         if self.skill_num == 3:
@@ -1507,14 +1577,13 @@ class SubProjectile:
 
         sheet = pyg.image.load(_resolve_path(data["path"])).convert_alpha()
         n = max(1, sheet.get_width() // raw_w)
-        raw_frames = [
-            sheet.subsurface((i * raw_w, 0, raw_w, raw_h))
-            for i in range(n)
-        ]
+        raw_frames = [sheet.subsurface((i * raw_w, 0, raw_w, raw_h)) for i in range(n)]
         if CHARACTER_SCALE != 1.0:
-            raw_frames = [pyg.transform.scale(f, (self.width, self.height)) for f in raw_frames]
+            raw_frames = [
+                pyg.transform.scale(f, (self.width, self.height)) for f in raw_frames
+            ]
         self.frames_right = raw_frames
-        self.frames_left  = [pyg.transform.flip(f, True, False) for f in raw_frames]
+        self.frames_left = [pyg.transform.flip(f, True, False) for f in raw_frames]
         # backward-compat alias
         self.frames = raw_frames
         self.total_frames = data["frames"]
@@ -1626,6 +1695,11 @@ class Character4(Character):
 
     def use_skill(self, skill_num):
         if skill_num == 1 and not self.is_attacking_s1:
+            # Son
+            snd = getattr(self, "_sounds", {}).get("s1")
+            if snd:
+                snd.play()
+            self.is_attacking_s1 = True
             self.is_attacking_s1 = True
             self.s1_phse = 1
             self.s1_htd = False
@@ -1640,6 +1714,11 @@ class Character4(Character):
             return True
 
         if skill_num == 2 and not self.is_attacking_s2 and not self.is_attacking_s1:
+            # Son
+            snd = getattr(self, "_sounds", {}).get("s1")
+            if snd:
+                snd.play()
+            self.is_attacking_s1 = True
             self.s2_vrt = 1 if self.chrgs < 3 else 2
             if self.s2_vrt == 1:
                 self.chrgs = min(self.MAX_CHRGS, self.chrgs + 1)
@@ -1656,6 +1735,11 @@ class Character4(Character):
             return True
 
         if skill_num == 3 and not self.is_attacking_s3:
+            # Son
+            snd = getattr(self, "_sounds", {}).get("s1")
+            if snd:
+                snd.play()
+            self.is_attacking_s1 = True
             self._s3_chrgs_spnt = self.chrgs
             self.chrgs = 0
             self.is_attacking_s3 = True
@@ -1720,7 +1804,9 @@ class Character4(Character):
             if self.s1_phse == 1:
                 hbx = self.get_attack_hitbox()
                 if hbx is not None:
-                    dmg = HITBOX_DATA.get(self.char_num, {}).get(1, _DEFAULT_HITBOX)["damage"]
+                    dmg = HITBOX_DATA.get(self.char_num, {}).get(1, _DEFAULT_HITBOX)[
+                        "damage"
+                    ]
                     for tgt in targets:
                         if tgt is self or tgt.is_dead:
                             continue
@@ -1742,7 +1828,9 @@ class Character4(Character):
             hbx = self.get_attack_hitbox()
             if hbx is None:
                 return
-            base_dmg = HITBOX_DATA.get(self.char_num, {}).get(2, _DEFAULT_HITBOX)["damage"]
+            base_dmg = HITBOX_DATA.get(self.char_num, {}).get(2, _DEFAULT_HITBOX)[
+                "damage"
+            ]
             dmg = base_dmg if self.s2_vrt == 2 else max(1, base_dmg // 2)
             for tgt in targets:
                 if tgt is self or tgt.is_dead:
@@ -1883,6 +1971,11 @@ class Character5(Character):
         if skill_num == 1:
             if self.is_attacking_s1 or self.is_attacking_s2:
                 return False
+            # Son
+            snd = getattr(self, "_sounds", {}).get("s1")
+            if snd:
+                snd.play()
+            self.is_attacking_s1 = True
             if self.wtr_cns > 0:
                 self._cns_ctx = "water"
                 self.is_attacking_s1 = True
@@ -1911,6 +2004,12 @@ class Character5(Character):
         if skill_num == 2:
             if self.is_attacking_s1 or self.is_attacking_s2:
                 return False
+
+            # Son
+            snd = getattr(self, "_sounds", {}).get("s1")
+            if snd:
+                snd.play()
+            self.is_attacking_s1 = True
             if self.sda_cns > 0:
                 self._cns_ctx = "soda"
                 self.is_attacking_s1 = True
@@ -1938,6 +2037,11 @@ class Character5(Character):
             return True
 
         if skill_num == 3 and not self.is_attacking_s3:
+            # Son
+            snd = getattr(self, "_sounds", {}).get("s1")
+            if snd:
+                snd.play()
+            self.is_attacking_s1 = True
             self.is_attacking_s3 = True
             self.frame_S3 = 0
             self.timer_S3 = 0
