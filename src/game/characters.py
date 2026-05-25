@@ -1,6 +1,6 @@
 import pygame as pyg
 
-import game.map_laoder as _map_mod  # use _map_mod.ACTIVE_COLLISIONS for per-map collisions
+import game.map_laoder as _map_mod
 from ui.console import (
     print_debug,
     print_warning,
@@ -10,12 +10,12 @@ from utils.status import StatusManager
 
 FRAME_SIZE = 40
 CHARACTER_SCALE = 1.5
-SCALED_FRAME_SIZE = int(FRAME_SIZE * CHARACTER_SCALE)  # logical cell size after scaling
+SCALED_FRAME_SIZE = int(FRAME_SIZE * CHARACTER_SCALE)
 IDLE_SPEED = 100
 MOVE_SPEED = 150
 HURT_SPEED = 180
 SKILL_SPEED = 100
-DISABLED_DURATION = 3000  # Durée de  disabled en ms
+DISABLED_DURATION = 3000
 
 CHAR_STATS = {
     1: {"speed": 3, "health": 100, "color": (220, 80, 20)},
@@ -63,14 +63,8 @@ DIMENS = {
     },
 }
 
-# Hitbox d'attaque par personnage et par skill
-# "offset" : (x, y) par rapport a la position du perso (direction droite, c adapte quand c a gauche)
-# "size" : (largeur, hauteur) de la hitbox
-# "damage" : c assez evident
 HITBOX_DATA = {
     1: {
-        # S1 : feu — pixels attaque dans le frame à x=[46,79] y=[5,56]
-        # frame dessiné à (body_x, body_y), frame 80×60
         1: {
             "offset": (42, 4),
             "size": (38, 47),
@@ -79,8 +73,6 @@ HITBOX_DATA = {
             "frame_end": 9,
             "status_applied": lambda atk, tgt: tgt.status.apply_burn(),
         },
-        # S2 : sphère — n'apparaît qu'aux frames 4-6, x=[55,107] y=[4,41]
-        # frame dessiné à (body_x, body_y), frame 120×50
         2: {
             "offset": (50, 3),
             "size": (58, 38),
@@ -89,8 +81,6 @@ HITBOX_DATA = {
             "frame_end": 6,
             "status_applied": lambda atk, tgt: tgt.status.apply_oiled(),
         },
-        # S3 : lame de feu — attaque dès frame 1 jusqu'au 12, x=[46,105] y=[11,59]
-        # frame dessiné à (body_x, body_y), frame 120×60
         3: {
             "offset": (44, 10),
             "size": (62, 38),
@@ -222,7 +212,6 @@ def _calc_damage(base_dmg, target, skill):
     return max(1, round(base_dmg * res))
 
 
-# All the finfos ab the character's projectiles if there had some
 PROJECTILES_INFOS = {
     5: {
         "s1": {
@@ -262,8 +251,6 @@ PROJECTILES_INFOS = {
     },
 }
 
-# 40x40 c la ref de base donc le offset serais a (0,0)
-# En gros ce dictionnaire met un offset pour eviter un decalage l'hors de la position visuel du joueur quand on fait ue animations d'attaque
 SPRITE_OFFSETS = {
     1: {
         "idle": (0, 0),
@@ -325,7 +312,6 @@ CHAR6_CANS_HUD_POSITIONS = {
 }
 CHAR6_CANS_GAP = 50
 
-# Data pour update les bubbles dans les remotes
 BUBBLE_EFFECT_DATA = {
     2: {
         "path": "assets/sprites/Character-2/effect-2-S3-Sheet.png",
@@ -397,9 +383,7 @@ COLOR_ATTACK = (255, 60, 60, 160)
 
 class Character:
     def __init__(self, char_num):
-        stats = CHAR_STATS.get(
-            char_num, DEFAULT_STATS
-        )  # If the character isn't implemnted yet, then we took the default stat
+        stats = CHAR_STATS.get(char_num, DEFAULT_STATS)
         self.char_num = char_num
         self.health = stats["health"]
         self.max_health = stats["health"]
@@ -682,7 +666,6 @@ class Character:
             self.frame_S3_2 = 0
             self.timer_S3_2 = 0
 
-        # Son
         snd = getattr(self, "_sounds", {}).get(skill_key)
         if snd:
             snd.play()
@@ -726,7 +709,7 @@ class Character:
         burn_dmg = self.status.get_burn_damage()
         if burn_dmg > 0:
             if self.status.is_oiled:
-                burn_dmg = int(burn_dmg * 2.0)
+                burn_dmg = int(burn_dmg * 2)
             self.take_damage(burn_dmg, trigger_hurt=False, parriable=False)
 
         if hasattr(self, "bubble_effect") and self.bubble_effect:
@@ -879,12 +862,12 @@ class Character:
 
     def _active_skill(self):
         if self.is_attacking_s1:
-            return 1  # skill 1
+            return 1
         if self.is_attacking_s2:
-            return 2  # 2
+            return 2
         if self.is_attacking_s3:
-            return 3  # and 3
-        return None  # No skill activated
+            return 3
+        return None
 
     def _current_skill_frame(self):
         skill = self._active_skill()
@@ -921,7 +904,7 @@ class Character:
             return
 
         hitbox = self.get_attack_hitbox()
-        if hitbox is None:  # out of frame
+        if hitbox is None:
             return
 
         dmg = HITBOX_DATA.get(self.char_num, {}).get(skill, _DEFAULT_HITBOX)["damage"]
@@ -974,7 +957,6 @@ class Character:
         global TMP__GET_SURFACE_HITBOX_ATTACKS_
         TMP__GET_SURFACE_HITBOX_ATTACKS_ = not TMP__GET_SURFACE_HITBOX_ATTACKS_
 
-    # petit helper
     def get_anim_state(self):
         if self.is_dead:
             return "dead"
@@ -1098,7 +1080,7 @@ class Water(Character):
         if frm < 6 or frm > 16:
             return None
 
-        ratio = (frm - 5) / 11.0  # frame 6 → 1/11 ≈ 9%, frame 16 → 100%
+        ratio = (frm - 5) / 11
         sw = int(full_w * ratio)
         if sw <= 0:
             return None
@@ -1199,7 +1181,6 @@ class Character3(Character):
 
     def use_skill(self, skill_num):
         if skill_num == 1 and not self.is_attacking_s1:
-            # Son
             snd = getattr(self, "_sounds", {}).get("s1")
             if snd:
                 snd.play()
@@ -1317,11 +1298,9 @@ class Character3(Character):
 
     def check_hits(self, targets):
         if self.is_attacking_s1:
-            # Phase 1 : fenêtre de parade — pas de hitbox
             if self.s1_phase == 1:
                 return
 
-            # Phase 3 : animation ratée (pas de parade) — pas de dégâts
             if self.s1_phase == 3:
                 return
 
@@ -1371,7 +1350,6 @@ def make_character(char_num):
     return cls() if cls else Character(char_num)
 
 
-# petit helper pour les classes qui suivent
 def _resolve_path(relative_path):
     parts = relative_path.replace("assets/", "").split("/")
     return get_asset_path(*parts)
@@ -1580,7 +1558,6 @@ class SubProjectile:
             ]
         self.frames_right = raw_frames
         self.frames_left = [pyg.transform.flip(f, True, False) for f in raw_frames]
-        # backward-compat alias
         self.frames = raw_frames
         self.total_frames = data["frames"]
         self.current_frame = 0

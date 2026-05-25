@@ -22,8 +22,10 @@ SRC_DIR = os.path.join(INSTALL_DIR, "src")
 
 
 def is_installed():
-    return os.path.isdir(os.path.join(INSTALL_DIR, "assets")) and \
-           os.path.isfile(os.path.join(SRC_DIR, "main.py"))
+    return (
+        os.path.isdir(os.path.join(INSTALL_DIR, "assets"))
+        and os.path.isfile(os.path.join(SRC_DIR, "main.py"))
+    )
 
 
 def download_game(progress_cb=None):
@@ -73,12 +75,12 @@ def run_with_splash():
     done = [False]
     error = [None]
 
-    BG      = (18, 18, 28)
-    BAR_BG  = (45, 45, 65)
-    BAR_FG  = (72, 199, 142)
-    WHITE   = (240, 240, 255)
-    GRAY    = (160, 160, 180)
-    RED     = (255, 90, 90)
+    BG = (18, 18, 28)
+    BAR_BG = (45, 45, 65)
+    BAR_FG = (72, 199, 142)
+    WHITE = (240, 240, 255)
+    GRAY = (160, 160, 180)
+    RED = (255, 90, 90)
 
     def progress_cb(downloaded, total):
         if downloaded == -1:

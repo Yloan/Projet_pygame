@@ -36,7 +36,6 @@ from ui.console import (
 from ui.HUD import HUD, _draw_char4_hud, _draw_char5_hud, _load_spec_hud_sheets
 from ui.menu_in_game import InGameMenu
 
-# Gloabl variables
 MESSAGE_DELIMITER = "\n"
 HUD_POSITIONS = {1: (10, 10), 2: (993, 10), 3: (10, 530), 4: (993, 530)}
 
@@ -52,7 +51,6 @@ SPAWN_POSITIONS = {
 }
 
 SKILL_COOLDOWNS = {
-    # duree in secs
     1: {"S1": 2, "S2": 4, "S3": 7},
     2: {"S1": 2, "S2": 4, "S3": 8},
     3: {"S1": 2, "S2": 4, "S3": 7},
@@ -78,11 +76,9 @@ class Game:
             width=self.width, height=self.height, fullscreen=self.fullscreen
         )
 
-        #    init sound
         pyg.mixer.pre_init(44100, -16, 2, 512)
         pyg.init()
         try:
-            # Reuse menu's pygame resources
             self.screen = self.Menu.screen
             self.wallpaper = self.Menu.wallpaper
             self.clock = self.Menu.c
@@ -91,12 +87,10 @@ class Game:
                 self.TEXT_COL = self.Menu.TEXT_COL
                 self.TEXT_COL2 = self.Menu.TEXT_COL2
             except Exception:
-                # Default values if menu doesn't expose them
                 self.font = pyg.font.SysFont("arialblack", 40)
                 self.TEXT_COL = (255, 255, 255)
                 self.TEXT_COL2 = (255, 0, 0)
         except Exception:
-            # Minimal if Menu initialization fails
             flags = pyg.FULLSCREEN if self.fullscreen else 0
             self.screen = pyg.display.set_mode((self.width, self.height), flags)
             self.wallpaper = pyg.Surface((self.width, self.height))
@@ -104,7 +98,6 @@ class Game:
 
         self.music_play = False
 
-        # LOAD GAME MAP (surfaces vides par défaut, chargées à la sélection de map)
         self.map_back = pyg.Surface((self.width, self.height))
         self.map_front = pyg.Surface((self.width, self.height), pyg.SRCALPHA)
 
@@ -116,16 +109,13 @@ class Game:
         self._retreat_cooldown = 0
         self.running = False
 
-        # In-game pause menu
         self._paused = False
         self._frozen_frame = None
         self._in_game_menu = InGameMenu(self.width, self.height)
 
-        # NETWORK CONFIGURATION
         # self.host = "127.0.0.1"
         # self.port = 12345
 
-        # connexion online server
         self.host = "51.75.118.17"
         self.port = 20041
 
@@ -135,11 +125,9 @@ class Game:
         self._r_queue = queue.Queue()
         self.r_buffer = ""
 
-        # SESSION JOIN
         self.current_joined_session = None
         self.position = self.Menu.slot_positions[1]
 
-        # MUSIC
         self.current_music = 0
         self.musics = []
 
@@ -154,7 +142,6 @@ class Game:
             music = music_module.MusicPlayer(chemin_complet)
             self.musics.append(music)
 
-        # Variables HUD
         self.other_huds = {}
         self.hud = None
 
@@ -177,7 +164,6 @@ class Game:
         self._game_over_timer = 0
         self._game_over_result = None
 
-        # Camera shake
         self._shake_timer = 0
         self._shake_strength = 0
 
@@ -192,7 +178,6 @@ class Game:
         else:
             self.current_music = (self.current_music + 1) % len(self.musics)
 
-        # Lancer la nouvelle piste
         try:
             self.musics[self.current_music].play()
             self.musics[self.current_music].volume(0.01)
@@ -329,7 +314,6 @@ class Game:
                     self.Menu.players_ready[player_id] = False
                     if self.game_started and self._game_over_result is None:
                         leaving = self.remote_players.pop(player_id, None)
-                        # Ignorer si ce joueur n'était pas dans notre partie
                         if leaving is not None and len(self.remote_players) == 0:
                             if not leaving.is_dead:
                                 self._game_over_result = "win"
@@ -655,8 +639,6 @@ class Game:
             f"support 1: perso {c2} | support 2: perso {c3}"
         )
 
-    # GAME UPDATE AND RENDERING
-
     def update(self):
         if self.active_char:
             self.active_char.update()
@@ -664,7 +646,6 @@ class Game:
     def send_to_server(self, message="Bonjour serveur"):
         self._send_queue.put(message)
 
-    # Some dev display
     def dev_display(self, liste_image=None):
         x, y = pyg.mouse.get_pos()
         self.draw_text_center(
@@ -683,14 +664,14 @@ class Game:
         self.send_to_server(f"[HUDUpdate]:{json.dumps(payload)}")
 
     _STATUS_ICON_FILES = {
-        "burn":     "status-icone-1.png",
-        "grabbed":  "status-icone-2.png",
+        "burn": "status-icone-1.png",
+        "grabbed": "status-icone-2.png",
         "disabled": "status-icone-3.png",
-        "wet":      "status-icone-4.png",
+        "wet": "status-icone-4.png",
         "weakened": "status-icone-5.png",
-        "oiled":    "status-icone-6.png",
-        "pushed":   {"right": "status-icone-7-1.png", "left": "status-icone-7-2.png"},
-        "stun":     "status-icone-13.png",
+        "oiled": "status-icone-6.png",
+        "pushed": {"right": "status-icone-7-1.png", "left": "status-icone-7-2.png"},
+        "stun": "status-icone-13.png",
     }
     _ICON_SIZE = 32
     _HUD_H = 192
@@ -819,8 +800,6 @@ class Game:
         self.Menu.players_ready = {1: False, 2: False, 3: False, 4: False}
         self.Menu.map_player_votes = {}
 
-    # MAIN GAME LOOP
-
     def _send_skill(self, skill_num):
         skill_key = f"S{skill_num}"
 
@@ -848,8 +827,6 @@ class Game:
         self.send_to_server(f"[SkillUsed]:{json.dumps(base)}")
 
     def run(self):
-
-        # Initialize and connect to server
         self.running = True
         self._connect_to_server()
 
@@ -858,14 +835,10 @@ class Game:
         self.etat = "menu"
         # self.etat = "game"
 
-        # When starting directly in game initialise characters with defaults
         self.musics[self.current_music].play()
         self.musics[self.current_music].volume(0.01)
         while self.running:
-            # Launch music
-
             self._process_network_messages()
-            # MENU STATE
             if self.etat == "menu":
                 self.music_play = False
                 screen.blit(self.wallpaper, (0, 0))
@@ -1051,7 +1024,6 @@ class Game:
 
             delta_time = 0
 
-            # GAME STATE - Actual gameplay
             if self.etat == "game":
                 if not self.music_play:
                     self.music_play = True
@@ -1181,7 +1153,6 @@ class Game:
                     pyg.display.flip()
                     continue
 
-                # draw background
                 self.screen.blit(self.map_back, (0, 0))
 
                 keys_pressed = pyg.key.get_pressed()
@@ -1218,7 +1189,6 @@ class Game:
                     self.send_to_server(f"[ProjectileSpawned]:{json.dumps(base)}")
                 self.active_char._just_spawned_projectiles.clear()
 
-                # Draw active character
                 if self._game_over_result is None:
                     current_sprite = self.active_char.get_current_sprite()
                     player_pos = self.active_char.position
@@ -1323,7 +1293,6 @@ class Game:
                                 )
                                 break
                     self.active_char.draw_projectiles(self.screen)
-                    # Remplacer le bloc actuel (autour de "if self.active_char.is_dead") par :
 
                     if self.active_char.is_dead:
                         if not self.support_1.is_dead:
@@ -1357,7 +1326,6 @@ class Game:
                                 self.hud.setHealth(round(pct * 17))
                                 self.hud.set_portrait(self.active_char.char_num)
 
-                    # ── Mise à jour HUD AVANT la vérification game over ──────────────────
                     if self.hud and self.active_char:
                         delta = self._last_char_health - self.active_char.health
                         if delta > 0:
@@ -1369,7 +1337,6 @@ class Game:
                             self.hud.setHealth(0)
                         self._last_char_health = self.active_char.health
 
-                    # ── Vérification game over APRÈS la mise à jour HUD ──────────────────
                     if self._game_over_result is None:
                         all_bots_dead = (
                             BOTS_ENABLED
@@ -1396,7 +1363,6 @@ class Game:
                         self._reset_to_menu()
                         continue  # skip the rest of the draw pipeline
 
-                # DRaw remote player
                 if self._game_over_result is None:
                     for pid, remote_char in self.remote_players.items():
                         remote_char.check_hits(
@@ -1435,13 +1401,10 @@ class Game:
                                 ex -= FRAME_SIZE
                             self.screen.blit(effect_sprite, (ex, ey))
 
-                # Foreground
                 self.screen.blit(self.map_front, (0, 0))
 
-                # Broadcast HUD
                 self._broadcast_hud_state()
 
-                # Draw char 6 special HUD
                 if self._spec_hud_loaded:
                     cnum = self.active_char.char_num
                     if cnum == 4:
@@ -1495,7 +1458,6 @@ class Game:
                         self.send_to_server(f"[EntityState]:{json.dumps(payload)}")
 
                 self.active_char.draw_hitbox(self.screen)
-                # draw HUD
                 if self.hud:
                     self.hud.update(dt)
                     x, y = HUD_POSITIONS.get(self.Menu.CurrentPlayer_id, (10, 10))
@@ -1538,7 +1500,6 @@ class Game:
                 except Exception as e:
                     print(f"Error dev display| Error --> {e}")
 
-            # Camera shake
             if self._shake_timer > 0 and self.etat == "game":
                 ox = r.randint(-self._shake_strength, self._shake_strength)
                 oy = r.randint(-self._shake_strength, self._shake_strength)
@@ -1549,10 +1510,8 @@ class Game:
                 if self._shake_timer == 0:
                     self._shake_strength = 0
 
-            # Update display
             pyg.display.flip()
 
-        # Graceful shutdown
         self.shutdown()
 
 

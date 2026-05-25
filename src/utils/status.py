@@ -32,6 +32,8 @@ BURN_TICK_INTERVAL = 1000
 BURN_TICK_DAMAGE = 1
 WEAKENED_DURATION = 5000
 
+WET_SLIDE_FACTOR = 0.6  # fraction of speed kept as slide drift
+
 
 class StatusEffect:
     def __init__(self, duration):
@@ -45,15 +47,13 @@ class StatusEffect:
             self.is_active = False
 
 
-WET_SLIDE_FACTOR = 0.6  # fraction of speed kept as slide drift
-
 class WetStatus(StatusEffect):
     def __init__(self):
         super().__init__(WET_DURATION)
-        self.drft_x = 0.0
-        self.drft_y = 0.0
-        self._acc_x = 0.0
-        self._acc_y = 0.0
+        self.drft_x = 0
+        self.drft_y = 0
+        self._acc_x = 0
+        self._acc_y = 0
 
     def set_drift(self, nx, ny, spd):
         self.drft_x = nx * spd * WET_SLIDE_FACTOR
@@ -62,7 +62,7 @@ class WetStatus(StatusEffect):
     def get_drift(self, dt):
         if not self.is_active:
             return 0, 0
-        decay = 0.97 ** (dt / 16.0)
+        decay = 0.97 ** (dt / 16)
         self.drft_x *= decay
         self.drft_y *= decay
         self._acc_x += self.drft_x
@@ -78,7 +78,7 @@ class DisabledStatus(StatusEffect):
     def __init__(self, direction):
         super().__init__(DISABLED_DURATION)
         self.direction = direction
-        self.bubble_offset = 0.0
+        self.bubble_offset = 0
 
     def update(self, dt):
         super().update(dt)
@@ -91,13 +91,13 @@ class PushedStatus(StatusEffect):
     def __init__(self, direction):
         super().__init__(PUSH_DURATION)
         self.direction = direction
-        self._accum = 0.0
+        self._accum = 0
 
     def get_delta(self, dt):
         if not self.is_active:
             return 0
-        ratio = max(0.0, 1.0 - self.timer / self.duration)
-        self._accum += PUSH_SPEED * ratio * (dt / 16.0)
+        ratio = max(0, 1 - self.timer / self.duration)
+        self._accum += PUSH_SPEED * ratio * (dt / 16)
         px = int(self._accum)
         self._accum -= px
         return px if self.direction == "right" else -px
@@ -111,10 +111,10 @@ class StunStatus(StatusEffect):
 class OiledStatus(StatusEffect):
     def __init__(self):
         super().__init__(OILED_DURATION)
-        self.drft_x = 0.0
-        self.drft_y = 0.0
-        self._acc_x = 0.0
-        self._acc_y = 0.0
+        self.drft_x = 0
+        self.drft_y = 0
+        self._acc_x = 0
+        self._acc_y = 0
 
     def set_drift(self, nx, ny, spd):
         self.drft_x = nx * spd * 0.4
@@ -123,7 +123,7 @@ class OiledStatus(StatusEffect):
     def get_drift(self, dt):
         if not self.is_active:
             return 0, 0
-        decay = 0.95 ** (dt / 16.0)
+        decay = 0.95 ** (dt / 16)
         self.drft_x *= decay
         self.drft_y *= decay
         self._acc_x += self.drft_x
@@ -168,15 +168,15 @@ class GrabStatus(StatusEffect):
 
     def get_pull_delta(self, tgt_pos, dt):
         if not self.is_active:
-            return 0.0, 0.0
-        self.cur_spd = min(GRAB_MAX_SPD, self.cur_spd * (GRAB_GRWTH ** (dt / 16.0)))
+            return 0, 0
+        self.cur_spd = min(GRAB_MAX_SPD, self.cur_spd * (GRAB_GRWTH ** (dt / 16)))
         tx, ty = self.src.position
         cx, cy = tgt_pos
         dx = tx - cx
         dy = ty - cy
         dist = (dx * dx + dy * dy) ** 0.5
         if dist < 3:
-            return 0.0, 0.0
+            return 0, 0
         return (dx / dist) * self.cur_spd, (dy / dist) * self.cur_spd
 
 
@@ -265,7 +265,7 @@ class StatusManager:
     @property
     def bubble_offset(self):
         d = self.effects.get("disabled")
-        return d.bubble_offset if d and d.is_active else 0.0
+        return d.bubble_offset if d and d.is_active else 0
 
     def get_push_delta(self, dt):
         p = self.effects.get("pushed")
@@ -273,7 +273,7 @@ class StatusManager:
 
     def get_grab_delta(self, tgt_pos, dt):
         g = self.effects.get("grabbed")
-        return g.get_pull_delta(tgt_pos, dt) if g else (0.0, 0.0)
+        return g.get_pull_delta(tgt_pos, dt) if g else (0, 0)
 
     def clear(self):
         self.effects = {}

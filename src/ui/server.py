@@ -26,7 +26,6 @@ class Serveur:
         self.Port = port
         self.Host = host
 
-        # CONNECTION MANAGMENT
         self.clients = []
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.Host, self.Port))
@@ -35,14 +34,11 @@ class Serveur:
         self.sessions_characters = {}
         self.socket_player_ids = {}
 
-        # Game states
         self.game_states = {}
         self.game_states_lock = threading.Lock()
 
-        # Map votes: {session_name: {player_id: map_num}}
         self.sessions_map_votes = {}
 
-        # GLOBALS VARIABLES
         self.sessions = []
         self.sessions_lock = threading.Lock()
         self.sessions_clients_joined = {}
@@ -102,7 +98,6 @@ class Serveur:
             pass
 
     def broadcast_except(self, message, exclude_socket=None):
-        # Diffuse un message brut à tous les autres clients que le excluded
         for client in list(self.clients):
             if client != exclude_socket:
                 try:
@@ -263,7 +258,6 @@ class Serveur:
                             self.game_states[session_name] = {}
                         self.game_states[session_name][player_id] = state
 
-                    # Diffuse l'état complet de la session aux players de la session
                     self._broadcast_game_state(session_name)
 
             except Exception as e:
@@ -351,7 +345,6 @@ class Serveur:
                         )
                     for c in clients_in:
                         self._send(c, vote_msg)
-                    # Start game when every human player has voted
                     all_voted = len(clients_in) > 0 and all(
                         self.socket_player_ids.get(c, (None, None))[1] in votes
                         for c in clients_in
@@ -393,7 +386,6 @@ class Serveur:
                     self.sessions_clients_joined.get(session_name, [])
                 )
 
-            # broadcast for all clients in the session
             for client in clients_in_session:
                 if client != client_socket:
                     try:
@@ -401,7 +393,6 @@ class Serveur:
                     except Exception:
                         pass
 
-            # Supprimer la session
             with self.sessions_lock:
                 self.sessions = [s for s in self.sessions if s["titre"] != session_name]
                 self.sessions_clients_joined.pop(session_name, None)
@@ -419,8 +410,6 @@ class Serveur:
         elif data.startswith("[BubbleHit]:"):
             self.broadcast_except(data, exclude_socket=client_socket)
 
-    # GAME STATE BROADCAST
-
     def _broadcast_game_state(self, sessionName):
         with self.game_states_lock:
             e = dict(self.game_states.get(sessionName, {}))
@@ -437,10 +426,7 @@ class Serveur:
             except Exception as e:
                 print_error(f"Erreur broadcast GameState a client: {e}")
 
-    # SESSION MANAGEMENT
-
     def broadcast_sessions(self):
-        # send the session's list to all clients
         try:
             with self.sessions_lock:
                 message = f"[SessionsList]:{json.dumps(self.sessions)}"
@@ -454,14 +440,10 @@ class Serveur:
         except Exception as e:
             print_error(f"Erreur broadcast sessions: {e}")
 
-    # GAME STATE MANAGEMENT
-
     def start_game(self):
         start_message = "[GameStart]: the game begin!!!!!"
         self.broadcast_except(start_message)
         print_success(f"Le jeu a démarré avec {len(self.clients)} joueurs.")
-
-    # SERVER SHUTDOWN
 
     def stop_server(self):
         for client in self.clients:
