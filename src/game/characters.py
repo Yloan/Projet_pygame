@@ -887,7 +887,7 @@ class Character:
                     if id(target) in self._hit_this_swing:
                         continue
                     if hasattr(target, "notify_incoming_hit"):
-                        target.notify_incoming_hit(self.position)
+                        target.notify_incoming_hit(self.position, self)
                     hit = target.take_damage(_calc_damage(dmg, target, skill))
                     self._hit_this_swing.add(id(target))
                     if hit:
@@ -904,7 +904,7 @@ class Character:
                 continue
             if hitbox.colliderect(target.get_body_rect()):
                 if hasattr(target, "notify_incoming_hit"):
-                    target.notify_incoming_hit(self.position)
+                    target.notify_incoming_hit(self.position, self)
                 hit = target.take_damage(_calc_damage(dmg, target, skill))
                 if hit:
                     self._apply_status_on_hit(target, skill)
@@ -1098,6 +1098,7 @@ class Character3(Character):
         self.s1_phase = 1
         self.s1_parried = False
         self._last_hit_by_pos = None
+        self._parried_attacker = None
         self.frame_S1_2 = 0
         self.timer_S1_2 = 0
         self.frame_S1_3 = 0
@@ -1110,8 +1111,9 @@ class Character3(Character):
         self.frames_S1_3_left = []
         super().__init__(3)
 
-    def notify_incoming_hit(self, attacker_pos):
+    def notify_incoming_hit(self, attacker_pos, attacker=None):
         self._last_hit_by_pos = attacker_pos
+        self._parried_attacker = attacker
 
     def _load_animations(self):
         super()._load_animations()
@@ -1145,6 +1147,7 @@ class Character3(Character):
             self.is_attacking_s1 = True
             self.s1_phase = 1
             self.s1_parried = False
+            self._parried_attacker = None
             self.frame_S1 = 0
             self.timer_S1 = 0
             self.frame_S1_2 = 0
@@ -1173,6 +1176,7 @@ class Character3(Character):
                     offset = -SCALED_FRAME_SIZE if self.direction == "right" else SCALED_FRAME_SIZE
                     self.position = (int(ax) + offset, int(ay))
                     self._last_hit_by_pos = None
+                self._hit_this_swing = set()
                 return
 
             self.timer_S1 += dt
@@ -1190,10 +1194,10 @@ class Character3(Character):
                 self.timer_S1_2 = 0
                 self.frame_S1_2 += 1
                 if self.frame_S1_2 >= len(self.frames_S1_2_anim):
-                    # Contre-attaque terminée : fin du skill (pas de phase 3)
                     self.is_attacking_s1 = False
                     self.s1_phase = 1
                     self.s1_parried = False
+                    self._parried_attacker = None
                     self._hit_this_swing = set()
 
         elif self.s1_phase == 3:
@@ -1205,6 +1209,7 @@ class Character3(Character):
                     self.is_attacking_s1 = False
                     self.s1_phase = 1
                     self.s1_parried = False
+                    self._parried_attacker = None
                     self._hit_this_swing = set()
 
     def get_current_sprite(self):
@@ -1255,26 +1260,12 @@ class Character3(Character):
             if self.s1_phase == 3:
                 return
 
-            # Phase 2 : contre-attaque après parade réussie — touche toujours
-            px, py = CHAR3_S1_PHASE3_HITBOX["offset"]
-            sw, sh = CHAR3_S1_PHASE3_HITBOX["size"]
-            px = int(px * CHARACTER_SCALE)
-            py = int(py * CHARACTER_SCALE)
-            sw = int(sw * CHARACTER_SCALE)
-            sh = int(sh * CHARACTER_SCALE)
-            x, y = self.position
-            if self.direction == "left":
-                px = SCALED_FRAME_SIZE - px - sw
-            hitbox = pyg.Rect(x + px, y + py, sw, sh)
-
-            for target in targets:
-                if target is self or target.is_dead:
-                    continue
-                tid = id(target)
-                if tid in self._hit_this_swing:
-                    continue
-                if hitbox.colliderect(target.get_body_rect()):
-                    target.take_damage(_calc_damage(CHAR3_S1_DAMAGE_PARRY, target, 1))
+            # Phase 2 : contre-attaque après parade réussie — touche toujours l'attaquant
+            attacker = self._parried_attacker
+            if attacker is not None and not attacker.is_dead:
+                tid = id(attacker)
+                if tid not in self._hit_this_swing:
+                    attacker.take_damage(_calc_damage(CHAR3_S1_DAMAGE_PARRY, attacker, 1))
                     self._hit_this_swing.add(tid)
 
         elif self.is_attacking_s3:
@@ -1725,7 +1716,7 @@ class Character4(Character):
                             continue
                         if hbx.colliderect(tgt.get_body_rect()):
                             if hasattr(tgt, "notify_incoming_hit"):
-                                tgt.notify_incoming_hit(self.position)
+                                tgt.notify_incoming_hit(self.position, self)
                             tgt.take_damage(_calc_damage(dmg, tgt, 1))
                             self._hit_this_swing.add(id(tgt))
                             self.s1_htd = True
