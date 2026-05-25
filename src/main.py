@@ -1,7 +1,9 @@
 import json
+import os
 import queue
 import random as r
 import socket
+import sys
 import threading
 import time
 
@@ -1555,6 +1557,9 @@ class Game:
 
 
 if __name__ == "__main__":
-    # Initialize and run game with fullscreen enabled
+    if hasattr(sys, '_MEIPASS'):
+        os.chdir(sys._MEIPASS)
+    elif getattr(sys, 'frozen', False):
+        os.chdir(os.path.dirname(sys.executable))
     game = Game(width=1280, height=720, fullscreen=False)
     game.run()

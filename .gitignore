@@ -1,2 +1,6 @@
 __pycache__/
 .venv/
+.venv_build/
+dist/
+build/
+*.spec.bak

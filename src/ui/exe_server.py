@@ -17,13 +17,13 @@ from server import Serveur
 
 
 def run_offline_server():
-    # Initialize the server on localhost with the port given by katabump
+    # Initialize the server on localhost with the port given by blitzkrieg
     server = Serveur(host="0.0.0.0", port=20142)
 
     # Start the server
     server.start_server()
 
-    print_success(">> Server is now listening for Katabump connections.")
+    print_success(">> Server is now listening for BLITZKRIEG connections.")
     print_info("Press Ctrl+C to shut down the server.")
 
     try:
