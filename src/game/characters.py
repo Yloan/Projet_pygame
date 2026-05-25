@@ -583,7 +583,7 @@ class Character:
             if wet:
                 wet.set_drift(nx, ny, self.speed)
 
-    def take_damage(self, amount, trigger_hurt=True):
+    def take_damage(self, amount, trigger_hurt=True, parriable=True):
         if self.status.is_disabled:
             return False
 
@@ -678,7 +678,8 @@ class Character:
         if burn_dmg > 0:
             if self.status.is_oiled:
                 burn_dmg = int(burn_dmg * 2.0)
-            self.take_damage(burn_dmg, trigger_hurt=False)
+            # parriable=False : les ticks de brûlure ne doivent pas déclencher la parade de Char3
+            self.take_damage(burn_dmg, trigger_hurt=False, parriable=False)
 
         if hasattr(self, "bubble_effect") and self.bubble_effect:
             self.bubble_effect.update(dt)
@@ -1154,11 +1155,12 @@ class Character3(Character):
             return True
         return super().use_skill(skill_num)
 
-    def take_damage(self, amount, trigger_hurt=True):
-        if self.is_attacking_s1 and self.s1_phase == 1:
+    def take_damage(self, amount, trigger_hurt=True, parriable=True):
+        # Seuls les vrais coups ennemis (parriable=True) déclenchent la parade
+        if parriable and self.is_attacking_s1 and self.s1_phase == 1:
             self.s1_parried = True
             return False
-        return super().take_damage(amount, trigger_hurt=trigger_hurt)
+        return super().take_damage(amount, trigger_hurt=trigger_hurt, parriable=parriable)
 
     def _handle_s1_update(self, dt):
         if self.s1_phase == 1:

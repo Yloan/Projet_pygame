@@ -355,6 +355,16 @@ class Serveur:
             except Exception as e:
                 print_error(f"Erreur UnchooseMap: {e}")
 
+        elif data.startswith("[DeleteSession]:"):
+            session_name = data.split(":", 1)[1]
+            with self.sessions_lock:
+                self.sessions = [s for s in self.sessions if s["titre"] != session_name]
+                self.sessions_clients_joined.pop(session_name, None)
+                self.sessions_characters.pop(session_name, None)
+                self.sessions_map_votes.pop(session_name, None)
+            print_success(f"Session supprimée : {session_name}")
+            self.broadcast_sessions()
+
         elif data.startswith("[ProjectileSpawned]:"):
             self.broadcast_except(data, exclude_socket=client_socket)
 

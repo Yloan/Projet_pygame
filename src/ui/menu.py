@@ -357,9 +357,9 @@ class Menu:
 
         _base = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
         self.slot_maps_selection = {
-            1: (355, 288),
-            2: (560, 288),
-            3: (758, 288),
+            1: (302, 210),
+            2: (561, 210),
+            3: (820, 210),
         }
         self.width_slots_map = 159
         self.height_slots_map = 135
@@ -380,20 +380,27 @@ class Menu:
             _forest = pyg.image.load(
                 os.path.join(_base, "assets", "maps", "FOREST-WHOLE.png")
             )
-            _forest_scaled = pyg.transform.scale(
+            self.map_slot_previews[1] = pyg.transform.scale(
                 _forest, (self.width_slots_map, self.height_slots_map)
             )
-            for _slot in (1, 2):
-                self.map_slot_previews[_slot] = _forest_scaled
-
+        except Exception:
+            pass
+        try:
+            _desert = pyg.image.load(
+                os.path.join(_base, "assets", "maps", "map_2", "map-2.png")
+            )
+            self.map_slot_previews[2] = pyg.transform.scale(
+                _desert, (self.width_slots_map, self.height_slots_map)
+            )
+        except Exception:
+            pass
+        try:
             _grotte = pyg.image.load(
                 os.path.join(_base, "assets", "maps", "map_3", "map-3.png")
             )
-            _grotte = pyg.transform.scale(
+            self.map_slot_previews[3] = pyg.transform.scale(
                 _grotte, (self.width_slots_map, self.height_slots_map)
             )
-
-            self.map_slot_previews[3] = _grotte
         except Exception:
             pass
 

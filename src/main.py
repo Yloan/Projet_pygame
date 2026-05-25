@@ -97,7 +97,7 @@ class Game:
             self.wallpaper = pyg.Surface((self.width, self.height))
             self.clock = pyg.time.Clock()
 
-        # LOAD GAME MAP
+        # LOAD GAME MAP (surfaces vides par défaut, chargées à la sélection de map)
         self.map_back = pyg.Surface((self.width, self.height))
         self.map_front = pyg.Surface((self.width, self.height), pyg.SRCALPHA)
 
@@ -513,9 +513,10 @@ class Game:
             try:
                 if self._client_socket:
                     self._client_socket.send(
-                        f"[LeaveSession]:{self.current_joined_session}\n".encode(
-                            "utf-8"
-                        )
+                        f"[DeleteSession]:{self.current_joined_session}\n".encode("utf-8")
+                    )
+                    self._client_socket.send(
+                        f"[LeaveSession]:{self.current_joined_session}\n".encode("utf-8")
                     )
             except Exception:
                 pass
@@ -729,8 +730,9 @@ class Game:
         surface.blit(img, (cx, cy))
 
     def _reset_to_menu(self):
-        # Leave the current session
+        # Delete and leave the current session
         if self.current_joined_session:
+            self.send_to_server(f"[DeleteSession]:{self.current_joined_session}")
             self.send_to_server(f"[LeaveSession]:{self.current_joined_session}")
             self.current_joined_session = None
 
