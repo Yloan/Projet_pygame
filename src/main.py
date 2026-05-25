@@ -737,6 +737,9 @@ class Game:
         if self.current_joined_session:
             self.send_to_server(f"[DeleteSession]:{self.current_joined_session}")
             self.send_to_server(f"[LeaveSession]:{self.current_joined_session}")
+            # Suppression locale immédiate pour que le menu soit à jour sans attendre le serveur
+            session_name = self.current_joined_session
+            self.Menu.sessions = [s for s in self.Menu.sessions if s.titre != session_name]
             self.current_joined_session = None
 
         # Reset game state
