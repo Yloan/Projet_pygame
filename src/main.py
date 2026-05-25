@@ -302,10 +302,9 @@ class Game:
                     self.Menu.players_ready[player_id] = False
                     if self.game_started and self._game_over_result is None:
                         leaving = self.remote_players.pop(player_id, None)
-                        if len(self.remote_players) == 0:
-                            # Victoire seulement si le joueur partant était encore en vie
-                            # (si il était déjà mort, la condition normale all_remotes_dead aurait dû s'activer)
-                            if leaving is None or not leaving.is_dead:
+                        # Ignorer si ce joueur n'était pas dans notre partie
+                        if leaving is not None and len(self.remote_players) == 0:
+                            if not leaving.is_dead:
                                 self._game_over_result = "win"
                                 self._game_over_timer = 0
                 except Exception as e:
