@@ -734,10 +734,20 @@ class Game:
     def _reset_to_menu(self):
         # Delete and leave the current session
         if self.current_joined_session:
-            self.send_to_server(f"[DeleteSession]:{self.current_joined_session}")
-            self.send_to_server(f"[LeaveSession]:{self.current_joined_session}")
-            # Suppression locale immédiate pour que le menu soit à jour sans attendre le serveur
             session_name = self.current_joined_session
+            # Envoi direct via socket (pas via queue) pour garantir la livraison
+            # même si le socket s'est fermé pendant la partie
+            try:
+                if self._client_socket:
+                    self._client_socket.send(
+                        f"[DeleteSession]:{session_name}\n".encode("utf-8")
+                    )
+                    self._client_socket.send(
+                        f"[LeaveSession]:{session_name}\n".encode("utf-8")
+                    )
+            except Exception:
+                pass
+            # Suppression locale immédiate pour que le menu soit à jour sans attendre le serveur
             self.Menu.sessions = [s for s in self.Menu.sessions if s.titre != session_name]
             self.current_joined_session = None
 
