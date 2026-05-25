@@ -76,21 +76,27 @@ class Menu:
 
         # PLAY BUTTON FRAMES
         play_button = ObjButton.PlayButton()
-        self.play_button_frames           = play_button.play_button_frames
-        self.play_button_frames_pressed   = play_button.play_button_frames_pressed
+        self.play_button_frames = play_button.play_button_frames
+        self.play_button_frames_pressed = play_button.play_button_frames_pressed
         self.play_button_frames_unpressed = play_button.play_button_frames_unpressed
 
         # SETTINGS BUTTON FRAMES
         settings_button = ObjButton.OptionsButton()
-        self.settings_button_frames           = settings_button.settings_button_frames
-        self.settings_button_frames_pressed   = settings_button.settings_button_frames_pressed
-        self.settings_button_frames_unpressed = settings_button.settings_button_frames_unpressed
+        self.settings_button_frames = settings_button.settings_button_frames
+        self.settings_button_frames_pressed = (
+            settings_button.settings_button_frames_pressed
+        )
+        self.settings_button_frames_unpressed = (
+            settings_button.settings_button_frames_unpressed
+        )
 
         # EXIT BUTTON FRAMES
         exit_button = ObjButton.ExitButton()
-        self.exit_button_frames           = exit_button.exit_button_frames
-        self.exit_button_frames_pressed   = exit_button.exit_button_frames_pressed
-        self.exit_button_frames_unpressed = exit_button.exit_button_frames_unpressed  # empty list
+        self.exit_button_frames = exit_button.exit_button_frames
+        self.exit_button_frames_pressed = exit_button.exit_button_frames_pressed
+        self.exit_button_frames_unpressed = (
+            exit_button.exit_button_frames_unpressed
+        )  # empty list
 
         # Settings submenu buttons
         video_img = pyg.image.load("assets/buttons/button_video.png").convert_alpha()
@@ -114,8 +120,10 @@ class Menu:
             "assets/buttons/button_four_players.png"
         ).convert_alpha()
         back_char_img = pyg.transform.scale(
-            pyg.image.load("assets/buttons/Back_selection_character.png").convert_alpha(),
-            (63, 57)
+            pyg.image.load(
+                "assets/buttons/Back_selection_character.png"
+            ).convert_alpha(),
+            (63, 57),
         )
         # IMAGES FOR SESSION INTERFACE
         self.bg_session = pyg.image.load(
@@ -141,7 +149,9 @@ class Menu:
             image_ch.append(Img)
 
         # Add the character 3, 4 & 5 which is not at a good index in the file
-        _icones_sheet = pyg.image.load(get_asset_path("Menus_assets") + "/SELECT-ICONES-Sheet.png").convert_alpha()
+        _icones_sheet = pyg.image.load(
+            get_asset_path("Menus_assets") + "/SELECT-ICONES-Sheet.png"
+        ).convert_alpha()
         _icones_h = _icones_sheet.get_height()
 
         # Character 3 — frame 6 of SELECT-ICONES-Sheet
@@ -195,28 +205,28 @@ class Menu:
         self.play_button = animated_button.AnimatedButton(
             self.center_x(self.play_button_frames[0], 1.5),
             390,
-            frames_idle      = self.play_button_frames,
-            frames_pressed   = self.play_button_frames_pressed,
-            frames_unpressed = self.play_button_frames_unpressed,
-            scale            = BUTTON_SCALE,
-            animation_speed  = 8,
+            frames_idle=self.play_button_frames,
+            frames_pressed=self.play_button_frames_pressed,
+            frames_unpressed=self.play_button_frames_unpressed,
+            scale=BUTTON_SCALE,
+            animation_speed=8,
         )
         self.exit_button = animated_button.AnimatedButton(
             self.center_x(self.exit_button_frames[0], 1.5),
             510,
-            frames_idle      = self.exit_button_frames,
-            frames_pressed   = self.exit_button_frames_pressed,
-            frames_unpressed = self.exit_button_frames_unpressed,  # empty → no release anim
-            scale            = 2,
-            animation_speed  = 8,
+            frames_idle=self.exit_button_frames,
+            frames_pressed=self.exit_button_frames_pressed,
+            frames_unpressed=self.exit_button_frames_unpressed,  # empty → no release anim
+            scale=2,
+            animation_speed=8,
         )
         # Each sub-menu gets its OWN back-button instance so their state machines
         # never interfere with each other or with the main-menu exit button.
-        self.back_btn_settings     = self._make_back_btn()
-        self.back_btn_sessions     = self._make_back_btn()
-        self.back_btn_play_menu    = self._make_back_btn()
-        self.back_btn_one_player   = self._make_back_btn()
-        self.back_btn_two_players  = self._make_back_btn()
+        self.back_btn_settings = self._make_back_btn()
+        self.back_btn_sessions = self._make_back_btn()
+        self.back_btn_play_menu = self._make_back_btn()
+        self.back_btn_one_player = self._make_back_btn()
+        self.back_btn_two_players = self._make_back_btn()
         self.back_btn_three_players = self._make_back_btn()
         self.video_button = button.Button(
             self.center_x(video_img, 1) - 350, 350, video_img, 1
@@ -330,14 +340,11 @@ class Menu:
 
         self.__mouse_prev = False
 
-        # Arrow / cursor animation state (per-player)
-        # cursor slot: 'main' | 'support1' | 'support2'
-        self._arrow_cursor = {1: 'main', 2: 'main', 3: 'main', 4: 'main'}
-        self._arrow_pos = {}     # {player_id: float} — current arrow centre X (lerped)
-        self._arrow_target = {}  # {player_id: float} — target arrow centre X
-        self._arrow_bob = 0.0    # global bouncing time (seconds)
-        # Clickable rects of idle animations displayed in each slot (refreshed each frame)
-        self._idle_click_rects = {}  # {player_id: [(char_num, Rect), ...]}
+        self._arrow_cursor = {1: "main", 2: "main", 3: "main", 4: "main"}
+        self._arrow_pos = {}
+        self._arrow_target = {}
+        self._arrow_bob = 0
+        self._idle_click_rects = {}
 
         # Selection cursor image
         try:
@@ -350,8 +357,9 @@ class Menu:
 
         _base = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
         self.slot_maps_selection = {
-            1: (337, 210),
-            2: (780, 210),
+            1: (355, 288),
+            2: (560, 288),
+            3: (758, 288),
         }
         self.width_slots_map = 159
         self.height_slots_map = 135
@@ -359,7 +367,7 @@ class Menu:
 
         try:
             _bg_raw = pyg.image.load(
-                os.path.join(_base, "assets", "wallpapers", "map.png")
+                os.path.join(_base, "assets", "maps", "maps_selection.png")
             )
             self.maps_selection_bg = pyg.transform.scale(
                 _bg_raw, (self.width, self.height)
@@ -377,6 +385,15 @@ class Menu:
             )
             for _slot in (1, 2):
                 self.map_slot_previews[_slot] = _forest_scaled
+
+            _grotte = pyg.image.load(
+                os.path.join(_base, "assets", "maps", "map_3", "map-3.png")
+            )
+            _grotte = pyg.transform.scale(
+                _grotte, (self.width_slots_map, self.height_slots_map)
+            )
+
+            self.map_slot_previews[3] = _grotte
         except Exception:
             pass
 
@@ -491,11 +508,11 @@ class Menu:
         return animated_button.AnimatedButton(
             self.center_x(self.exit_button_frames[0], 1.5),
             y,
-            frames_idle      = self.exit_button_frames,
-            frames_pressed   = self.exit_button_frames_pressed,
-            frames_unpressed = self.exit_button_frames_unpressed,
-            scale            = 2,
-            animation_speed  = 8,
+            frames_idle=self.exit_button_frames,
+            frames_pressed=self.exit_button_frames_pressed,
+            frames_unpressed=self.exit_button_frames_unpressed,
+            scale=2,
+            animation_speed=8,
         )
 
     def handle_main_menu(self):
@@ -662,9 +679,9 @@ class Menu:
     #       support dy   = 137 - 36 = 101   (both supports identical → always aligned)
     _SLOT_ROLE_LAYOUT = {
         #             dx    size   dy
-        'support1': (-40,   72,  101),   # left,   small, centred on main
-        'main':     ( 37,  130,   72),   # centre, large
-        'support2': (172,   72,  101),   # right,  small, centred on main
+        "support1": (-40, 72, 101),  # left,   small, centred on main
+        "main": (37, 130, 72),  # centre, large
+        "support2": (172, 72, 101),  # right,  small, centred on main
     }
 
     def _draw_slot_preview(self, pos_x, pos_y, char_1, char_2, char_3, player_id=None):
@@ -677,9 +694,9 @@ class Menu:
         rl = self._SLOT_ROLE_LAYOUT
         # Draw order: support1 & support2 first, then main on top
         draw_pairs = [
-            (char_2, 'support1'),
-            (char_3, 'support2'),
-            (char_1, 'main'),
+            (char_2, "support1"),
+            (char_3, "support2"),
+            (char_1, "main"),
         ]
         click_rects = []
         for char, role in draw_pairs:
@@ -701,7 +718,7 @@ class Menu:
           - 'support1' → left    (choosing support 1)
           - 'support2' → right   (choosing support 2)
         """
-        cursor = self._arrow_cursor.get(player_id, 'main')
+        cursor = self._arrow_cursor.get(player_id, "main")
         pos_x, _ = self.slot_positions.get(player_id, (64, 125))
         dx, size, dy = self._SLOT_ROLE_LAYOUT[cursor]
         target_x = float(pos_x + dx + size // 2)
@@ -711,10 +728,10 @@ class Menu:
         if player_id not in self._arrow_pos:
             self._arrow_pos[player_id] = target_x
 
-        ax  = int(self._arrow_pos[player_id])
+        ax = int(self._arrow_pos[player_id])
         bob = int(5 * math.sin(self._arrow_bob * 4.5))  # ±5 px vertical bounce
         # Arrow always sits at the TOP of the slot (y fixed, only x varies)
-        img_top_y = slot_top_y + 6 + bob   # 6 px below slot top → always inside
+        img_top_y = slot_top_y + 6 + bob  # 6 px below slot top → always inside
 
         if self._select_cursor_img:
             img = self._select_cursor_img
@@ -722,11 +739,11 @@ class Menu:
         else:
             # Fallback: simple gold triangle (tip at bottom of arrow area)
             tip_y = img_top_y + 30
-            tip   = (ax,      tip_y)
-            left  = (ax - 13, tip_y - 18)
+            tip = (ax, tip_y)
+            left = (ax - 13, tip_y - 18)
             right = (ax + 13, tip_y - 18)
-            pyg.draw.polygon(self.screen, (110, 70, 0),   [tip, left, right], 3)
-            pyg.draw.polygon(self.screen, (255, 210, 30),  [tip, left, right])
+            pyg.draw.polygon(self.screen, (110, 70, 0), [tip, left, right], 3)
+            pyg.draw.polygon(self.screen, (255, 210, 30), [tip, left, right])
 
     def _deselect_char(self, char_num):
         """Remove *char_num* from the current player's selection.
@@ -748,11 +765,11 @@ class Menu:
         self.p_character_update = True
         # Always point to the first empty slot so the player is never stuck
         if not self.character_1:
-            self._arrow_cursor[pid] = 'main'
+            self._arrow_cursor[pid] = "main"
         elif not self.character_2:
-            self._arrow_cursor[pid] = 'support1'
+            self._arrow_cursor[pid] = "support1"
         else:
-            self._arrow_cursor[pid] = 'support2'
+            self._arrow_cursor[pid] = "support2"
         self._arrow_pos.pop(pid, None)
 
     def handle_character_selection(self, character_var, next_state, title):
@@ -811,7 +828,9 @@ class Menu:
                 self.menu_state = "choice_characters_2"
 
         pos_x, pos_y = self.slot_positions.get(self.CurrentPlayer_id, (64, 125))
-        rects = self._draw_slot_preview(pos_x, pos_y, self.character_1, 0, 0, player_id=self.CurrentPlayer_id)
+        rects = self._draw_slot_preview(
+            pos_x, pos_y, self.character_1, 0, 0, player_id=self.CurrentPlayer_id
+        )
         self._idle_click_rects[self.CurrentPlayer_id] = rects
         if self.character_1:
             self._draw_arrow_indicator(self.CurrentPlayer_id, pos_y)
@@ -838,7 +857,14 @@ class Menu:
                 self.menu_state = "choice_characters_3"
 
         pos_x, pos_y = self.slot_positions.get(self.CurrentPlayer_id, (64, 125))
-        rects = self._draw_slot_preview(pos_x, pos_y, self.character_1, self.character_2, 0, player_id=self.CurrentPlayer_id)
+        rects = self._draw_slot_preview(
+            pos_x,
+            pos_y,
+            self.character_1,
+            self.character_2,
+            0,
+            player_id=self.CurrentPlayer_id,
+        )
         self._idle_click_rects[self.CurrentPlayer_id] = rects
         if self.character_1 or self.character_2:
             self._draw_arrow_indicator(self.CurrentPlayer_id, pos_y)
@@ -865,7 +891,11 @@ class Menu:
 
         pos_x, pos_y = self.slot_positions.get(self.CurrentPlayer_id, (64, 125))
         rects = self._draw_slot_preview(
-            pos_x, pos_y, self.character_1, self.character_2, self.character_3,
+            pos_x,
+            pos_y,
+            self.character_1,
+            self.character_2,
+            self.character_3,
             player_id=self.CurrentPlayer_id,
         )
         self._idle_click_rects[self.CurrentPlayer_id] = rects
@@ -887,12 +917,11 @@ class Menu:
             self.character_1 = 0
             self.character_2 = 0
             self.character_3 = 0
-            self._arrow_cursor[self.CurrentPlayer_id] = 'main'
+            self._arrow_cursor[self.CurrentPlayer_id] = "main"
             self._arrow_pos.pop(self.CurrentPlayer_id, None)
             if self.current_session_name:
                 self.p_leave_session = self.current_session_name
             self.current_session_name = None
-
 
         # ── character buttons ──────────────────────────────────────────────
         character_buttons = [
@@ -914,26 +943,26 @@ class Menu:
                 else:
                     # Place char in the cursor's slot, then advance unless all 3 are filled
                     pid = self.CurrentPlayer_id
-                    cursor = self._arrow_cursor.get(pid, 'main')
+                    cursor = self._arrow_cursor.get(pid, "main")
                     filled = False
-                    if cursor == 'main' and not self.character_1:
+                    if cursor == "main" and not self.character_1:
                         self.character_1 = char_num
                         filled = True
-                    elif cursor == 'support1' and not self.character_2:
+                    elif cursor == "support1" and not self.character_2:
                         self.character_2 = char_num
                         filled = True
-                    elif cursor == 'support2' and not self.character_3:
+                    elif cursor == "support2" and not self.character_3:
                         self.character_3 = char_num
                         filled = True
                     if filled:
                         self.p_character_update = True
                         # Advance to first empty slot; if all filled keep current position
                         if not self.character_1:
-                            self._arrow_cursor[pid] = 'main'
+                            self._arrow_cursor[pid] = "main"
                         elif not self.character_2:
-                            self._arrow_cursor[pid] = 'support1'
+                            self._arrow_cursor[pid] = "support1"
                         elif not self.character_3:
-                            self._arrow_cursor[pid] = 'support2'
+                            self._arrow_cursor[pid] = "support2"
                         # else all 3 filled → cursor stays wherever it is
 
         self.players_characters[self.CurrentPlayer_id] = [

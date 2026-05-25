@@ -9,6 +9,7 @@ import pygame as pyg
 
 import game.characters as player_module
 import game.ia as bot_module
+import game.map_laoder as _map_mod
 import ui.menu as menu
 import ui.Music as music_module
 import utils.paths as __path__
@@ -21,9 +22,7 @@ from game.characters import (
     SubProjectile,
     make_character,
 )
-import game.map_laoder as _map_mod
 from game.map_laoder import MapLoader
-from ui.menu_in_game import InGameMenu
 from ui.console import (
     print_debug,
     print_error,
@@ -33,6 +32,7 @@ from ui.console import (
     print_warning,
 )
 from ui.HUD import HUD, _draw_char4_hud, _draw_char5_hud, _load_spec_hud_sheets
+from ui.menu_in_game import InGameMenu
 
 # Gloabl variables
 MESSAGE_DELIMITER = "\n"
@@ -60,7 +60,6 @@ SKILL_COOLDOWNS = {
 RETREAT_COOLDOWN_DURATION = 4  # secs aussi
 
 BOTS_ENABLED: bool = True
-
 
 
 class Game:
@@ -99,10 +98,8 @@ class Game:
             self.clock = pyg.time.Clock()
 
         # LOAD GAME MAP
-        map_loader = MapLoader(None)
-        background, foreground = map_loader.load_map()
-        self.map_back = pyg.transform.scale(background, (self.width, self.height))
-        self.map_front = pyg.transform.scale(foreground, (self.width, self.height))
+        self.map_back = pyg.Surface((self.width, self.height))
+        self.map_front = pyg.Surface((self.width, self.height), pyg.SRCALPHA)
 
         self.active_char = None
         self.support_1 = None
@@ -367,7 +364,10 @@ class Game:
             elif message.startswith("[BubbleHit]:"):
                 try:
                     data = json.loads(message.split(":", 1)[1])
-                    if data.get("victim_id") == self.Menu.CurrentPlayer_id and self.active_char:
+                    if (
+                        data.get("victim_id") == self.Menu.CurrentPlayer_id
+                        and self.active_char
+                    ):
                         self.active_char.is_hidden = True
                         self.active_char.bubble_source_char = data["caster"]
                         effect_data = BUBBLE_EFFECT_DATA.get(int(data["caster"]))
@@ -377,7 +377,9 @@ class Game:
                                 self.active_char.position[1],
                                 effect_data,
                             )
-                        self.active_char.status.apply_disabled(data.get("direction", "right"))
+                        self.active_char.status.apply_disabled(
+                            data.get("direction", "right")
+                        )
                         self.active_char.status.apply_wet()
                 except Exception as e:
                     print_error(f"Erreur BubbleHit: {e}")
@@ -867,7 +869,9 @@ class Game:
                                     f"[LeaveSession]:{self.current_joined_session}"
                                 )
                             pyg.quit()
-                            import sys; sys.exit(0)
+                            import sys
+
+                            sys.exit(0)
                         if event.key == pyg.K_F2:
                             self.dev_display_ = not self.dev_display_
                             Character.switch_TMP__GET_SURFACE_HITBOX_ATTACKS_()
@@ -1034,7 +1038,9 @@ class Game:
                                             self.hud.startAssCooldown(
                                                 RETREAT_COOLDOWN_DURATION
                                             )
-                                            self.hud.set_portrait(self.active_char.char_num)
+                                            self.hud.set_portrait(
+                                                self.active_char.char_num
+                                            )
                                         self.send_to_server(
                                             f"[Retreat]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'slot': 1, 'active_char': self.active_char.char_num})}"
                                         )
@@ -1068,7 +1074,9 @@ class Game:
                                             self.hud.startAssCooldown(
                                                 RETREAT_COOLDOWN_DURATION
                                             )
-                                            self.hud.set_portrait(self.active_char.char_num)
+                                            self.hud.set_portrait(
+                                                self.active_char.char_num
+                                            )
                                         self.send_to_server(
                                             f"[Retreat]:{json.dumps({'player_id': self.Menu.CurrentPlayer_id, 'slot': 2, 'active_char': self.active_char.char_num})}"
                                         )
@@ -1309,9 +1317,8 @@ class Game:
                         and self.support_1.is_dead
                         and self.support_2.is_dead
                     )
-                    all_remotes_dead = (
-                        bool(self.remote_players)
-                        and all(rc.is_dead for rc in self.remote_players.values())
+                    all_remotes_dead = bool(self.remote_players) and all(
+                        rc.is_dead for rc in self.remote_players.values()
                     )
                     if all_bots_dead or all_remotes_dead:
                         self._game_over_result = "win"
@@ -1339,7 +1346,9 @@ class Game:
                         if remote_sprite:
                             dx, dy = remote_char.get_blit_offset(remote_sprite)
                             rpos = remote_char.position
-                            self.screen.blit(remote_sprite, (rpos[0] + dx, rpos[1] + dy))
+                            self.screen.blit(
+                                remote_sprite, (rpos[0] + dx, rpos[1] + dy)
+                            )
 
                         if (
                             hasattr(remote_char, "bubble_effect")
