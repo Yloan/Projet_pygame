@@ -681,33 +681,42 @@ class Game:
         self.send_to_server(f"[HUDUpdate]:{json.dumps(payload)}")
 
     _STATUS_ICON_FILES = {
-        "burn": "status-icone-1.png",
-        "grabbed": "status-icone-2.png",
+        "burn":     "status-icone-1.png",
+        "grabbed":  "status-icone-2.png",
         "disabled": "status-icone-3.png",
-        "wet": "status-icone-4.png",
-        "oiled": "status-icone-6.png",
-        "pushed": {"right": "status-icone-7-1.png", "left": "status-icone-7-2.png"},
-        "stun": "status-icone-13.png",
+        "wet":      "status-icone-4.png",
+        "weakened": "status-icone-5.png",
+        "oiled":    "status-icone-6.png",
+        "pushed":   {"right": "status-icone-7-1.png", "left": "status-icone-7-2.png"},
+        "stun":     "status-icone-13.png",
     }
-    _ICON_SIZE = 24  # display size
+    _ICON_SIZE = 32
+    _HUD_H = 192
 
     def _load_status_icons(self):
-        """Load & cache all status icon images"""
         self._status_icon_imgs = {}
         sz = self._ICON_SIZE
-        base = "assets/status/"
         for key, val in self._STATUS_ICON_FILES.items():
-            if isinstance(val, dict):
-                self._status_icon_imgs[key] = {
-                    d: pyg.transform.scale(
-                        pyg.image.load(base + fname).convert_alpha(), (sz, sz)
+            try:
+                if isinstance(val, dict):
+                    self._status_icon_imgs[key] = {
+                        d: pyg.transform.scale(
+                            pyg.image.load(
+                                __path__.get_asset_path("status", fname)
+                            ).convert_alpha(),
+                            (sz, sz),
+                        )
+                        for d, fname in val.items()
+                    }
+                else:
+                    self._status_icon_imgs[key] = pyg.transform.scale(
+                        pyg.image.load(
+                            __path__.get_asset_path("status", val)
+                        ).convert_alpha(),
+                        (sz, sz),
                     )
-                    for d, fname in val.items()
-                }
-            else:
-                self._status_icon_imgs[key] = pyg.transform.scale(
-                    pyg.image.load(base + val).convert_alpha(), (sz, sz)
-                )
+            except Exception as e:
+                print_warning(f"[STATUS ICON] impossible de charger '{val}': {e}")
 
     def _draw_status_icons(self, surface, status_manager, hud_x, hud_y, player_id):
         if not hasattr(self, "_status_icon_imgs"):
@@ -717,7 +726,9 @@ class Game:
         for key in self._STATUS_ICON_FILES:
             eff = status_manager.effects.get(key)
             if eff and eff.is_active:
-                imgs = self._status_icon_imgs[key]
+                imgs = self._status_icon_imgs.get(key)
+                if imgs is None:
+                    continue
                 if isinstance(imgs, dict):
                     direction = getattr(eff, "direction", "right")
                     img = imgs.get(direction, next(iter(imgs.values())))
@@ -729,12 +740,11 @@ class Game:
             return
 
         sz = self._ICON_SIZE
-        gap = 3
-        hud_h = 192  # scaled HUD height (96 × 2)
+        gap = 4
 
         if player_id in (1, 2):
             ix = hud_x
-            iy = hud_y + hud_h + 4
+            iy = hud_y + self._HUD_H + 4
         else:
             ix = hud_x
             iy = hud_y - sz - 4
@@ -761,11 +771,8 @@ class Game:
         surface.blit(img, (cx, cy))
 
     def _reset_to_menu(self):
-        # Delete and leave the current session
         if self.current_joined_session:
             session_name = self.current_joined_session
-            # Envoi direct via socket (pas via queue) pour garantir la livraison
-            # même si le socket s'est fermé pendant la partie
             try:
                 if self._client_socket:
                     self._client_socket.send(
@@ -776,13 +783,10 @@ class Game:
                     )
             except Exception:
                 pass
-            # Suppression locale immédiate pour que le menu soit à jour sans attendre le serveur
             self.Menu.sessions = [
                 s for s in self.Menu.sessions if s.titre != session_name
             ]
             self.current_joined_session = None
-
-        # Reset game state
         self.game_started = False
         self._game_initialized = False
         self._game_over_result = None

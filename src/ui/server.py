@@ -133,7 +133,6 @@ class Serveur:
 
         self.recv_buffers.pop(client_socket, None)
 
-        # Clean up session membership (same as [LeaveSession])
         if client_socket in self.socket_player_ids:
             left_session, left_pid = self.socket_player_ids.pop(client_socket)
 
@@ -150,7 +149,6 @@ class Serveur:
                 if left_session in self.sessions_characters:
                     self.sessions_characters[left_session].pop(left_pid, None)
 
-                # Auto-suppression si plus aucun joueur dans la session
                 remaining = self.sessions_clients_joined.get(left_session, [])
                 if len(remaining) == 0:
                     self.sessions = [
@@ -317,7 +315,6 @@ class Serveur:
                         f"[PlayerLeft]:{left_pid}", exclude_socket=client_socket
                     )
 
-                # Auto-suppression si plus aucun joueur dans la session
                 remaining = self.sessions_clients_joined.get(session_name, [])
                 if len(remaining) == 0:
                     self.sessions = [

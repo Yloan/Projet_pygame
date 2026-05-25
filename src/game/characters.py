@@ -365,29 +365,29 @@ SPRITE_OFFSETS_4_UPDATE = {
 
 SOUNDS = {
     1: {
-        "s1": "assets/sounds_effect/SFX1.wav",
-        "s2": "assets/sounds_effect/SFX7.wav",
-        "s3": "assets/sounds_effect/SFX1.wav",
+        "s1": "assets/sounds_effect/SFX 1.wav",
+        "s2": "assets/sounds_effect/SFX 7.wav",
+        "s3": "assets/sounds_effect/SFX 1.wav",
     },
     2: {
-        "s1": "assets/sounds_effect/SFX3.wav",
-        "s2": "assets/sounds_effect/SFX7.wav",
-        "s3": "assets/sounds_effect/SFX5.wav",
+        "s1": "assets/sounds_effect/SFX 3.wav",
+        "s2": "assets/sounds_effect/SFX 7.wav",
+        "s3": "assets/sounds_effect/SFX 5.wav",
     },
     3: {
-        "s1": "assets/sounds_effect/SFX2.wav",
-        "s2": "assets/sounds_effect/SFX4.wav",
-        "s3": "assets/sounds_effect/SFX6.wav",
+        "s1": "assets/sounds_effect/SFX 2.wav",
+        "s2": "assets/sounds_effect/SFX 4.wav",
+        "s3": "assets/sounds_effect/SFX 6.wav",
     },
     4: {
-        "s1": "assets/sounds_effect/SFX2.wav",
-        "s2": "assets/sounds_effect/SFX4.wav",
-        "s3": "assets/sounds_effect/SFX6.wav",
+        "s1": "assets/sounds_effect/SFX 2.wav",
+        "s2": "assets/sounds_effect/SFX 4.wav",
+        "s3": "assets/sounds_effect/SFX 6.wav",
     },
     5: {
-        "s1": "assets/sounds_effect/SFX7.wav",
-        "s2": "assets/sounds_effect/SFX7.wav",
-        "s3": "assets/sounds_effect/SFX2.wav",
+        "s1": "assets/sounds_effect/SFX 7.wav",
+        "s2": "assets/sounds_effect/SFX 7.wav",
+        "s3": "assets/sounds_effect/SFX 2.wav",
     },
 }
 
@@ -727,7 +727,6 @@ class Character:
         if burn_dmg > 0:
             if self.status.is_oiled:
                 burn_dmg = int(burn_dmg * 2.0)
-            # parriable=False : les ticks de brûlure ne doivent pas déclencher la parade de Char3
             self.take_damage(burn_dmg, trigger_hurt=False, parriable=False)
 
         if hasattr(self, "bubble_effect") and self.bubble_effect:
@@ -755,17 +754,17 @@ class Character:
             oild = self.status.effects.get("oiled")
             if oild:
                 odx, ody = oild.get_drift(dt)
-                if odx != 0.0 or ody != 0.0:
+                if odx != 0 or ody != 0:
                     x, y = self.position
-                    self.position = (x + int(odx), y + int(ody))
+                    self.position = (x + odx, y + ody)
 
         if self.status.is_wet:
             wet = self.status.effects.get("wet")
             if wet:
                 wdx, wdy = wet.get_drift(dt)
-                if wdx != 0.0 or wdy != 0.0:
+                if wdx != 0 or wdy != 0:
                     x, y = self.position
-                    self.position = (x + int(wdx), y + int(wdy))
+                    self.position = (x + wdx, y + wdy)
 
         if self.is_attacking_s1:
             self._handle_s1_update(dt)
@@ -1235,11 +1234,10 @@ class Character3(Character):
                 if self._last_hit_by_pos is not None:
                     ax, ay = self._last_hit_by_pos
                     cx, cy = self.position
-                    # Téléportation derrière l'attaquant (côté opposé à notre position)
-                    if ax >= cx:  # attaquant à droite → se placer à sa droite
+                    if ax >= cx:
                         self.position = (int(ax) + SCALED_FRAME_SIZE // 2, cy)
-                        self.direction = "left"  # regarder vers l'attaquant
-                    else:  # attaquant à gauche → se placer à sa gauche
+                        self.direction = "left"
+                    else:
                         self.position = (int(ax) - SCALED_FRAME_SIZE // 2, cy)
                         self.direction = "right"
                     self._last_hit_by_pos = None
@@ -1327,10 +1325,8 @@ class Character3(Character):
             if self.s1_phase == 3:
                 return
 
-            # Phase 2 : contre-attaque après parade réussie — touche toujours l'attaquant
             attacker = self._parried_attacker
             if attacker is None or attacker.is_dead:
-                # Fallback si notify_incoming_hit n'a pas été appelé (ex. projectile)
                 for t in targets:
                     if t is not self and not t.is_dead:
                         attacker = t

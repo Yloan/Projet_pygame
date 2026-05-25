@@ -45,13 +45,15 @@ class StatusEffect:
             self.is_active = False
 
 
-WET_SLIDE_FACTOR = 0.25  # fraction of speed kept as slide drift
+WET_SLIDE_FACTOR = 0.6  # fraction of speed kept as slide drift
 
 class WetStatus(StatusEffect):
     def __init__(self):
         super().__init__(WET_DURATION)
         self.drft_x = 0.0
         self.drft_y = 0.0
+        self._acc_x = 0.0
+        self._acc_y = 0.0
 
     def set_drift(self, nx, ny, spd):
         self.drft_x = nx * spd * WET_SLIDE_FACTOR
@@ -59,11 +61,17 @@ class WetStatus(StatusEffect):
 
     def get_drift(self, dt):
         if not self.is_active:
-            return 0.0, 0.0
-        decay = 0.90 ** (dt / 16.0)
+            return 0, 0
+        decay = 0.97 ** (dt / 16.0)
         self.drft_x *= decay
         self.drft_y *= decay
-        return self.drft_x, self.drft_y
+        self._acc_x += self.drft_x
+        self._acc_y += self.drft_y
+        px = int(self._acc_x)
+        py = int(self._acc_y)
+        self._acc_x -= px
+        self._acc_y -= py
+        return px, py
 
 
 class DisabledStatus(StatusEffect):
@@ -105,6 +113,8 @@ class OiledStatus(StatusEffect):
         super().__init__(OILED_DURATION)
         self.drft_x = 0.0
         self.drft_y = 0.0
+        self._acc_x = 0.0
+        self._acc_y = 0.0
 
     def set_drift(self, nx, ny, spd):
         self.drft_x = nx * spd * 0.4
@@ -112,11 +122,17 @@ class OiledStatus(StatusEffect):
 
     def get_drift(self, dt):
         if not self.is_active:
-            return 0.0, 0.0
+            return 0, 0
         decay = 0.95 ** (dt / 16.0)
         self.drft_x *= decay
         self.drft_y *= decay
-        return self.drft_x, self.drft_y
+        self._acc_x += self.drft_x
+        self._acc_y += self.drft_y
+        px = int(self._acc_x)
+        py = int(self._acc_y)
+        self._acc_x -= px
+        self._acc_y -= py
+        return px, py
 
 
 class BurnStatus(StatusEffect):
