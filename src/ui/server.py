@@ -148,6 +148,15 @@ class Serveur:
                 if left_session in self.sessions_characters:
                     self.sessions_characters[left_session].pop(left_pid, None)
 
+                # Auto-suppression si plus aucun joueur dans la session
+                remaining = self.sessions_clients_joined.get(left_session, [])
+                if len(remaining) == 0:
+                    self.sessions = [s for s in self.sessions if s["titre"] != left_session]
+                    self.sessions_clients_joined.pop(left_session, None)
+                    self.sessions_characters.pop(left_session, None)
+                    self.sessions_map_votes.pop(left_session, None)
+                    print_success(f"Session auto-supprimée (déconnexion) : {left_session}")
+
             self.broadcast_except(
                 f"[PlayerLeft]:{left_pid}", exclude_socket=client_socket
             )
@@ -298,10 +307,18 @@ class Serveur:
 
                     if left_session in self.sessions_characters:
                         self.sessions_characters[left_session].pop(left_pid, None)
-                    # Prevent everyone
                     self.broadcast_except(
                         f"[PlayerLeft]:{left_pid}", exclude_socket=client_socket
                     )
+
+                # Auto-suppression si plus aucun joueur dans la session
+                remaining = self.sessions_clients_joined.get(session_name, [])
+                if len(remaining) == 0:
+                    self.sessions = [s for s in self.sessions if s["titre"] != session_name]
+                    self.sessions_clients_joined.pop(session_name, None)
+                    self.sessions_characters.pop(session_name, None)
+                    self.sessions_map_votes.pop(session_name, None)
+                    print_success(f"Session auto-supprimée (plus de joueurs) : {session_name}")
 
             self.broadcast_sessions()
 

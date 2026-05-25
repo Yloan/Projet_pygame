@@ -1173,8 +1173,14 @@ class Character3(Character):
                 self.timer_S1_2 = 0
                 if self._last_hit_by_pos is not None:
                     ax, ay = self._last_hit_by_pos
-                    offset = -SCALED_FRAME_SIZE if self.direction == "right" else SCALED_FRAME_SIZE
-                    self.position = (int(ax) + offset, int(ay))
+                    cx, cy = self.position
+                    # Téléportation derrière l'attaquant (côté opposé à notre position)
+                    if ax >= cx:  # attaquant à droite → se placer à sa droite
+                        self.position = (int(ax) + SCALED_FRAME_SIZE // 2, cy)
+                        self.direction = "left"  # regarder vers l'attaquant
+                    else:  # attaquant à gauche → se placer à sa gauche
+                        self.position = (int(ax) - SCALED_FRAME_SIZE // 2, cy)
+                        self.direction = "right"
                     self._last_hit_by_pos = None
                 self._hit_this_swing = set()
                 return
@@ -1262,6 +1268,12 @@ class Character3(Character):
 
             # Phase 2 : contre-attaque après parade réussie — touche toujours l'attaquant
             attacker = self._parried_attacker
+            if attacker is None or attacker.is_dead:
+                # Fallback si notify_incoming_hit n'a pas été appelé (ex. projectile)
+                for t in targets:
+                    if t is not self and not t.is_dead:
+                        attacker = t
+                        break
             if attacker is not None and not attacker.is_dead:
                 tid = id(attacker)
                 if tid not in self._hit_this_swing:
