@@ -97,6 +97,8 @@ class Game:
             self.wallpaper = pyg.Surface((self.width, self.height))
             self.clock = pyg.time.Clock()
 
+        self.music_play = False
+
         # LOAD GAME MAP (surfaces vides par défaut, chargées à la sélection de map)
         self.map_back = pyg.Surface((self.width, self.height))
         self.map_front = pyg.Surface((self.width, self.height), pyg.SRCALPHA)
@@ -136,7 +138,11 @@ class Game:
         self.current_music = 0
         self.musics = []
 
-        self.musics_names = ["Slower_blitzkrieg.mp3"]
+        self.musics_names = [
+            "Slower_blitzkrieg.mp3",
+            "howling_hound_music-retro-egyptian-theme-187380.mp3",
+            "NewForestmusicBlitzkrieg.mp3",
+        ]
 
         for music_file in self.musics_names:
             chemin_complet = __path__.ensure_asset_exists("musics", music_file)
@@ -171,11 +177,22 @@ class Game:
         self._shake_strength = 0
 
     def switch_music(self, i=None):
+        try:
+            self.musics[self.current_music].stop()
+        except Exception:
+            pass
+
         if i is not None:
             self.current_music = i
-
         else:
-            self.current_music += 1
+            self.current_music = (self.current_music + 1) % len(self.musics)
+
+        # Lancer la nouvelle piste
+        try:
+            self.musics[self.current_music].play()
+            self.musics[self.current_music].volume(0.01)
+        except Exception:
+            pass
 
     def draw_text(self, text, font, text_col, x, y):
         img = font.render(text, True, text_col)
@@ -238,6 +255,11 @@ class Game:
 
                 except Exception as e:
                     print_error(f"Erreur player ID: {e}")
+
+            elif message.startswith("[SessionDeleted]:"):
+                if self.game_started and self._game_over_result is None:
+                    self._game_over_result = "win"
+                    self._game_over_timer = 0
 
             elif message.startswith("[CharacterUpdate]:"):
                 try:
@@ -515,10 +537,14 @@ class Game:
             try:
                 if self._client_socket:
                     self._client_socket.send(
-                        f"[DeleteSession]:{self.current_joined_session}\n".encode("utf-8")
+                        f"[DeleteSession]:{self.current_joined_session}\n".encode(
+                            "utf-8"
+                        )
                     )
                     self._client_socket.send(
-                        f"[LeaveSession]:{self.current_joined_session}\n".encode("utf-8")
+                        f"[LeaveSession]:{self.current_joined_session}\n".encode(
+                            "utf-8"
+                        )
                     )
             except Exception:
                 pass
@@ -748,7 +774,9 @@ class Game:
             except Exception:
                 pass
             # Suppression locale immédiate pour que le menu soit à jour sans attendre le serveur
-            self.Menu.sessions = [s for s in self.Menu.sessions if s.titre != session_name]
+            self.Menu.sessions = [
+                s for s in self.Menu.sessions if s.titre != session_name
+            ]
             self.current_joined_session = None
 
         # Reset game state
@@ -767,6 +795,10 @@ class Game:
         self.Menu.CurrentPlayer_id = None
         self.choose_map = False
         self.map_choosen = None
+
+        # Reset music
+        self.music_play = False
+        self.switch_music(0)
 
         # Reset pause state
         self._paused = False
@@ -828,6 +860,7 @@ class Game:
             self._process_network_messages()
             # MENU STATE
             if self.etat == "menu":
+                self.music_play = False
                 screen.blit(self.wallpaper, (0, 0))
 
                 self.Menu.method_menu()
@@ -1013,6 +1046,11 @@ class Game:
 
             # GAME STATE - Actual gameplay
             if self.etat == "game":
+                if not self.music_play:
+                    self.music_play = True
+                    map_id = self.map_choosen if self.map_choosen is not None else 1
+                    self.switch_music(1 if map_id == 2 else 2)
+
                 dt = self.clock.tick(60) / 1000
                 delta_time = int(dt * 1000)
 
@@ -1116,7 +1154,6 @@ class Game:
                 if self._retreat_cooldown > 0:
                     self._retreat_cooldown -= 1
 
-                # ── In-game pause menu ────────────────────────────────────
                 if self._paused:
                     # Blit the frozen frame then overlay the menu
                     if self._frozen_frame:
@@ -1279,71 +1316,73 @@ class Game:
                                 )
                                 break
                     self.active_char.draw_projectiles(self.screen)
+                    # Remplacer le bloc actuel (autour de "if self.active_char.is_dead") par :
 
-                if self.active_char.is_dead:
-                    if not self.support_1.is_dead:
-                        current_pos = list(self.active_char.position)
-                        self.active_char, self.support_1 = (
-                            self.support_1,
-                            self.active_char,
-                        )
-                        self.active_char.position = current_pos
-                        self.player = self.active_char
-                        self._last_char_health = self.active_char.health
-                        if self.hud:
-                            pct = self.active_char.health / max(
-                                1, self.active_char.max_health
+                    if self.active_char.is_dead:
+                        if not self.support_1.is_dead:
+                            current_pos = list(self.active_char.position)
+                            self.active_char, self.support_1 = (
+                                self.support_1,
+                                self.active_char,
                             )
-                            self.hud.setHealth(round(pct * 17))
-                            self.hud.set_portrait(self.active_char.char_num)
-                    elif not self.support_2.is_dead:
-                        current_pos = list(self.active_char.position)
-                        self.active_char, self.support_2 = (
-                            self.support_2,
-                            self.active_char,
-                        )
-                        self.active_char.position = current_pos
-                        self.player = self.active_char
-                        self._last_char_health = self.active_char.health
-                        if self.hud:
-                            pct = self.active_char.health / max(
-                                1, self.active_char.max_health
+                            self.active_char.position = current_pos
+                            self.player = self.active_char
+                            self._last_char_health = self.active_char.health
+                            if self.hud:
+                                pct = self.active_char.health / max(
+                                    1, self.active_char.max_health
+                                )
+                                self.hud.setHealth(round(pct * 17))
+                                self.hud.set_portrait(self.active_char.char_num)
+                        elif not self.support_2.is_dead:
+                            current_pos = list(self.active_char.position)
+                            self.active_char, self.support_2 = (
+                                self.support_2,
+                                self.active_char,
                             )
-                            self.hud.setHealth(round(pct * 17))
-                            self.hud.set_portrait(self.active_char.char_num)
+                            self.active_char.position = current_pos
+                            self.player = self.active_char
+                            self._last_char_health = self.active_char.health
+                            if self.hud:
+                                pct = self.active_char.health / max(
+                                    1, self.active_char.max_health
+                                )
+                                self.hud.setHealth(round(pct * 17))
+                                self.hud.set_portrait(self.active_char.char_num)
 
-                if self.hud and self.active_char:
-                    delta = self._last_char_health - self.active_char.health
-                    if delta > 0:
-                        hud_dmg = max(1, round(delta * 54 / 100))
-                        self.hud.DealsDamage(hud_dmg)
-                        self._shake_timer = 350
-                        self._shake_strength = min(10, 4 + delta // 5)
-                    if self.active_char.health <= 0 and self.hud.currentHealth > 0:
-                        self.hud.setHealth(0)
-                    self._last_char_health = self.active_char.health
+                    # ── Mise à jour HUD AVANT la vérification game over ──────────────────
+                    if self.hud and self.active_char:
+                        delta = self._last_char_health - self.active_char.health
+                        if delta > 0:
+                            hud_dmg = max(1, round(delta * 54 / 100))
+                            self.hud.DealsDamage(hud_dmg)
+                            self._shake_timer = 350
+                            self._shake_strength = min(10, 4 + delta // 5)
+                        if self.active_char.health <= 0 and self.hud.currentHealth > 0:
+                            self.hud.setHealth(0)
+                        self._last_char_health = self.active_char.health
 
-                if self._game_over_result is None:
-                    all_bots_dead = (
-                        BOTS_ENABLED
-                        and bool(self.bots)
-                        and all(b.char.is_dead for b in self.bots)
-                    )
-                    all_players_dead = (
-                        self.active_char.is_dead
-                        and self.support_1.is_dead
-                        and self.support_2.is_dead
-                    )
-                    all_remotes_dead = bool(self.remote_players) and all(
-                        rc.is_dead for rc in self.remote_players.values()
-                    )
-                    if all_bots_dead or all_remotes_dead:
-                        self._game_over_result = "win"
-                        self._game_over_timer = 0
-                    elif all_players_dead:
-                        self._game_over_result = "lose"
-                        self._game_over_timer = 0
-
+                    # ── Vérification game over APRÈS la mise à jour HUD ──────────────────
+                    if self._game_over_result is None:
+                        all_bots_dead = (
+                            BOTS_ENABLED
+                            and bool(self.bots)
+                            and all(b.char.is_dead for b in self.bots)
+                        )
+                        all_players_dead = (
+                            self.active_char.is_dead
+                            and self.support_1.is_dead
+                            and self.support_2.is_dead
+                        )
+                        all_remotes_dead = bool(self.remote_players) and all(
+                            rc.is_dead for rc in self.remote_players.values()
+                        )
+                        if all_bots_dead or all_remotes_dead:
+                            self._game_over_result = "win"
+                            self._game_over_timer = 0
+                        elif all_players_dead:
+                            self._game_over_result = "lose"
+                            self._game_over_timer = 0
                 if self._game_over_result is not None:
                     self._game_over_timer += delta_time
                     if self._game_over_timer >= 3000:

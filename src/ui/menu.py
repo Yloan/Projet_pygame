@@ -357,9 +357,9 @@ class Menu:
 
         _base = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
         self.slot_maps_selection = {
-            1: (302, 210),
-            2: (561, 210),
-            3: (820, 210),
+            1: (355, 285),
+            2: (558, 285),
+            3: (759, 285),
         }
         self.width_slots_map = 159
         self.height_slots_map = 135

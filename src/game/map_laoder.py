@@ -16,15 +16,15 @@ MAP1_COLLISIONS = [
 
 # Map 2 — collisions réelles de la map désert
 MAP2_COLLISIONS = [
-    pyg.Rect(0,    0,                         9,                  723),  # left wall
-    pyg.Rect(0,    700,                     1267, COLLISION_THICKNESS),  # floor
-    pyg.Rect(1269, 0,        COLLISION_THICKNESS,                 723),  # right wall
-    pyg.Rect(0,    200 - COLLISION_THICKNESS, 1279, COLLISION_THICKNESS),  # top platform
-    pyg.Rect(1064, 511, 1202 - 1064, 646 - 511),                         # plateforme droite
-    pyg.Rect(781,  565, 673  - 565,  1202 - 1064 - 26),                  # plateforme centre-droite
-    pyg.Rect(66,   200, 673  - 565,  1202 - 1064 - 26),                  # plateforme gauche
-    pyg.Rect(91,   528, 229  - 91,   650 - 528),                         # bloc bas-gauche
-    pyg.Rect(1122, 220, 1202 - 1064, 646 - 511),                         # bloc haut-droite
+    pyg.Rect(0, 0, 9, 723),  # left wall
+    pyg.Rect(0, 700, 1267, COLLISION_THICKNESS),  # floor
+    pyg.Rect(1269, 0, COLLISION_THICKNESS, 723),  # right wall
+    pyg.Rect(0, 200 - COLLISION_THICKNESS, 1279, COLLISION_THICKNESS),  # top platform
+    pyg.Rect(1064, 511, 1202 - 1064, 646 - 511),  # plateforme droite
+    pyg.Rect(781, 565, 673 - 565, 1202 - 1064 - 26),  # plateforme centre-droite
+    pyg.Rect(66, 200, 673 - 565, 1202 - 1064 - 26),  # plateforme gauche
+    pyg.Rect(91, 528, 229 - 91, 650 - 528),  # bloc bas-gauche
+    pyg.Rect(1122, 220, 1202 - 1064, 646 - 511),  # bloc haut-droite
 ]
 
 # Map 3 — grotte
@@ -44,8 +44,8 @@ MAP_PATHS = {
         "fore": "assets/maps/map_1/map-1-FOREGROUND-Sheet.png",
     },
     2: {
-        "back": "assets/maps/map_2/map-2-BACKGROUND-Sheet.png",
-        "fore": "assets/maps/map_2/map-2-FOREGROUND-Sheet.png",
+        "back": "assets/maps/map_2/map-2.png",
+        "fore": None,
     },
     3: {
         "back": "assets/maps/map_3/map-3.png",

@@ -3,11 +3,10 @@ import pygame
 
 class MusicPlayer:
     def __init__(self, file):
-        pygame.mixer.init()
         self.file = file
-        pygame.mixer.music.load(self.file)
 
     def play(self, loop=-1):
+        pygame.mixer.music.load(self.file)
         pygame.mixer.music.play(loop)
 
     def volume(self, volume):

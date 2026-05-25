@@ -92,7 +92,9 @@ class Serveur:
                         break
                 if left_session in self.sessions_characters:
                     self.sessions_characters[left_session].pop(left_pid, None)
-            self.broadcast_except(f"[PlayerLeft]:{left_pid}", exclude_socket=client_socket)
+            self.broadcast_except(
+                f"[PlayerLeft]:{left_pid}", exclude_socket=client_socket
+            )
             self.broadcast_sessions()
         try:
             client_socket.close()
@@ -151,11 +153,15 @@ class Serveur:
                 # Auto-suppression si plus aucun joueur dans la session
                 remaining = self.sessions_clients_joined.get(left_session, [])
                 if len(remaining) == 0:
-                    self.sessions = [s for s in self.sessions if s["titre"] != left_session]
+                    self.sessions = [
+                        s for s in self.sessions if s["titre"] != left_session
+                    ]
                     self.sessions_clients_joined.pop(left_session, None)
                     self.sessions_characters.pop(left_session, None)
                     self.sessions_map_votes.pop(left_session, None)
-                    print_success(f"Session auto-supprimée (déconnexion) : {left_session}")
+                    print_success(
+                        f"Session auto-supprimée (déconnexion) : {left_session}"
+                    )
 
             self.broadcast_except(
                 f"[PlayerLeft]:{left_pid}", exclude_socket=client_socket
@@ -314,11 +320,15 @@ class Serveur:
                 # Auto-suppression si plus aucun joueur dans la session
                 remaining = self.sessions_clients_joined.get(session_name, [])
                 if len(remaining) == 0:
-                    self.sessions = [s for s in self.sessions if s["titre"] != session_name]
+                    self.sessions = [
+                        s for s in self.sessions if s["titre"] != session_name
+                    ]
                     self.sessions_clients_joined.pop(session_name, None)
                     self.sessions_characters.pop(session_name, None)
                     self.sessions_map_votes.pop(session_name, None)
-                    print_success(f"Session auto-supprimée (plus de joueurs) : {session_name}")
+                    print_success(
+                        f"Session auto-supprimée (plus de joueurs) : {session_name}"
+                    )
 
             self.broadcast_sessions()
 
@@ -339,7 +349,9 @@ class Serveur:
                     votes = self.sessions_map_votes[session_name]
                     vote_msg = f"[MapVotesUpdate]:{json.dumps(votes)}"
                     with self.sessions_lock:
-                        clients_in = list(self.sessions_clients_joined.get(session_name, []))
+                        clients_in = list(
+                            self.sessions_clients_joined.get(session_name, [])
+                        )
                     for c in clients_in:
                         self._send(c, vote_msg)
                     # Start game when every human player has voted
@@ -353,7 +365,9 @@ class Serveur:
                         for c in clients_in:
                             self._send(c, start_msg)
                         self.sessions_map_votes.pop(session_name, None)
-                        print_success(f"StartGame envoyé: map {winner} pour {session_name}")
+                        print_success(
+                            f"StartGame envoyé: map {winner} pour {session_name}"
+                        )
             except Exception as e:
                 print_error(f"Erreur ChooseMap: {e}")
 
@@ -366,7 +380,9 @@ class Serveur:
                     votes = self.sessions_map_votes.get(session_name, {})
                     vote_msg = f"[MapVotesUpdate]:{json.dumps(votes)}"
                     with self.sessions_lock:
-                        clients_in = list(self.sessions_clients_joined.get(session_name, []))
+                        clients_in = list(
+                            self.sessions_clients_joined.get(session_name, [])
+                        )
                     for c in clients_in:
                         self._send(c, vote_msg)
             except Exception as e:
@@ -374,11 +390,29 @@ class Serveur:
 
         elif data.startswith("[DeleteSession]:"):
             session_name = data.split(":", 1)[1]
+
+            with self.sessions_lock:
+                clients_in_session = list(
+                    self.sessions_clients_joined.get(session_name, [])
+                )
+
+            # broadcast for all clients in the session
+            for client in clients_in_session:
+                if client != client_socket:
+                    try:
+                        self._send(client, f"[SessionDeleted]:{session_name}")
+                    except Exception:
+                        pass
+
+            # Supprimer la session
             with self.sessions_lock:
                 self.sessions = [s for s in self.sessions if s["titre"] != session_name]
                 self.sessions_clients_joined.pop(session_name, None)
                 self.sessions_characters.pop(session_name, None)
                 self.sessions_map_votes.pop(session_name, None)
+                with self.game_states_lock:
+                    self.game_states.pop(session_name, None)
+
             print_success(f"Session supprimée : {session_name}")
             self.broadcast_sessions()
 
