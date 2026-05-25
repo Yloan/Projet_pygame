@@ -76,6 +76,9 @@ class Game:
             width=self.width, height=self.height, fullscreen=self.fullscreen
         )
 
+        #    init sound
+        pyg.mixer.pre_init(44100, -16, 2, 512)
+        pyg.init()
         try:
             # Reuse menu's pygame resources
             self.screen = self.Menu.screen
@@ -850,8 +853,6 @@ class Game:
         # self.etat = "game"
 
         # When starting directly in game initialise characters with defaults
-
-        pyg.mixer.init()
         self.musics[self.current_music].play()
         self.musics[self.current_music].volume(0.01)
         while self.running:

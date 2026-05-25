@@ -573,7 +573,7 @@ class Character:
                 snd = pyg.mixer.Sound(
                     get_asset_path(*path.replace("assets/", "").split("/"))
                 )
-                snd.set_volume(0.6)
+                snd.set_volume(1)
                 self._sounds[skill_key] = snd
             except (FileNotFoundError, pyg.error) as e:
                 print_warning(
@@ -1695,11 +1695,9 @@ class Character4(Character):
 
     def use_skill(self, skill_num):
         if skill_num == 1 and not self.is_attacking_s1:
-            # Son
             snd = getattr(self, "_sounds", {}).get("s1")
             if snd:
                 snd.play()
-            self.is_attacking_s1 = True
             self.is_attacking_s1 = True
             self.s1_phse = 1
             self.s1_htd = False
@@ -1714,11 +1712,9 @@ class Character4(Character):
             return True
 
         if skill_num == 2 and not self.is_attacking_s2 and not self.is_attacking_s1:
-            # Son
-            snd = getattr(self, "_sounds", {}).get("s1")
+            snd = getattr(self, "_sounds", {}).get("s2")
             if snd:
                 snd.play()
-            self.is_attacking_s1 = True
             self.s2_vrt = 1 if self.chrgs < 3 else 2
             if self.s2_vrt == 1:
                 self.chrgs = min(self.MAX_CHRGS, self.chrgs + 1)
@@ -1735,11 +1731,9 @@ class Character4(Character):
             return True
 
         if skill_num == 3 and not self.is_attacking_s3:
-            # Son
-            snd = getattr(self, "_sounds", {}).get("s1")
+            snd = getattr(self, "_sounds", {}).get("s3")
             if snd:
                 snd.play()
-            self.is_attacking_s1 = True
             self._s3_chrgs_spnt = self.chrgs
             self.chrgs = 0
             self.is_attacking_s3 = True
@@ -1971,11 +1965,9 @@ class Character5(Character):
         if skill_num == 1:
             if self.is_attacking_s1 or self.is_attacking_s2:
                 return False
-            # Son
             snd = getattr(self, "_sounds", {}).get("s1")
             if snd:
                 snd.play()
-            self.is_attacking_s1 = True
             if self.wtr_cns > 0:
                 self._cns_ctx = "water"
                 self.is_attacking_s1 = True
@@ -2004,12 +1996,9 @@ class Character5(Character):
         if skill_num == 2:
             if self.is_attacking_s1 or self.is_attacking_s2:
                 return False
-
-            # Son
-            snd = getattr(self, "_sounds", {}).get("s1")
+            snd = getattr(self, "_sounds", {}).get("s2")
             if snd:
                 snd.play()
-            self.is_attacking_s1 = True
             if self.sda_cns > 0:
                 self._cns_ctx = "soda"
                 self.is_attacking_s1 = True
@@ -2037,11 +2026,9 @@ class Character5(Character):
             return True
 
         if skill_num == 3 and not self.is_attacking_s3:
-            # Son
-            snd = getattr(self, "_sounds", {}).get("s1")
+            snd = getattr(self, "_sounds", {}).get("s3")
             if snd:
                 snd.play()
-            self.is_attacking_s1 = True
             self.is_attacking_s3 = True
             self.frame_S3 = 0
             self.timer_S3 = 0
